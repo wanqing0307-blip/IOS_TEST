@@ -68,7 +68,6 @@ unsigned char                   pwm_value;
 enum led_level                  led_light_lev;
 
 uint8_t                         pwm_time_count;
-uint16_t                        delay_time_count;
 uint8_t                         rgb_index;
 uint8_t                         led_process_index;
 uint8_t                         hint_time_count;
@@ -564,6 +563,7 @@ void logo_process(void)
 
         led_process_index = 0;
         rgb_index = 0;
+        led_timer_reset();                          // 灯效按 RTC 时间推进，进入即走第一步
 
         clr_rgb();
         memset(pwm_duty_array_0, 0x00, 16);
@@ -581,19 +581,16 @@ void logo_process(void)
                 break;
             case iMODE_LED_BREATH:
                 pwm_time_count = 0;
-                delay_time_count = 0xFF;
                 rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
 
                 break;
             case iMODE_LED_NHJB:
-                delay_time_count = 0;
                 pwm_duty_array_0[0] = iPWM_MAX;
                 pwm_duty_array_0[1] = 0x00;
                 pwm_duty_array_0[2] = 0x00;
 
                 break;
             case iMODE_LED_LG_L_R:
-                delay_time_count = 0;
                 led_status_reg = 0xCCCC;
 
                 for(i=0; i<iLED_MAX; i++)
@@ -604,7 +601,6 @@ void logo_process(void)
 
                 break;
             case iMODE_LED_STAR:
-                delay_time_count = 0;
                 snake_led_index = 0xFF;
                 lfsr_value = 0x55AA;
                 break;
@@ -618,7 +614,6 @@ void logo_process(void)
                 }
                 break;
             case iMODE_LED_BS:
-                led_mode_baoshan_init();    // 进入爆闪立即刷新首帧，之后按 RTC 时间固定节奏
                 break;
             case iMODE_LED_QCNH:
                 led_mode_qcnh_init();

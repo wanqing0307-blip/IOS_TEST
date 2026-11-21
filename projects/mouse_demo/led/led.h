@@ -145,11 +145,9 @@ extern unsigned char            pwm_value;
 extern enum led_level           led_light_lev;
 
 extern uint16_t                 lfsr_value;
-extern uint8_t                  start_dec_count;
 extern uint8_t                  snake_led_index;
 
 extern uint8_t                  pwm_time_count;
-extern uint16_t                 delay_time_count;
 extern uint8_t                  rgb_index;
 extern uint8_t                  led_process_index;
 extern uint8_t                  hint_time_count;
@@ -197,8 +195,8 @@ extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
 extern void led_mode_sbzl(void);
 
-extern void led_mode_baoshan_init(void);
 extern void led_mode_baoshan(void);
+extern void led_timer_reset(void);
 extern void led_mode_qcnh_init(void);
 extern void led_mode_qcnh(void);
 extern void led_mode_lhtw(void);
