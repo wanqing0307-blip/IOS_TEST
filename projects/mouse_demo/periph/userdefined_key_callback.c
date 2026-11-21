@@ -352,6 +352,8 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             break;
         case iMODE_KEY_BT0&0x0F:
             device_key |= bkey_bt0_press;
+            if(iDEVICE_TYPE_BT2 < device_type)
+                break;                              // 三段开关不在蓝牙档：蓝牙通道键无效（模式只由开关决定）
             if(0==(device_key_bak&bkey_bt0_press_bak))
             {
                 device_key_bak |= bkey_bt0_press_bak;
@@ -384,6 +386,8 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             break;
         case iMODE_KEY_BT1&0x0F:
             device_key |= bkey_bt1_press;
+            if(iDEVICE_TYPE_BT2 < device_type)
+                break;                              // 三段开关不在蓝牙档：蓝牙通道键无效（模式只由开关决定）
             if(0==(device_key_bak&bkey_bt1_press_bak))
             {
                 device_key_bak |= bkey_bt1_press_bak;
@@ -416,6 +420,8 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             break;
         case iMODE_KEY_BT2&0x0F:
             device_key |= bkey_bt2_press;
+            if(iDEVICE_TYPE_BT2 < device_type)
+                break;                              // 三段开关不在蓝牙档：蓝牙通道键无效（模式只由开关决定）
             if(0==(device_key_bak&bkey_bt2_press_bak))
             {
                 device_key_bak |= bkey_bt2_press_bak;
@@ -452,21 +458,15 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             {
                 device_key_bak |= bkey_24g_press_bak;
                 press_24g_time_count = conn_rtc_value;
-
-                if(iDEVICE_TYPE_24G != device_type)
-                {
-                    device_type = iDEVICE_TYPE_24G;
-                    bt_index = iDEVICE_TYPE_24G;
-                    flash_save_status();
-                    delayus(10000);
-                    NVIC_SystemReset();
-                }
+                // 模式只由三段开关决定：2.4G 键不再切换模式（原实现会从蓝牙/USB 档强制切到 2.4G，
+                // 并把 bt_index 写成 2.4G，导致开关在蓝牙档也开机进 2.4G）
             }
             else
             {
                 if(mMS_TO_TICK(3000) < (conn_rtc_value-press_24g_time_count))
                 {
-                    if(iMCU_MODE_NO_DONGLE == work_mode)
+                    if((iDEVICE_TYPE_24G == device_type)       // 长按配对接收器：仅开关在 2.4G 档有效
+                        && (iMCU_MODE_NO_DONGLE == work_mode))
                     {
                         if(iRF_MODE_CONNECT != rf_mode_type)
                         {

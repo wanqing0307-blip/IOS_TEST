@@ -594,6 +594,9 @@ void scan_mode_swtich(uint8_t type)
         }
         else
         {
+            // 开关在蓝牙档只能进蓝牙通道：flash 中的 bt_index 可能是旧版按键写入的 2.4G 等值
+            if(iDEVICE_TYPE_BT2 < bt_index)
+                bt_index = iDEVICE_TYPE_BT0;
             device_type = bt_index;
         }
     }
