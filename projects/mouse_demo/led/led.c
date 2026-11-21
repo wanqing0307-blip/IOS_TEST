@@ -485,9 +485,13 @@ void logo_process(void)
         bsave_cfg_dpi = false;
         flash_save_cfg_dpi();
     }
-    if(iDEVICE_TYPE_24G == device_type)
+    // 刚写过 flash：2.4G 下 logo_process 在 RF 回调里执行，本次跳过灯效让出时间给 RF。
+    // 只跳过这一次，必须清标志；原来从不清零，2.4G 下改过灯效/速度/颜色后灯效会一直定格到复位。
+    // 灯效按 RTC 时间推进，跳过一次不影响速度。
+    if(true==bflash_ctrl)
     {
-        if(true==bflash_ctrl)
+        bflash_ctrl = false;
+        if(iDEVICE_TYPE_24G == device_type)
             return;
     }
 
