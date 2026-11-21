@@ -36,15 +36,6 @@ static uint16_t                qcnh_phase;          // 七彩霓虹色环相位�
 
 #define iHUE_NUM        48
 
-// 呼吸用 gamma 表（0~64 -> 0~64，gamma≈2.2，人眼感知线性）
-static const unsigned char gamma_tbl[65] = {
-     0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  2,  2,  2,  3,
-     3,  3,  4,  4,  5,  6,  6,  7,  7,  8,  9, 10, 10, 11, 12, 13,
-    14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 25, 27, 28, 29, 31, 32,
-    34, 36, 37, 39, 41, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62,
-    64,
-};
-
 // 48 阶平滑色环（R,G,B，满量程 iPWM_MAX）
 static const unsigned char hue_rgb_tbl[iHUE_NUM][3] = {
     {64,  0,  0}, {64,  8,  0}, {64, 16,  0}, {64, 24,  0}, {64, 32,  0}, {64, 40,  0},
@@ -163,53 +154,125 @@ void led_mode_on(void)
     }
 }
 
+//-----------------------------------------------------------------------------;
+// 呼吸
+//
+// 呼吸周期(基准节拍 7.5ms 数)，下标 = 速度档：约 3s / 4.5s / 6s / 8s / 10s
+static const unsigned short breath_cycle_tbl[] = { 400, 600, 800, 1067, 1333 };
+
+// 一个周期按 0~1023 划分：渐亮 42.5% -> 最亮停顿 5% -> 渐暗 42.5% -> 全暗停顿 10%
+#define iBREATH_POS_MAX         1024
+#define iBREATH_RISE_END        435
+#define iBREATH_TOP_END         486
+#define iBREATH_FALL_END        921
+#define iBREATH_RAMP_LEN        (iBREATH_RISE_END)          // 渐亮/渐暗段长度
+
+// 呼吸亮度曲线（33 点，0~4096）：sin(πx/2)^2.2
+// 感知亮度正弦缓出：离开全暗快、接近最亮时变化率趋于 0，顶部不生硬折返；
+// 再经 γ2.2 转为灯珠线性亮度
+#define iBREATH_LUM_MAX         4096
+static const unsigned short breath_curve_tbl[33] = {
+       0,    5,   25,   60,  112,  182,  270,  374,  495,  632,  783,
+     948, 1124, 1310, 1505, 1706, 1911, 2118, 2325, 2529, 2729, 2922,
+    3107, 3280, 3441, 3588, 3718, 3831, 3925, 3999, 4053, 4085, 4096,
+};
+
+static unsigned short           breath_phase;               // 周期内相位（基准节拍数）
+static unsigned char            breath_hue;                 // 七彩时色环起点，每个周期在全暗处推进
+
 /******************************************************************************
-* 函数名称: led_hint_process
-* 功能描述:
-* 输入参数:
-* 输出参数:
-* 说    明:
+* 函数名称: led_mode_breath_init
+* 功能描述: 呼吸进入初始化（切换灯效时调用），从全暗开始渐亮
 ******************************************************************************/
-static void led_mode_breath_step(void)
+void led_mode_breath_init(void)
 {
-    unsigned char i, h;
+    breath_phase = 0;
+    breath_hue = 0;
+}
 
+// x: 0~1023 -> 亮度 0~4096（查表 + 线性插值）
+static unsigned short breath_curve(unsigned short x)
+{
+    unsigned char  idx  = x >> 5;
+    unsigned char  frac = x & 0x1F;
+    unsigned short a    = breath_curve_tbl[idx];
 
-    i = pwm_time_count;
-    if(!bback_led_status)
+    return a + (((breath_curve_tbl[idx+1] - a) * frac) >> 5);
+}
+
+/******************************************************************************
+* 函数名称: led_mode_breath
+* 功能描述: 呼吸：平滑渐亮 -> 短暂停顿 -> 平滑渐暗 -> 全暗停顿
+* 输入参数: 无
+* 输出参数: 无
+* 说    明: 按 RTC 时间推进相位；亮度先以 12bit 精度计算、与颜色相乘后
+*           一次性四舍五入到 0~64，避免两次截断造成的暗端台阶与色偏。
+*           led_rgb_index 为七彩时 8 颗灯色环呼吸（每周期旋转 22.5°），
+*           否则按所选单色呼吸（与常亮一致）
+******************************************************************************/
+void led_mode_breath(void)
+{
+    unsigned char  i, n, h, en;
+    unsigned short cycle, pos, x;
+    uint32_t       lum;
+
+    n = led_timer_take(&led_timer_main, iLED_BASE_TICK, iLED_CATCHUP_MAX);
+    if(0 == n)
+        return;
+
+    cycle = breath_cycle_tbl[led_speed_index()];
+    breath_phase += n;
+    if(cycle <= breath_phase)
     {
-        if(pwm_time_count >= iPWM_MAX)
-            pwm_value = 0;
-        else
-            pwm_value = gamma_tbl[iPWM_MAX - i];    // gamma 曲线，呼吸更柔和
+        breath_phase %= cycle;                  // 也兼容运行中切换到更短周期
+        breath_hue = (breath_hue + 3) % iHUE_NUM;   // 全暗时换色，看不到跳变
+    }
+
+    pos = ((uint32_t)breath_phase * iBREATH_POS_MAX) / cycle;
+
+    if(pos < iBREATH_RISE_END)
+    {
+        x   = ((uint32_t)pos * 1024) / iBREATH_RAMP_LEN;
+        lum = breath_curve(x);
+    }
+    else if(pos < iBREATH_TOP_END)
+    {
+        lum = iBREATH_LUM_MAX;
+    }
+    else if(pos < iBREATH_FALL_END)
+    {
+        x   = ((uint32_t)(iBREATH_FALL_END - 1 - pos) * 1024) / iBREATH_RAMP_LEN;
+        lum = breath_curve(x);
     }
     else
     {
-        if(pwm_time_count >= iPWM_MAX)
-            pwm_value = iPWM_MAX;
-        else
-            pwm_value = gamma_tbl[i];
+        lum = 0;
     }
 
-    if(pwm_time_count == iPWM_MAX)   // 最亮和最暗的时间加长
-    {
-        pwm_time_count = 0;
-        bback_led_status = !bback_led_status;
-        if(bback_led_status)
-            rgb_index++;
-    }
-
-    // 色环：8 颗灯色相依次相差 45°，随呼吸周期缓慢旋转
+    en = rgb_en_tbl[led_rgb_index&0x07];
     for(i=0; i<iLED_MAX; i++)
     {
-        h = (rgb_index*3 + i*(iHUE_NUM/iLED_MAX)) % iHUE_NUM;
+        unsigned char r, g, b;
 
-        pwm_rgb_tbl[i][iR_INDEX] = (hue_rgb_tbl[h][0] * pwm_value) >> 6;
-        pwm_rgb_tbl[i][iG_INDEX] = (hue_rgb_tbl[h][1] * pwm_value) >> 6;
-        pwm_rgb_tbl[i][iB_INDEX] = (hue_rgb_tbl[h][2] * pwm_value) >> 6;
+        if(iRGB_QICAI == (led_rgb_index&0x07))
+        {
+            // 色环：8 颗灯色相依次相差 45°
+            h = (breath_hue + i*(iHUE_NUM/iLED_MAX)) % iHUE_NUM;
+            r = hue_rgb_tbl[h][0];
+            g = hue_rgb_tbl[h][1];
+            b = hue_rgb_tbl[h][2];
+        }
+        else
+        {
+            r = (en & iPWM_R) ? iPWM_MAX : 0;
+            g = (en & iPWM_G) ? iPWM_MAX : 0;
+            b = (en & iPWM_B) ? iPWM_MAX : 0;
+        }
+
+        pwm_rgb_tbl[i][iR_INDEX] = (r * lum + (iBREATH_LUM_MAX/2)) / iBREATH_LUM_MAX;
+        pwm_rgb_tbl[i][iG_INDEX] = (g * lum + (iBREATH_LUM_MAX/2)) / iBREATH_LUM_MAX;
+        pwm_rgb_tbl[i][iB_INDEX] = (b * lum + (iBREATH_LUM_MAX/2)) / iBREATH_LUM_MAX;
     }
-
-    pwm_time_count++;
 }
 
 /******************************************************************************
@@ -946,13 +1009,6 @@ static void led_mode_txtw_step(void)
 //=============================================================================;
 // 灯效对外入口：按 RTC 时间取出到期步数，逐步执行
 //=============================================================================;
-
-void led_mode_breath(void)
-{
-    uint8_t n = led_speed_steps();
-    while(n--)
-        led_mode_breath_step();
-}
 
 void led_mode_nhjb(void)
 {

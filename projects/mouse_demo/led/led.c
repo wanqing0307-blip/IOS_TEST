@@ -580,8 +580,7 @@ void logo_process(void)
 
                 break;
             case iMODE_LED_BREATH:
-                pwm_time_count = 0;
-                rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
+                led_mode_breath_init();
 
                 break;
             case iMODE_LED_NHJB:
