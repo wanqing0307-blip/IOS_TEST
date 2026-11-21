@@ -603,13 +603,7 @@ void logo_process(void)
                 lfsr_value = 0x55AA;
                 break;
             case iMODE_LED_SBZL:
-                for(i=0; i<iLED_MAX; i++)
-                {
-                    pwm_duty_array_0[i] = sbzl_r_tbl[iLED_MAX-1-i];
-                    pwm_duty_array_1[i] = sbzl_g_tbl[iLED_MAX-1-i];
-                    pwm_duty_array_2[i] = sbzl_b_tbl[iLED_MAX-1-i];
-                    pwm_duty_array_3[i] = sbzl_ctrl_tbl[iLED_MAX-1-i];
-                }
+                led_mode_sbzl_init();
                 break;
             case iMODE_LED_BS:
                 led_mode_baoshan_init();
