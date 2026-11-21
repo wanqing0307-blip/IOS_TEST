@@ -621,6 +621,7 @@ void logo_process(void)
                 delay_time_count = 0xFF;    // 进入爆闪立即刷新首帧，避免起步等待
                 break;
             case iMODE_LED_QCNH:
+                led_mode_qcnh_init();
                 break;
             case iMODE_LED_LHTW:
                 break;

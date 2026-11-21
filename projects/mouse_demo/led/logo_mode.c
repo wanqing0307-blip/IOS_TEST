@@ -29,9 +29,7 @@ bool                            bled_run_dir;
 uint16_t                        lfsr_value;
 uint8_t                         start_dec_count;
 uint8_t                         snake_led_index;
-static uint8_t                 qcnh_phase;
-static uint8_t                 qcnh_first = 1;
-static uint8_t                 qcnh_cur[iLED_MAX][3];
+static uint16_t                qcnh_phase;          // 七彩霓虹色环相位（8.8 定点：高字节=色号，低字节=插值）
 
 //-----------------------------------------------------------------------------;
 // 表格定义区
@@ -555,7 +553,8 @@ void led_mode_baoshan(void)
     }
 }
 
-unsigned char       const   qcnh_en_tbl[]={
+// 来回拖尾（LHTW）逐灯颜色使能表
+unsigned char       const   lhtw_en_tbl[]={
     iPWM_R,
     iPWM_G,
     iPWM_B,
@@ -574,67 +573,84 @@ unsigned char       const   qcnh_en_tbl[]={
     iPWM_R,
     iPWM_G,
 };
-unsigned int       const   qcnh_dec_delay[]={
-    40,
-    60,
-    90,
-    140,
-    200,
+
+//-----------------------------------------------------------------------------;
+// 七彩霓虹（QCNH）
+//
+#define iQCNH_COLOR_NUM     7                                   // 赤橙黄绿青蓝紫
+#define iQCNH_COLOR_SPAN    256                                 // 相邻两色之间的插值细分
+#define iQCNH_RING_LEN      (iQCNH_COLOR_NUM * iQCNH_COLOR_SPAN)// 色环总长 1792
+#define iQCNH_LED_SPACING   (iQCNH_RING_LEN / iLED_MAX)         // 相邻灯相位差：整条灯带正好铺满一圈七彩
+
+// 七彩色环（R,G,B，满量程 iPWM_MAX），首尾相接循环插值
+static const unsigned char qcnh_color_tbl[iQCNH_COLOR_NUM][3] = {
+    {64,  0,  0},   // 赤
+    {64, 20,  0},   // 橙
+    {64, 56,  0},   // 黄
+    { 0, 64,  0},   // 绿
+    { 0, 64, 48},   // 青
+    { 0,  0, 64},   // 蓝
+    {40,  0, 64},   // 紫
 };
 
-// QCNH 行走色带：12 色等间隔、色相单调递增（无白、无重复）
-// 偏移 15° 避开纯红/绿/蓝，饱和度 0.7 使颜色为混合色
-static const unsigned char qcnh_hue12_tbl[12][3] = {
-    {64,30,19}, {64,53,19}, {53,64,19}, {30,64,19}, {19,64,30}, {19,64,53},
-    {19,53,64}, {19,30,64}, {30,19,64}, {53,19,64}, {64,19,53}, {64,19,30},
-};
+// 每节拍(15ms)相位步进，下标 = led_speed_lev（0 最快）
+// 一圈周期约：6.7s / 9.0s / 13.4s / 26.9s / 26.9s
+static const unsigned char qcnh_step_tbl[] = { 4, 3, 2, 1, 1 };
+#define iQCNH_STEP_NUM      (sizeof(qcnh_step_tbl) / sizeof(qcnh_step_tbl[0]))
 
-// 固定亮度轮廓：中间亮、两端稍暗，提供稳定的空间层次（不会逐拍翻转）
+// 固定亮度轮廓：中间亮、两端稍暗，提供稳定的空间层次
 static const unsigned char qcnh_layer_tbl[iLED_MAX] = { 36, 48, 58, 64, 64, 58, 48, 36 };
 
-#define iQCNH_HUE_NUM   12
-
-
 /******************************************************************************
-* 函数名称: led_mode_snake
-* 功能描述:
+* 函数名称: led_mode_qcnh_init
+* 功能描述: 七彩霓虹进入初始化（切换灯效时调用）
 * 输入参数: 无
 * 输出参数: 无
-* 说    明:
+******************************************************************************/
+void led_mode_qcnh_init(void)
+{
+    qcnh_phase = 0;
+}
+
+/******************************************************************************
+* 函数名称: led_mode_qcnh
+* 功能描述: 七彩霓虹：赤橙黄绿青蓝紫色环在灯带上连续平滑流动
+* 输入参数: 无
+* 输出参数: 无
+* 说    明: 每节拍调用一次；相位 8.8 定点，相邻两色线性插值，无跳变
 ******************************************************************************/
 void led_mode_qcnh(void)
 {
-    unsigned char i, k, light;
+    unsigned char  i, c, n, frac, light, step_idx;
+    unsigned short pos;
+    const unsigned char *a, *b;
 
-    delay_time_count++;
-    if(qcnh_first || (qcnh_dec_delay[led_speed_lev&0x07] <= delay_time_count))
-    {
-        qcnh_first = 0;
-        delay_time_count = 0;
+    step_idx = led_speed_lev;
+    if(iQCNH_STEP_NUM <= step_idx)
+        step_idx = iQCNH_STEP_NUM - 1;
 
-        if(++qcnh_phase >= iQCNH_HUE_NUM)
-            qcnh_phase = 0;
+    qcnh_phase += qcnh_step_tbl[step_idx];
+    if(iQCNH_RING_LEN <= qcnh_phase)
+        qcnh_phase -= iQCNH_RING_LEN;
 
-        for(i = 0; i<iLED_MAX; i++)
-        {
-            k = qcnh_phase + (iLED_MAX - i);        // 方向反向（配合灯珠反向接线）
-            if(iQCNH_HUE_NUM <= k)
-                k -= iQCNH_HUE_NUM;
-
-            qcnh_cur[i][0] = qcnh_hue12_tbl[k][0];
-            qcnh_cur[i][1] = qcnh_hue12_tbl[k][1];
-            qcnh_cur[i][2] = qcnh_hue12_tbl[k][2];
-        }
-    }
-
-    // 固定亮度轮廓形成层次，颜色在下面流动
     for(i = 0; i<iLED_MAX; i++)
     {
+        // 方向反向（配合灯珠反向接线）：颜色从低序号灯流向高序号灯
+        pos = qcnh_phase + (iLED_MAX - i) * iQCNH_LED_SPACING;
+        while(iQCNH_RING_LEN <= pos)
+            pos -= iQCNH_RING_LEN;
+
+        c    = pos / iQCNH_COLOR_SPAN;
+        frac = pos % iQCNH_COLOR_SPAN;
+        n    = (iQCNH_COLOR_NUM-1 <= c) ? 0 : (c + 1);
+        a    = qcnh_color_tbl[c];
+        b    = qcnh_color_tbl[n];
         light = qcnh_layer_tbl[i];
 
-        pwm_rgb_tbl[i][iR_INDEX] = (qcnh_cur[i][0] * light) >> 6;
-        pwm_rgb_tbl[i][iG_INDEX] = (qcnh_cur[i][1] * light) >> 6;
-        pwm_rgb_tbl[i][iB_INDEX] = (qcnh_cur[i][2] * light) >> 6;
+        // 先插值得到颜色，再乘亮度轮廓（>>6 对应满量程 64）
+        pwm_rgb_tbl[i][iR_INDEX] = ((((a[0] * (256 - frac)) + (b[0] * frac)) >> 8) * light) >> 6;
+        pwm_rgb_tbl[i][iG_INDEX] = ((((a[1] * (256 - frac)) + (b[1] * frac)) >> 8) * light) >> 6;
+        pwm_rgb_tbl[i][iB_INDEX] = ((((a[2] * (256 - frac)) + (b[2] * frac)) >> 8) * light) >> 6;
     }
 }
 
@@ -646,8 +662,8 @@ unsigned int       const   lhtw_dec_delay[]={
     32,
 };
 /******************************************************************************
-* 函数名称: led_mode_snake
-* 功能描述:
+* 函数名称: led_mode_lhtw
+* 功能描述: 来回拖尾
 * 输入参数: 无
 * 输出参数: 无
 * 说    明:
@@ -666,7 +682,7 @@ void led_mode_lhtw(void)
     {
         for(i=0; i<led_process_index; i++)
         {
-            rgb_enable = qcnh_en_tbl[i];
+            rgb_enable = lhtw_en_tbl[i];
 	        gtemp_j = i;
 	        rgb_w_max();
         }
@@ -678,7 +694,7 @@ void led_mode_lhtw(void)
     {
         for(i=led_process_index; i<iLED_MAX; i++)
         {
-            rgb_enable = qcnh_en_tbl[i];
+            rgb_enable = lhtw_en_tbl[i];
             pwm_rgb_tbl[i][iR_INDEX] = 0;
             pwm_rgb_tbl[i][iG_INDEX] = 0;
             pwm_rgb_tbl[i][iB_INDEX] = 0;

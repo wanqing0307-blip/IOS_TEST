@@ -198,6 +198,7 @@ extern void led_mode_star(void);
 extern void led_mode_sbzl(void);
 
 extern void led_mode_baoshan(void);
+extern void led_mode_qcnh_init(void);
 extern void led_mode_qcnh(void);
 extern void led_mode_lhtw(void);
 extern void led_mode_dxtw(void);
