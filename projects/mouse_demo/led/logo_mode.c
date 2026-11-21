@@ -520,79 +520,120 @@ static void led_mode_star_spawn(void)
         pwm_duty_array_1[j] = 1;
 }
 
+//-----------------------------------------------------------------------------;
+// 随波逐流
+//
+// 颜色：完整色环沿灯带流动，相邻灯相差 37.5°（8 颗灯覆盖约 300°），与原效果一致
+// 波浪：一条柔和的亮度涌浪（波长 = 8 颗灯）比颜色稍快地推过灯带，颜色随波而动
+//
+// 色环转一圈的时间(基准节拍 7.5ms 数)，下标 = 速度档：约 1.44s / 2.88s / 4.32s，与原速度一致
+static const unsigned short sbzl_cycle_tbl[] = { 192, 384, 576, 768, 960 };
+
+#define iSBZL_HUE_SPAN      (iHUE_NUM * 256)                // 色环相位（8.8 定点）
+#define iSBZL_HUE_OFFSET    (iSBZL_HUE_SPAN * 375 / 3600)   // 相邻灯 37.5°
+#define iSBZL_POS_MAX       1024                            // 涌浪一个波长的相位细分
+#define iSBZL_WAVE_NUM      3                               // 涌浪周期 = 色环周期 × 3/4（比颜色快）
+#define iSBZL_WAVE_DEN      4
+
+// 涌浪截面（半个波长，33 点，0~4096）：(0.55 + 0.45·(1+cos)/2)^2.2
+// 浪峰全亮，浪谷约 27%（不熄灭），起伏柔和
+static const unsigned short sbzl_wave_tbl[33] = {
+    4096, 4086, 4057, 4009, 3943, 3860, 3762, 3650, 3526, 3391, 3249,
+    3100, 2948, 2793, 2639, 2487, 2338, 2194, 2056, 1926, 1804, 1691,
+    1588, 1494, 1410, 1337, 1273, 1220, 1176, 1142, 1119, 1104, 1099,
+};
+
+static unsigned short           sbzl_hue_phase;             // 色环相位（基准节拍数，0 ~ 色环周期-1）
+static unsigned short           sbzl_wave_phase;            // 涌浪相位（基准节拍数，0 ~ 涌浪周期-1）
+
 /******************************************************************************
-* 函数名称: led_mode_snake
-* 功能描述:
+* 函数名称: led_mode_sbzl_init
+* 功能描述: 随波逐流进入初始化（切换灯效时调用）
+******************************************************************************/
+void led_mode_sbzl_init(void)
+{
+    sbzl_hue_phase = 0;
+    sbzl_wave_phase = 0;
+}
+
+// x: 距浪峰的相位 0~1023（循环）-> 亮度 1099~4096
+static unsigned short sbzl_wave(unsigned short x)
+{
+    unsigned char  idx, frac;
+    unsigned short a;
+
+    if(iSBZL_POS_MAX/2 < x)
+        x = iSBZL_POS_MAX - x;                      // 对称：只用半个波长的表
+    x <<= 1;                                        // 0~1024
+    if(1024 <= x)
+        return sbzl_wave_tbl[32];
+
+    idx  = x >> 5;
+    frac = x & 0x1F;
+    a    = sbzl_wave_tbl[idx];
+    return a - (((a - sbzl_wave_tbl[idx+1]) * frac) >> 5);
+}
+
+/******************************************************************************
+* 函数名称: led_mode_sbzl
+* 功能描述: 随波逐流：色环沿灯带流动，柔和涌浪推着颜色前进
 * 输入参数: 无
 * 输出参数: 无
-* 说    明:
+* 说    明: 按 RTC 时间推进相位，颜色与涌浪均向高序号流动；
+*           七彩时为色环，否则按 led_rgb_index 所选单色随波起伏（与常亮一致）
 ******************************************************************************/
-static void led_mode_sbzl_step(void)
+void led_mode_sbzl(void)
 {
+    unsigned char  i, n, h0, h1, hf, en;
+    unsigned short cycle, wave_cycle, hue, wpos, x;
+    uint32_t       lum;
 
-    for(gtemp_x=0; gtemp_x<iLED_MAX; gtemp_x++)
-    {
-        if(0 == pwm_duty_array_3[gtemp_x])
-        {
-            pwm_duty_array_0[gtemp_x]--;
-            pwm_duty_array_1[gtemp_x]=iPWM_MAX-pwm_duty_array_0[gtemp_x];
-            if(0 == pwm_duty_array_0[gtemp_x])
-                pwm_duty_array_3[gtemp_x]++;
-        }
-        else if(1 == pwm_duty_array_3[gtemp_x])
-        {
-            pwm_duty_array_1[gtemp_x]--;
-            pwm_duty_array_2[gtemp_x]=iPWM_MAX-pwm_duty_array_1[gtemp_x];
-            if(0 == pwm_duty_array_1[gtemp_x])
-                pwm_duty_array_3[gtemp_x]++;
-        }
-        else //if(2 == pwm_duty_array_3[gtemp_x])
-        {
-            pwm_duty_array_2[gtemp_x]--;
-            pwm_duty_array_0[gtemp_x]=iPWM_MAX-pwm_duty_array_2[gtemp_x];
-            if(0 == pwm_duty_array_2[gtemp_x])
-                pwm_duty_array_3[gtemp_x]=0;
-        }
-    }
+    n = led_timer_take(&led_timer_main, iLED_BASE_TICK, iLED_CATCHUP_MAX);
+    if(0 == n)
+        return;
 
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-    rgb_enable = iPWM_RGB;
+    cycle      = sbzl_cycle_tbl[led_speed_index()];
+    wave_cycle = (cycle * iSBZL_WAVE_NUM) / iSBZL_WAVE_DEN;
 
-    if(!bled_run_dir)
+    sbzl_hue_phase  += n;
+    sbzl_wave_phase += n;
+    while(cycle <= sbzl_hue_phase)                  // 也兼容运行中切换到更短周期
+        sbzl_hue_phase -= cycle;
+    while(wave_cycle <= sbzl_wave_phase)
+        sbzl_wave_phase -= wave_cycle;
+
+    hue  = ((uint32_t)sbzl_hue_phase  * iSBZL_HUE_SPAN) / cycle;
+    wpos = ((uint32_t)sbzl_wave_phase * iSBZL_POS_MAX)  / wave_cycle;
+    en   = rgb_en_tbl[led_rgb_index&0x07];
+
+    for(i=0; i<iLED_MAX; i++)
     {
-        for(gtemp_x = 0; gtemp_x<iLED_MAX; gtemp_x++)
+        unsigned short r, g, b, h;
+
+        // 灯 i 显示的是灯 i-1 稍早的状态 -> 颜色与涌浪都向高序号流动
+        x   = (wpos + iSBZL_POS_MAX - i * (iSBZL_POS_MAX / iLED_MAX)) % iSBZL_POS_MAX;
+        lum = sbzl_wave(x);
+
+        if(iRGB_QICAI == (led_rgb_index&0x07))
         {
-            if(rgb_enable&iPWM_R)
-               pwm_rgb_tbl[gtemp_x][iR_INDEX] = pwm_duty_array_0[gtemp_x];
-           else
-               pwm_rgb_tbl[gtemp_x][iR_INDEX] = 0;
-            if(rgb_enable&iPWM_G)
-               pwm_rgb_tbl[gtemp_x][iG_INDEX] = pwm_duty_array_1[gtemp_x];
-           else
-               pwm_rgb_tbl[gtemp_x][iG_INDEX] = 0;
-            if(rgb_enable&iPWM_B)
-               pwm_rgb_tbl[gtemp_x][iB_INDEX] = pwm_duty_array_2[gtemp_x];
-           else
-               pwm_rgb_tbl[gtemp_x][iB_INDEX] = 0;
+            h  = (hue + iSBZL_HUE_SPAN - (i * iSBZL_HUE_OFFSET) % iSBZL_HUE_SPAN) % iSBZL_HUE_SPAN;
+            h0 = h >> 8;
+            hf = h & 0xFF;
+            h1 = (iHUE_NUM-1 <= h0) ? 0 : (h0 + 1);
+            r  = (hue_rgb_tbl[h0][0] * (256 - hf) + hue_rgb_tbl[h1][0] * hf) >> 8;
+            g  = (hue_rgb_tbl[h0][1] * (256 - hf) + hue_rgb_tbl[h1][1] * hf) >> 8;
+            b  = (hue_rgb_tbl[h0][2] * (256 - hf) + hue_rgb_tbl[h1][2] * hf) >> 8;
         }
-    }
-    else
-    {
-        for(gtemp_x = 0; gtemp_x<iLED_MAX; gtemp_x++)
+        else
         {
-            if(rgb_enable&iPWM_R)
-                pwm_rgb_tbl[gtemp_x][iR_INDEX] = pwm_duty_array_0[iLED_MAX-1-gtemp_x];
-            else
-                pwm_rgb_tbl[gtemp_x][iR_INDEX] = 0;
-            if(rgb_enable&iPWM_G)
-                pwm_rgb_tbl[gtemp_x][iG_INDEX] = pwm_duty_array_1[iLED_MAX-1-gtemp_x];
-            else
-                pwm_rgb_tbl[gtemp_x][iG_INDEX] = 0;
-            if(rgb_enable&iPWM_B)
-                pwm_rgb_tbl[gtemp_x][iB_INDEX] = pwm_duty_array_2[iLED_MAX-1-gtemp_x];
-            else
-                pwm_rgb_tbl[gtemp_x][iB_INDEX] = 0;    
+            r = (en & iPWM_R) ? iPWM_MAX : 0;
+            g = (en & iPWM_G) ? iPWM_MAX : 0;
+            b = (en & iPWM_B) ? iPWM_MAX : 0;
         }
+
+        pwm_rgb_tbl[i][iR_INDEX] = (r * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][iG_INDEX] = (g * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][iB_INDEX] = (b * lum + 2048) >> 12;
     }
 }
 
@@ -1064,13 +1105,6 @@ void led_mode_nhjb(void)
     uint8_t n = led_speed_steps();
     while(n--)
         led_mode_nhjb_step();
-}
-
-void led_mode_sbzl(void)
-{
-    uint8_t n = led_speed_steps();
-    while(n--)
-        led_mode_sbzl_step();
 }
 
 void led_mode_dxtw(void)
