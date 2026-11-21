@@ -157,13 +157,13 @@ __RAM_CODE void drv_pmu_set_low_power_mode(pmu_lpm_t lpm)
                 OM_PMU->LPMS = (lpms & (~PMU_LPMS_LOW_PWR_MODE_EN_MASK)) | (uint32_t)lpm;
                 if (lpm == PMU_LPM_DEEP_SLEEP) {
                     OM_PMU->PAD_PU_CTRL = 0x00AAAA00;
-                    OM_PMU->PAD_PU_CTRL_1 = 0x02000005;
-                    OM_PMU->PAD_PD_CTRL = 0x6000000C;
-                    OM_PMU->PAD_BUF_EN &= ~(1<<MODE_BLE_PIN)|(1<<MODE_24G_PIN);
+                    OM_PMU->PAD_PU_CTRL_1 = 0x00000002;  // 仅 CHR_OK 上拉10b；C19/C17 输出低不能带上拉，USB_5V/NUM/CAPS 无上下拉
+                    OM_PMU->PAD_PD_CTRL = 0x0000000C;  // 仅 USB D-/D+ 下拉；P35(USB_5V)已有外部下拉，P36(C17)走上拉10b
+                    OM_PMU->PAD_BUF_EN &= ~((1<<MODE_BLE_PIN)|(1<<MODE_24G_PIN));
 
-                    OM_GPIO0->DATAOUT = 0xF803FFF2;
-                    OM_GPIO0->OUTENSET = 0x07FC0003;
-                    OM_GPIO0->OUTENCLR = ~0x07FC0003;
+                    OM_GPIO0->DATAOUT = 0xA819FFF2;     // C19(P2.1)/C17(P3.6) 锁存低，可参与唤醒
+                    OM_GPIO0->OUTENSET = 0x57E60003;    // 输出低：C0~C4、C19、C17、KEY_EX、NUM/CAPS、ARGB
+                    OM_GPIO0->OUTENCLR = ~0x57E60003;   // 其余（行、模式、USB_5V 等）为输入
                     delayus(3000);
 
                     OM_RCC->CLKGATE = 0x0742;

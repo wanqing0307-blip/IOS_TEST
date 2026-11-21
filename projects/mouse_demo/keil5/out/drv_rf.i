@@ -2903,7 +2903,7 @@ void drv_dynamic_load_app(app_t *app);
 # 59 "../../../hal/driver/include\\om_driver.h" 2
 # 25 "../../../hal/driver/common/drv_rf.c" 2
 # 1 "../main\\main.h" 1
-# 237 "../main\\main.h"
+# 236 "../main\\main.h"
 typedef enum {
     iDEVICE_TYPE_BLE = 1U,
     iDEVICE_TYPE_BT0 = 0U,
@@ -2974,7 +2974,7 @@ extern uint8_t m_data_flag;
 
 
 extern uint8_t hint_led_status;
-# 316 "../main\\main.h"
+# 315 "../main\\main.h"
 extern uint8_t kb_led_status;
 
 
@@ -2988,7 +2988,7 @@ extern uint16_t mouse_y;
 extern uint8_t mouse_data_z;
 
 extern unsigned char std_key[];
-# 340 "../main\\main.h"
+# 339 "../main\\main.h"
 extern uint8_t mmk_data_l;
 extern uint8_t mmk_data_h;
 extern uint8_t kb_bd_addr[];

@@ -17,7 +17,6 @@
 //-----------------------------------------------------------------------------;
 // 配置区
 //
-#define iLED_SNAKE              (8)
 #define iLED_DXTW               16
 #define iLED_TXTW               11
 
@@ -39,6 +38,7 @@
 #define iPWM_W                  0x0F
 
 #define iPWM_MAX                64
+#define iLED_FADE_STEP          4                   // 灯效切换过渡步长
 #define iPWM_SNAKE_MAX          64
 #define iRGB_QICAI              7
 
@@ -50,7 +50,8 @@
 // 配置区
 //
 #define iLED_NUM_MAX         	(8)
-#define iLED_MAX         	    (8)
+#define iLED_MAX         	    (8)                 // 灯效灯数量（不含模式指示灯）
+#define iLED_HW_MAX             (9)                 // 实际灯珠数：1 个模式指示 + 8 个灯效灯
 #define iLED_HALF        	    (4)
 
 enum led_level
@@ -77,22 +78,20 @@ typedef enum {
     iMODE_LED_OFF       =0,
     iMODE_LED_ON        =1,                     // 常亮
     iMODE_LED_BREATH    =2,                     // 呼吸
-    iMODE_LED_SNAKE     =3,                     // 
-    iMODE_LED_NHJB      =4,                     // 霓虹渐变
-    iMODE_LED_LG_L_R    =5,                     // 流光
-    iMODE_LED_STAR      =6,                     // 繁星点点
-    iMODE_LED_SBZL      =7,                     // 随波逐流
-    iMODE_LED_BS        =8,                     // 爆闪
-    iMODE_LED_QCNH      =9,                     // 七彩霓虹
-    iMODE_LED_LHTW      =10,                    // 来回拖尾
-    iMODE_LED_DXTW      =11,                    // 单向拖尾
-    iMODE_LED_SXTW      =12,                    // 双向拖尾
-    iMODE_LED_TXTW      =13,                    // 对向拖尾
-    iMODE_LED_FXTW      =14,                    // 反向拖尾
-    iMODE_LED_JG        =15,                    // 激光
+    iMODE_LED_NHJB      =3,                     // 霓虹渐变
+    iMODE_LED_LG_L_R    =4,                     // 流光
+    iMODE_LED_STAR      =5,                     // 繁星点点
+    iMODE_LED_SBZL      =6,                     // 随波逐流
+    iMODE_LED_BS        =7,                     // 爆闪
+    iMODE_LED_QCNH      =8,                     // 七彩霓虹
+    iMODE_LED_LHTW      =9,                     // 来回拖尾
+    iMODE_LED_DXTW      =10,                    // 单向拖尾
+    iMODE_LED_SXTW      =11,                    // 双向拖尾
+    iMODE_LED_TXTW      =12,                    // 对向拖尾
+    iMODE_LED_FXTW      =13,                    // 反向拖尾
 
-    iMODE_LED_MAX       =14,
-    iMODE_LED_INVALID   =15,
+    iMODE_LED_MAX       =13,
+    iMODE_LED_INVALID   =14,
     iLOGO_INVALID   = 0x0F,
 } logo_mode_t;
 
@@ -154,8 +153,10 @@ extern uint16_t                 delay_time_count;
 extern uint8_t                  rgb_index;
 extern uint8_t                  led_process_index;
 extern uint8_t                  hint_time_count;
+extern uint8_t                  led_fade;
 
 extern uint8_t                  pwm_rgb_tbl[iLED_MAX][3];
+extern uint8_t                  mode_led_rgb[3];
 
 extern uint8_t                  pwm_duty_array_0[];
 extern uint8_t                  pwm_duty_array_1[];
@@ -191,7 +192,6 @@ extern void rgb_w_max(void);
 
 extern void led_mode_on(void);
 extern void led_mode_breath(void);
-extern void led_mode_snake(void);
 extern void led_mode_nhjb(void);
 extern void led_mode_liuguang(void);
 extern void led_mode_star(void);

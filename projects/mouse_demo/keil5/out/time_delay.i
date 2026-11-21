@@ -2256,7 +2256,7 @@ void drv_dynamic_load_app(app_t *app);
 # 59 "../../../hal/driver/include\\om_driver.h" 2
 # 11 "../periph/time_delay.c" 2
 # 1 "../main\\main.h" 1
-# 237 "../main\\main.h"
+# 236 "../main\\main.h"
 typedef enum {
     iDEVICE_TYPE_BLE = 1U,
     iDEVICE_TYPE_BT0 = 0U,
@@ -2327,7 +2327,7 @@ extern uint8_t m_data_flag;
 
 
 extern uint8_t hint_led_status;
-# 316 "../main\\main.h"
+# 315 "../main\\main.h"
 extern uint8_t kb_led_status;
 
 
@@ -2341,7 +2341,7 @@ extern uint16_t mouse_y;
 extern uint8_t mouse_data_z;
 
 extern unsigned char std_key[];
-# 340 "../main\\main.h"
+# 339 "../main\\main.h"
 extern uint8_t mmk_data_l;
 extern uint8_t mmk_data_h;
 extern uint8_t kb_bd_addr[];
@@ -2354,6 +2354,328 @@ extern uint32_t const ble_sleep_2_time_tbl[];
 
 extern void mouse_periph_wakeup_enable(uint8_t mask);
 # 12 "../periph/time_delay.c" 2
+# 1 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 1 3
+# 53 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+    typedef unsigned int size_t;
+# 68 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+    typedef __builtin_va_list __va_list;
+# 87 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+typedef struct __fpos_t_struct {
+    unsigned long long int __pos;
+
+
+
+
+
+    struct {
+        unsigned int __state1, __state2;
+    } __mbstate;
+} fpos_t;
+# 108 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+typedef struct __FILE FILE;
+# 119 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+struct __FILE {
+    union {
+        long __FILE_alignment;
+
+
+
+        char __FILE_size[84];
+
+    } __FILE_opaque;
+};
+# 138 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern FILE __stdin, __stdout, __stderr;
+extern FILE *__aeabi_stdin, *__aeabi_stdout, *__aeabi_stderr;
+# 224 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int remove(const char * ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int rename(const char * , const char * ) __attribute__((__nonnull__(1,2)));
+# 243 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) FILE *tmpfile(void);
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) char *tmpnam(char * );
+# 265 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fclose(FILE * ) __attribute__((__nonnull__(1)));
+# 275 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fflush(FILE * );
+# 285 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) FILE *fopen(const char * __restrict ,
+                           const char * __restrict ) __attribute__((__nonnull__(1,2)));
+# 329 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) FILE *freopen(const char * __restrict ,
+                    const char * __restrict ,
+                    FILE * __restrict ) __attribute__((__nonnull__(2,3)));
+# 342 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) void setbuf(FILE * __restrict ,
+                    char * __restrict ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int setvbuf(FILE * __restrict ,
+                   char * __restrict ,
+                   int , size_t ) __attribute__((__nonnull__(1)));
+# 370 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int fprintf(FILE * __restrict ,
+                    const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+# 393 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int _fprintf(FILE * __restrict ,
+                     const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int printf(const char * __restrict , ...) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int _printf(const char * __restrict , ...) __attribute__((__nonnull__(1)));
+
+
+
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int sprintf(char * __restrict , const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int _sprintf(char * __restrict , const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int __ARM_snprintf(char * __restrict , size_t ,
+                     const char * __restrict , ...) __attribute__((__nonnull__(3)));
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int snprintf(char * __restrict , size_t ,
+                     const char * __restrict , ...) __attribute__((__nonnull__(3)));
+# 460 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int _snprintf(char * __restrict , size_t ,
+                      const char * __restrict , ...) __attribute__((__nonnull__(3)));
+
+
+
+
+
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int fscanf(FILE * __restrict ,
+                    const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+# 503 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int _fscanf(FILE * __restrict ,
+                     const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int scanf(const char * __restrict , ...) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+
+
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int _scanf(const char * __restrict , ...) __attribute__((__nonnull__(1)));
+
+
+
+
+
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int sscanf(const char * __restrict ,
+                    const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+# 541 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int _sscanf(const char * __restrict ,
+                     const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int vfscanf(FILE * __restrict , const char * __restrict , __va_list) __attribute__((__nonnull__(1,2)));
+extern __attribute__((__nothrow__)) int vscanf(const char * __restrict , __va_list) __attribute__((__nonnull__(1)));
+extern __attribute__((__nothrow__)) int vsscanf(const char * __restrict , const char * __restrict , __va_list) __attribute__((__nonnull__(1,2)));
+
+extern __attribute__((__nothrow__)) int _vfscanf(FILE * __restrict , const char * __restrict , __va_list) __attribute__((__nonnull__(1,2)));
+extern __attribute__((__nothrow__)) int _vscanf(const char * __restrict , __va_list) __attribute__((__nonnull__(1)));
+extern __attribute__((__nothrow__)) int _vsscanf(const char * __restrict , const char * __restrict , __va_list) __attribute__((__nonnull__(1,2)));
+extern __attribute__((__nothrow__)) int __ARM_vsscanf(const char * __restrict , const char * __restrict , __va_list) __attribute__((__nonnull__(1,2)));
+
+extern __attribute__((__nothrow__)) int vprintf(const char * __restrict , __va_list ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int _vprintf(const char * __restrict , __va_list ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+extern __attribute__((__nothrow__)) int vfprintf(FILE * __restrict ,
+                    const char * __restrict , __va_list ) __attribute__((__nonnull__(1,2)));
+# 584 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int vsprintf(char * __restrict ,
+                     const char * __restrict , __va_list ) __attribute__((__nonnull__(1,2)));
+# 594 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int __ARM_vsnprintf(char * __restrict , size_t ,
+                     const char * __restrict , __va_list ) __attribute__((__nonnull__(3)));
+
+extern __attribute__((__nothrow__)) int vsnprintf(char * __restrict , size_t ,
+                     const char * __restrict , __va_list ) __attribute__((__nonnull__(3)));
+# 609 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int _vsprintf(char * __restrict ,
+                      const char * __restrict , __va_list ) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+extern __attribute__((__nothrow__)) int _vfprintf(FILE * __restrict ,
+                     const char * __restrict , __va_list ) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+extern __attribute__((__nothrow__)) int _vsnprintf(char * __restrict , size_t ,
+                      const char * __restrict , __va_list ) __attribute__((__nonnull__(3)));
+# 635 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int __ARM_asprintf(char ** , const char * __restrict , ...) __attribute__((__nonnull__(2)));
+extern __attribute__((__nothrow__)) int __ARM_vasprintf(char ** , const char * __restrict , __va_list ) __attribute__((__nonnull__(2)));
+# 649 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fgetc(FILE * ) __attribute__((__nonnull__(1)));
+# 659 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) char *fgets(char * __restrict , int ,
+                    FILE * __restrict ) __attribute__((__nonnull__(1,3)));
+# 673 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fputc(int , FILE * ) __attribute__((__nonnull__(2)));
+# 683 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fputs(const char * __restrict , FILE * __restrict ) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int getc(FILE * ) __attribute__((__nonnull__(1)));
+# 704 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+    extern __attribute__((__nothrow__)) int (getchar)(void);
+# 713 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) char *gets(char * ) __attribute__((__nonnull__(1)));
+# 725 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int putc(int , FILE * ) __attribute__((__nonnull__(2)));
+# 737 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+    extern __attribute__((__nothrow__)) int (putchar)(int );
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int puts(const char * ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int ungetc(int , FILE * ) __attribute__((__nonnull__(2)));
+# 778 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) size_t fread(void * __restrict ,
+                    size_t , size_t , FILE * __restrict ) __attribute__((__nonnull__(1,4)));
+# 794 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) size_t __fread_bytes_avail(void * __restrict ,
+                    size_t , FILE * __restrict ) __attribute__((__nonnull__(1,3)));
+# 810 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) size_t fwrite(const void * __restrict ,
+                    size_t , size_t , FILE * __restrict ) __attribute__((__nonnull__(1,4)));
+# 822 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fgetpos(FILE * __restrict , fpos_t * __restrict ) __attribute__((__nonnull__(1,2)));
+# 833 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fseek(FILE * , long int , int ) __attribute__((__nonnull__(1)));
+# 850 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fsetpos(FILE * __restrict , const fpos_t * __restrict ) __attribute__((__nonnull__(1,2)));
+# 863 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) long int ftell(FILE * ) __attribute__((__nonnull__(1)));
+# 877 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) void rewind(FILE * ) __attribute__((__nonnull__(1)));
+# 886 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) void clearerr(FILE * ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int feof(FILE * ) __attribute__((__nonnull__(1)));
+
+
+
+
+extern __attribute__((__nothrow__)) int ferror(FILE * ) __attribute__((__nonnull__(1)));
+
+
+
+
+extern __attribute__((__nothrow__)) void perror(const char * );
+# 917 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int _fisatty(FILE * ) __attribute__((__nonnull__(1)));
+
+
+
+extern __attribute__((__nothrow__)) void __use_no_semihosting_swi(void);
+extern __attribute__((__nothrow__)) void __use_no_semihosting(void);
+# 13 "../periph/time_delay.c" 2
 # 24 "../periph/time_delay.c"
 __attribute((used, section("RAM_CODE"), noinline)) void delayus(volatile uint32_t time)
 {
@@ -2367,59 +2689,84 @@ __attribute((used, section("RAM_CODE"), noinline)) void delayus(volatile uint32_
     }
     while(time);
 }
-# 46 "../periph/time_delay.c"
+
+__attribute((used, section("RAM_CODE"), noinline)) void uart_delay(void)
+{
+    uint8_t time= 65;
+
+    if(iDEVICE_TYPE_BT2 >= device_type)
+        time= 14;
+    do
+    {
+        __builtin_arm_nop();
+    }
+    while(--time);
+}
+# 59 "../periph/time_delay.c"
 __attribute((used, section("RAM_CODE"), noinline)) void uart_tx(uint8_t data)
 {
+do { uint32_t _primask = __get_PRIMASK(); __disable_irq();;
 
-    ((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1<<(2*8+2));
 
-    ((OM_GPIO_Type *) 0x43000000)->DATAOUT |= (1<<(2*8+2));
-    __builtin_arm_nop();__builtin_arm_nop();
-    __builtin_arm_nop();__builtin_arm_nop();
-    ((OM_GPIO_Type *) 0x43000000)->DATAOUT &= ~(1<<(2*8+2));
+
+    ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+0));
+    uart_delay();
     if(data&(1<<0))
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT |= (1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
     else
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT &= ~(1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+0));
+    uart_delay();
 
     if(data&(1<<1))
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT |= (1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
     else
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT &= ~(1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+0));
+    uart_delay();
 
     if(data&(1<<2))
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT |= (1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
     else
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT &= ~(1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+0));
+    uart_delay();
 
     if(data&(1<<3))
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT |= (1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
     else
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT &= ~(1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+0));
+    uart_delay();
 
     if(data&(1<<4))
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT |= (1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
     else
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT &= ~(1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+0));
+    uart_delay();
 
     if(data&(1<<5))
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT |= (1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
     else
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT &= ~(1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+0));
+    uart_delay();
 
     if(data&(1<<6))
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT |= (1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
     else
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT &= ~(1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+0));
+    uart_delay();
 
     if(data&(1<<7))
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT |= (1<<(2*8+2));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
     else
-        ((OM_GPIO_Type *) 0x43000000)->DATAOUT &= ~(1<<(2*8+2));
-    __builtin_arm_nop();__builtin_arm_nop();__builtin_arm_nop();__builtin_arm_nop();
-    __builtin_arm_nop();__builtin_arm_nop();__builtin_arm_nop();__builtin_arm_nop();
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+0));
+    uart_delay();
 
-    ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(2*8+2));
-    ((OM_GPIO_Type *) 0x43000000)->OUTENCLR = (1<<(2*8+2));
+    ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
 
+    if (!_primask) { __enable_irq(); } } while(0);
+    uart_delay();
+}
+
+int fputc(int ch, FILE *f)
+{
+    uart_tx((uint8_t)ch);
+    return ch;
 }

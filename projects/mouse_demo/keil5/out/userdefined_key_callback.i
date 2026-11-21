@@ -2376,7 +2376,7 @@ void drv_dynamic_load_app(app_t *app);
 # 14 "../periph/userdefined_key_callback.c" 2
 
 # 1 "../main\\main.h" 1
-# 237 "../main\\main.h"
+# 236 "../main\\main.h"
 typedef enum {
     iDEVICE_TYPE_BLE = 1U,
     iDEVICE_TYPE_BT0 = 0U,
@@ -2447,7 +2447,7 @@ extern uint8_t m_data_flag;
 
 
 extern uint8_t hint_led_status;
-# 316 "../main\\main.h"
+# 315 "../main\\main.h"
 extern uint8_t kb_led_status;
 
 
@@ -2461,7 +2461,7 @@ extern uint16_t mouse_y;
 extern uint8_t mouse_data_z;
 
 extern unsigned char std_key[];
-# 340 "../main\\main.h"
+# 339 "../main\\main.h"
 extern uint8_t mmk_data_l;
 extern uint8_t mmk_data_h;
 extern uint8_t kb_bd_addr[];
@@ -2801,7 +2801,7 @@ extern __attribute__((__nothrow__)) void __use_no_semihosting(void);
 
 
 # 1 "../periph\\matrix_key.h" 1
-# 77 "../periph\\matrix_key.h"
+# 79 "../periph\\matrix_key.h"
 extern unsigned char const flash_key_win_tbl[];
 
 
@@ -2813,18 +2813,18 @@ extern uint8_t const key_delay_tbl[4];
 
 
 extern uint16_t key_ctrl;
-# 105 "../periph\\matrix_key.h"
+# 107 "../periph\\matrix_key.h"
 extern uint16_t key_ctrl_ex;
-# 119 "../periph\\matrix_key.h"
+# 122 "../periph\\matrix_key.h"
 extern uint8_t key_temp_flag;
 
 
 
 
 extern uint16_t special_key;
-# 145 "../periph\\matrix_key.h"
+# 148 "../periph\\matrix_key.h"
 extern uint16_t special_key_bak;
-# 165 "../periph\\matrix_key.h"
+# 168 "../periph\\matrix_key.h"
 extern uint8_t device_key;
 
 
@@ -2860,11 +2860,12 @@ extern unsigned char decode_index;
 extern unsigned char multi_data_tmp_l;
 extern unsigned char multi_data_tmp_h;
 extern unsigned char tmp_std_key[22];
-# 210 "../periph\\matrix_key.h"
+# 213 "../periph\\matrix_key.h"
 extern unsigned char ctrl_key_value;
 extern unsigned char std_key_value;
 extern unsigned char com_ctrl_index;
 extern uint8_t desk_mac_index;
+extern uint8_t mac_shot_index;
 
 extern unsigned char const matrixkey_win_tbl[];
 extern unsigned char const matrixkey_win_fn_tbl[];
@@ -2878,7 +2879,7 @@ extern void scan_mode_swtich(uint8_t type);
 extern void mode_swtich_init(void);
 # 24 "../../../mode_24g\\main_24g.h" 2
 # 1 "../led\\led.h" 1
-# 56 "../led\\led.h"
+# 57 "../led\\led.h"
 enum led_level
 {
     iLED_LEV_MIN=0,
@@ -2903,25 +2904,23 @@ typedef enum {
     iMODE_LED_OFF =0,
     iMODE_LED_ON =1,
     iMODE_LED_BREATH =2,
-    iMODE_LED_SNAKE =3,
-    iMODE_LED_NHJB =4,
-    iMODE_LED_LG_L_R =5,
-    iMODE_LED_STAR =6,
-    iMODE_LED_SBZL =7,
-    iMODE_LED_BS =8,
-    iMODE_LED_QCNH =9,
-    iMODE_LED_LHTW =10,
-    iMODE_LED_DXTW =11,
-    iMODE_LED_SXTW =12,
-    iMODE_LED_TXTW =13,
-    iMODE_LED_FXTW =14,
-    iMODE_LED_JG =15,
+    iMODE_LED_NHJB =3,
+    iMODE_LED_LG_L_R =4,
+    iMODE_LED_STAR =5,
+    iMODE_LED_SBZL =6,
+    iMODE_LED_BS =7,
+    iMODE_LED_QCNH =8,
+    iMODE_LED_LHTW =9,
+    iMODE_LED_DXTW =10,
+    iMODE_LED_SXTW =11,
+    iMODE_LED_TXTW =12,
+    iMODE_LED_FXTW =13,
 
-    iMODE_LED_MAX =14,
-    iMODE_LED_INVALID =15,
+    iMODE_LED_MAX =13,
+    iMODE_LED_INVALID =14,
     iLOGO_INVALID = 0x0F,
 } logo_mode_t;
-# 118 "../led\\led.h"
+# 117 "../led\\led.h"
 extern _Bool blogo_status;
 extern _Bool bled_bright_en;
 extern _Bool bback_led_status;
@@ -2961,8 +2960,10 @@ extern uint16_t delay_time_count;
 extern uint8_t rgb_index;
 extern uint8_t led_process_index;
 extern uint8_t hint_time_count;
+extern uint8_t led_fade;
 
 extern uint8_t pwm_rgb_tbl[(8)][3];
+extern uint8_t mode_led_rgb[3];
 
 extern uint8_t pwm_duty_array_0[];
 extern uint8_t pwm_duty_array_1[];
@@ -2998,7 +2999,6 @@ extern void rgb_w_max(void);
 
 extern void led_mode_on(void);
 extern void led_mode_breath(void);
-extern void led_mode_snake(void);
 extern void led_mode_nhjb(void);
 extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
@@ -3080,7 +3080,7 @@ extern _Bool flash_read(unsigned int addr, unsigned int length);
 extern _Bool flash_erase(unsigned char bank);
 # 32 "../../../mode_24g\\main_24g.h" 2
 # 1 "../flash\\flash_process.h" 1
-# 152 "../flash\\flash_process.h"
+# 154 "../flash\\flash_process.h"
 enum key_mod
 {
     iKEY_MODE_MIN=0,
@@ -3125,7 +3125,7 @@ extern uint8_t sys_mode;
 extern uint8_t mouse_lod_set;
 extern uint8_t key_delay_set;
 extern uint16_t adv_cfg_value;
-# 204 "../flash\\flash_process.h"
+# 206 "../flash\\flash_process.h"
 extern uint8_t device_status_base;
 extern uint8_t sys_cfg_base;
 
@@ -3245,38 +3245,42 @@ uint32_t press_bt1_time_count;
 uint32_t press_bt2_time_count;
 uint32_t press_24g_time_count;
 uint32_t default_time_count;
-# 45 "../periph/userdefined_key_callback.c"
+
+static uint8_t mac_siri_state;
+static uint32_t mac_siri_time;
+static uint8_t mac_shot_done;
+# 49 "../periph/userdefined_key_callback.c"
 extern _Bool flash_read(unsigned int addr, unsigned int length);
 extern void laod_key_cfg(void);
-# 55 "../periph/userdefined_key_callback.c"
+# 59 "../periph/userdefined_key_callback.c"
 __attribute((used, section("RAM_CODE"), noinline)) void fn_decode_callback(unsigned char *key_index)
 {
 
 }
-# 67 "../periph/userdefined_key_callback.c"
+# 71 "../periph/userdefined_key_callback.c"
 __attribute((used, section("RAM_CODE"), noinline)) void std_decode_callback(unsigned char *key_index)
 {
     if(key_ctrl&(1<<14))
     {
-        if(((8*(18-3)+2)*2) == *key_index)
-            *key_index = ((8*(10-3) + 0)*2);
-        else if(((8*(6-3)+4)*2) == *key_index)
-            *key_index = ((8*(8-3) + 0)*2);
-        else if(((8*(18-3)+3)*2) == *key_index)
-            *key_index = ((8*(6-3) + 0)*2);
-        else if(((8*(16-3)+7)*2) == *key_index)
-            *key_index = ((8*(9-3) + 0)*2);
-        else if(((8*(10-3) + 0)*2) == *key_index)
-            *key_index = ((8*(18-3)+2)*2);
-        else if(((8*(8-3) + 0)*2) == *key_index)
-            *key_index = ((8*(6-3)+4)*2);
-        else if(((8*(6-3) + 0)*2) == *key_index)
-            *key_index = ((8*(18-3)+3)*2);
-        else if(((8*(9-3) + 0)*2) == *key_index)
-            *key_index = ((8*(16-3)+7)*2);
+        if((122*2) == *key_index)
+            *key_index = (56*2);
+        else if((124*2) == *key_index)
+            *key_index = (40*2);
+        else if((123*2) == *key_index)
+            *key_index = (24*2);
+        else if((127*2) == *key_index)
+            *key_index = (48*2);
+        else if((56*2) == *key_index)
+            *key_index = (122*2);
+        else if((40*2) == *key_index)
+            *key_index = (124*2);
+        else if((24*2) == *key_index)
+            *key_index = (123*2);
+        else if((48*2) == *key_index)
+            *key_index = (127*2);
     }
 }
-# 97 "../periph/userdefined_key_callback.c"
+# 101 "../periph/userdefined_key_callback.c"
 __attribute((used, section("RAM_CODE"), noinline)) void key_decode_pre_callback(void)
 {
     if((key_ctrl&(1<<6)) && (key_ctrl&(1<<10)))
@@ -3286,12 +3290,12 @@ __attribute((used, section("RAM_CODE"), noinline)) void key_decode_pre_callback(
             key_ctrl &= ~(1<<13);
     }
 }
-# 114 "../periph/userdefined_key_callback.c"
+# 118 "../periph/userdefined_key_callback.c"
 void __attribute__((noinline)) key_decode_cmd_0x00(void)
 {
 
 }
-# 126 "../periph/userdefined_key_callback.c"
+# 130 "../periph/userdefined_key_callback.c"
 void __attribute__((noinline)) key_decode_cmd_0x10(void)
 {
     if(iDEVICE_TYPE_USB != device_type)
@@ -3340,7 +3344,7 @@ void __attribute__((noinline)) key_decode_cmd_0x10(void)
                 special_key_bak |= (1<<7);
                 led_cur_mode++;
                 if(iMODE_LED_MAX<led_cur_mode)
-                    led_cur_mode = iMODE_LED_MIN;
+                    led_cur_mode = iMODE_LED_ON;
 
                 hid_ctrl_reg |= (1<<0);
                 key_ctrl |= (1<<2);
@@ -3395,7 +3399,7 @@ void __attribute__((noinline)) key_decode_cmd_0x10(void)
             break;
     }
 }
-# 237 "../periph/userdefined_key_callback.c"
+# 241 "../periph/userdefined_key_callback.c"
 void __attribute__((noinline)) key_decode_cmd_0x20(void)
 {
     switch(decode_data_l&0x0F)
@@ -3458,7 +3462,7 @@ void __attribute__((noinline)) key_decode_cmd_0x20(void)
             break;
     }
 }
-# 307 "../periph/userdefined_key_callback.c"
+# 311 "../periph/userdefined_key_callback.c"
 void __attribute__((noinline)) key_decode_cmd_0x30(void)
 {
     uint32_t conn_rtc_value = drv_rtc_read(((OM_RTC_Type *) 0x40000200));
@@ -3502,14 +3506,23 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             }
             break;
         case 0x32&0x0F:
-            if(iDEVICE_TYPE_BT0 != device_type)
-                break;
-
             device_key |= (1<<0);
             if(0==(device_key_bak&(1<<0)))
             {
                 device_key_bak |= (1<<0);
                 press_bt0_time_count = conn_rtc_value;
+
+                if(iDEVICE_TYPE_BT0 != device_type)
+                {
+                    device_type = iDEVICE_TYPE_BT0;
+                    bt_index = iDEVICE_TYPE_BT0;
+                    key_ctrl &= ~(1<<6);
+                    if(sys_mode&(1<<(device_type&0x07)))
+                        key_ctrl |= (1<<6);
+                    flash_save_status();
+                    delayus(10000);
+                    __NVIC_SystemReset();
+                }
             }
             else
             {
@@ -3525,14 +3538,23 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
 
             break;
         case 0x33&0x0F:
-            if(iDEVICE_TYPE_BT1 != device_type)
-                break;
-
             device_key |= (1<<1);
             if(0==(device_key_bak&(1<<1)))
             {
                 device_key_bak |= (1<<1);
                 press_bt1_time_count = conn_rtc_value;
+
+                if(iDEVICE_TYPE_BT1 != device_type)
+                {
+                    device_type = iDEVICE_TYPE_BT1;
+                    bt_index = iDEVICE_TYPE_BT1;
+                    key_ctrl &= ~(1<<6);
+                    if(sys_mode&(1<<(device_type&0x07)))
+                        key_ctrl |= (1<<6);
+                    flash_save_status();
+                    delayus(10000);
+                    __NVIC_SystemReset();
+                }
             }
             else
             {
@@ -3548,14 +3570,23 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
 
             break;
         case 0x34&0x0F:
-            if(iDEVICE_TYPE_BT2 != device_type)
-                break;
-
             device_key |= (1<<2);
             if(0==(device_key_bak&(1<<2)))
             {
                 device_key_bak |= (1<<2);
                 press_bt2_time_count = conn_rtc_value;
+
+                if(iDEVICE_TYPE_BT2 != device_type)
+                {
+                    device_type = iDEVICE_TYPE_BT2;
+                    bt_index = iDEVICE_TYPE_BT2;
+                    key_ctrl &= ~(1<<6);
+                    if(sys_mode&(1<<(device_type&0x07)))
+                        key_ctrl |= (1<<6);
+                    flash_save_status();
+                    delayus(10000);
+                    __NVIC_SystemReset();
+                }
             }
             else
             {
@@ -3571,14 +3602,20 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
 
             break;
         case 0x35&0x0F:
-            if(iDEVICE_TYPE_24G != device_type)
-                break;
-
             device_key |= (1<<3);
             if(0==(device_key_bak&(1<<3)))
             {
                 device_key_bak |= (1<<3);
                 press_24g_time_count = conn_rtc_value;
+
+                if(iDEVICE_TYPE_24G != device_type)
+                {
+                    device_type = iDEVICE_TYPE_24G;
+                    bt_index = iDEVICE_TYPE_24G;
+                    flash_save_status();
+                    delayus(10000);
+                    __NVIC_SystemReset();
+                }
             }
             else
             {
@@ -3662,7 +3699,7 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             break;
     }
 }
-# 518 "../periph/userdefined_key_callback.c"
+# 555 "../periph/userdefined_key_callback.c"
 void __attribute__((noinline)) key_decode_cmd_0x40(void)
 {
     uint32_t conn_rtc_value = drv_rtc_read(((OM_RTC_Type *) 0x40000200));
@@ -3684,9 +3721,13 @@ void __attribute__((noinline)) key_decode_cmd_0x40(void)
                     logo_off();
 
                     flash_erase(0);
+                    flash_erase(0 +1);
                     flash_erase(4);
+                    flash_erase(4 +1);
                     flash_erase(8);
+                    flash_erase(8 +1);
                     flash_erase(12);
+                    flash_erase(12 +1);
 
                     flash_erase((16));
                     flash_erase(17);
@@ -3797,6 +3838,46 @@ void __attribute__((noinline)) key_decode_cmd_0x40(void)
                     key_ctrl_ex |= (1<<4);
                     desk_mac_index = 0;
                 }
+            }
+            define_key_ctrl |= (1<<7);
+
+            break;
+        case 0x46&0x0F:
+            if(define_key_flag & (1<<1))
+            {
+                if(1 == mac_siri_state)
+                {
+                    multi_data_tmp_l = 0x21;
+                    multi_data_tmp_h = 0x02;
+                }
+                mac_siri_state = 0;
+            }
+            else if(0 == mac_siri_state)
+            {
+                mac_siri_state = 1;
+                mac_siri_time = conn_rtc_value;
+            }
+            else if(1 == mac_siri_state)
+            {
+                if(((1000)<<5) < (conn_rtc_value-mac_siri_time))
+                {
+                    mac_siri_state = 2;
+                    multi_data_tmp_l = 0xCF;
+                    multi_data_tmp_h = 0x00;
+                }
+            }
+            break;
+        case 0x47&0x0F:
+            if(define_key_flag & (1<<1))
+            {
+                mac_shot_done = 0;
+                break;
+            }
+            if(0 == mac_shot_done)
+            {
+                mac_shot_done = 1;
+                mac_shot_index = 0;
+                key_ctrl_ex |= (1<<3);
             }
             define_key_ctrl |= (1<<7);
 

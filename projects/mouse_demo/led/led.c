@@ -11,6 +11,7 @@
 #include "om_driver.h"
 
 #include "main.h"
+#include "main_24g.h"
 #include "lvd.h"
 #include "led.h"
 
@@ -71,8 +72,11 @@ uint16_t                        delay_time_count;
 uint8_t                         rgb_index;
 uint8_t                         led_process_index;
 uint8_t                         hint_time_count;
+uint8_t                         led_fade = iPWM_MAX;
+uint8_t                         led_fade_dir;
 
 __ALIGNED(4) uint8_t            pwm_rgb_tbl[iLED_MAX][3];
+uint8_t                         mode_led_rgb[3];
 
 uint8_t                         pwm_duty_array_0[0x20];
 uint8_t                         pwm_duty_array_1[0x20];
@@ -113,76 +117,79 @@ void ledc_init(void)
 void led_status_hint(void)
 {
     uint8_t i=0;
+    uint8_t r=0, g=0, b=0;
 
-    mLED_VDD_DIS;
-	if(hint_led_status&bled_hint_mode)
+    // 第 1 颗 ARGB 模式指示灯：与 NUM/CAPS 状态灯共用 hint_led_status 的节奏
+    if((iLOW_POWER >= bat_value) && (0 == (bat_status&bcharging)))
     {
-        if(hint_led_status&bled_bt0)
-        {
-            i = 1;
-            mLED_NUM_LOW;
-        }
-        else
-        {
-            mLED_NUM_HIGH;
-        }
-
-        if(hint_led_status&bled_bt1)
-        {
-            i = 1;
-            mLED_CAPS_LOW;
-        }
-        else
-        {
-            mLED_CAPS_HIGH;
-        }
-
-        if(hint_led_status&bled_24g)
-        {
-            i = 1;
-            
-        }
-        else
-        {
-            
-        }
+        if(0 != (hint_led_status&bled_low))
+            r = iPWM_MAX;                       // 低电：红色闪（优先）
     }
     else
     {
-        if(kb_led_status&bnum_lock)
-        {
-            i = 1;
-            mLED_NUM_LOW;
-        }
-        else
-        {
-            mLED_NUM_HIGH;
-        }
+        uint8_t connected;
 
-        if(kb_led_status&bcaps_lock)
-        {
-            i = 1;
-            mLED_CAPS_LOW;
-        }
+        if(iDEVICE_TYPE_USB == device_type)
+            connected = 1;                                  // 有线：直接亮
+        else if(iDEVICE_TYPE_24G == device_type)
+            connected = (iRF_MODE_NORMAL == rf_mode_type);  // 2.4G 连上
         else
-        {
-            mLED_CAPS_HIGH;
-        }
+            connected = (0 != (ble_24g_ctrl&bom6239_sync_ok));  // 蓝牙连上
 
-        if(hint_led_status&bled_low)
-        {
-            i = 1;
-            
-        }
-        else
-        {
-            
-        }
+        // 上电无线状态的配对/回连提示：与 mLED_NUM_LOW 同一闪烁相位；连上后常亮
+        if(0 != (hint_led_status&bled_hint_mode))
+            connected = (false != bdevice_led_status);
 
-        if(0==i)
-            return;
+        if(0 != connected)
+        {
+            if(iDEVICE_TYPE_BT0 == device_type)
+            {
+                b = iPWM_MAX;                   // 蓝牙1：蓝
+            }
+            else if(iDEVICE_TYPE_BT1 == device_type)
+            {
+                r = iPWM_MAX>>1;
+                b = iPWM_MAX;                   // 蓝牙2：紫
+            }
+            else if(iDEVICE_TYPE_BT2 == device_type)
+            {
+                g = iPWM_MAX;
+                b = iPWM_MAX;                   // 蓝牙3：青
+            }
+            else if(iDEVICE_TYPE_24G == device_type)
+            {
+                g = iPWM_MAX;                   // 2.4G：绿
+            }
+            else if(iDEVICE_TYPE_USB == device_type)
+            {
+                r = iPWM_MAX;
+                g = iPWM_MAX>>2;
+                b = iPWM_MAX>>1;                // 有线：粉红
+            }
+        }
     }
-    mLED_VDD_EN;
+
+    mode_led_rgb[iR_INDEX] = r;
+    mode_led_rgb[iG_INDEX] = g;
+    mode_led_rgb[iB_INDEX] = b;
+
+	if(kb_led_status&bnum_lock)
+    {
+        mLED_NUM_HIGH
+    }
+    else
+    {
+        mLED_NUM_LOW;
+    }
+
+    if(kb_led_status&bcaps_lock)
+    {
+        mLED_CAPS_HIGH;
+    }
+    else
+    {
+        mLED_CAPS_LOW;
+    }
 }
 
 /*******************************************************************************
@@ -322,6 +329,7 @@ void device_led_process(void)
                     device_conn_index++;
                     led_delay_count = rtc_cur_value;
                     device_hint_count = 0;
+                    bdevice_led_status = false;     // 从灭开始计数，保证连接成功只闪3下
                 }
 
                 key_into_fcc_test();
@@ -360,6 +368,7 @@ void device_led_process(void)
                             hint_led_status &= ~bled_hint_mode;
                             device_conn_index = 0;
                             ble_24g_ctrl &= ~bom6239_conning;
+                            ble_24g_ctrl &= ~bom6239_sync_ing;  // 同一次连接不再触发回连闪灯
                         }
                     }
                 }
@@ -393,6 +402,7 @@ void device_led_process(void)
                     device_conn_index++;
                     led_delay_count = rtc_cur_value;
                     device_hint_count = 0;
+                    bdevice_led_status = false;     // 从灭开始计数，保证连接成功只闪3下
                 }
 
                 if(false == bdevice_led_status)
@@ -494,15 +504,26 @@ void logo_process(void)
     {
         if(ble_24g_ctrl&bom6239_sync_ing)
         {
-            logo_off();
+            if(false == bargb_valid)
+            {
+                OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+                OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+                ledc_init();
+            }
+            clr_rgb();                              // 灯效全灭，保留LEDC输出第1颗模式指示灯（配对/回连提示）
             return;
         }
     }
 
-    if((false == bled_bright_en) || (iLOW_POWER>=bat_value))
+    if(false == bled_bright_en)
     {
-        clr_rgb();
-        logo_off();
+        if(false == bargb_valid)
+        {
+            OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+            OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+            ledc_init();
+        }
+        clr_rgb();                              // 灯效熄灭，保留第1颗模式指示灯
         return;
     }
 
@@ -513,8 +534,32 @@ void logo_process(void)
         ledc_init();
     }
 
-    if(led_pre_mode != led_cur_mode)
+    if(iLOW_POWER>=bat_value)
     {
+        clr_rgb();                              // 低电：灯效全灭，只保留第1颗模式指示灯红色闪
+        return;
+    }
+
+    // 灯效切换过渡：淡出 -> 切换初始化 -> 淡入
+    if(0 == led_fade_dir)
+    {
+        if(led_pre_mode != led_cur_mode)
+        {
+            led_fade = iPWM_MAX;
+            led_fade_dir = 1;
+        }
+    }
+
+    if(1 == led_fade_dir)
+    {
+        if(led_fade > iLED_FADE_STEP)
+        {
+            led_fade -= iLED_FADE_STEP;
+            return;                                 // 淡出中冻结当前画面
+        }
+
+        led_fade = 0;
+        led_fade_dir = 2;
         led_pre_mode = led_cur_mode;
 
         led_process_index = 0;
@@ -538,11 +583,6 @@ void logo_process(void)
                 pwm_time_count = 0;
                 delay_time_count = 0xFF;
                 rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-
-                break;
-            case iMODE_LED_SNAKE:
-                snake_led_index = 4;
-                pwm_duty_array_0[4] = ((iPWM_MAX*4)/4);
 
                 break;
             case iMODE_LED_NHJB:
@@ -578,6 +618,7 @@ void logo_process(void)
                 }
                 break;
             case iMODE_LED_BS:
+                delay_time_count = 0xFF;    // 进入爆闪立即刷新首帧，避免起步等待
                 break;
             case iMODE_LED_QCNH:
                 break;
@@ -597,13 +638,18 @@ void logo_process(void)
                 snake_led_index = 3;
                 pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
                 break;
-            case iMODE_LED_JG:
-                led_use_flag = 0;
-                break;
         }
     }
-    else
+    else if(2 == led_fade_dir)
     {
+        led_fade += iLED_FADE_STEP;
+        if(iPWM_MAX <= led_fade)
+        {
+            led_fade = iPWM_MAX;
+            led_fade_dir = 0;
+        }
+    }
+
         //bled_hint_ing = 1;
         switch(led_cur_mode)
         {
@@ -614,9 +660,6 @@ void logo_process(void)
                 break;
             case iMODE_LED_BREATH:
                 led_mode_breath();
-                break;
-            case iMODE_LED_SNAKE:
-                led_mode_snake();
                 break;
             case iMODE_LED_NHJB:
                 led_mode_nhjb();
@@ -650,5 +693,4 @@ void logo_process(void)
                 led_mode_txtw();
                 break;
         }
-    }
 }

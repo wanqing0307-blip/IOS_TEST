@@ -3988,7 +3988,7 @@ extern void ex2_hal_init(void);
 extern void ex2_hal_uninit(void);
 # 52 "../main/mouse_hw.c" 2
 # 1 "../main/main.h" 1
-# 237 "../main/main.h"
+# 236 "../main/main.h"
 typedef enum {
     iDEVICE_TYPE_BLE = 1U,
     iDEVICE_TYPE_BT0 = 0U,
@@ -4059,7 +4059,7 @@ extern uint8_t m_data_flag;
 
 
 extern uint8_t hint_led_status;
-# 316 "../main/main.h"
+# 315 "../main/main.h"
 extern uint8_t kb_led_status;
 
 
@@ -4073,7 +4073,7 @@ extern uint16_t mouse_y;
 extern uint8_t mouse_data_z;
 
 extern unsigned char std_key[];
-# 340 "../main/main.h"
+# 339 "../main/main.h"
 extern uint8_t mmk_data_l;
 extern uint8_t mmk_data_h;
 extern uint8_t kb_bd_addr[];
@@ -4087,7 +4087,7 @@ extern uint32_t const ble_sleep_2_time_tbl[];
 extern void mouse_periph_wakeup_enable(uint8_t mask);
 # 53 "../main/mouse_hw.c" 2
 # 1 "../led\\led.h" 1
-# 56 "../led\\led.h"
+# 57 "../led\\led.h"
 enum led_level
 {
     iLED_LEV_MIN=0,
@@ -4112,25 +4112,23 @@ typedef enum {
     iMODE_LED_OFF =0,
     iMODE_LED_ON =1,
     iMODE_LED_BREATH =2,
-    iMODE_LED_SNAKE =3,
-    iMODE_LED_NHJB =4,
-    iMODE_LED_LG_L_R =5,
-    iMODE_LED_STAR =6,
-    iMODE_LED_SBZL =7,
-    iMODE_LED_BS =8,
-    iMODE_LED_QCNH =9,
-    iMODE_LED_LHTW =10,
-    iMODE_LED_DXTW =11,
-    iMODE_LED_SXTW =12,
-    iMODE_LED_TXTW =13,
-    iMODE_LED_FXTW =14,
-    iMODE_LED_JG =15,
+    iMODE_LED_NHJB =3,
+    iMODE_LED_LG_L_R =4,
+    iMODE_LED_STAR =5,
+    iMODE_LED_SBZL =6,
+    iMODE_LED_BS =7,
+    iMODE_LED_QCNH =8,
+    iMODE_LED_LHTW =9,
+    iMODE_LED_DXTW =10,
+    iMODE_LED_SXTW =11,
+    iMODE_LED_TXTW =12,
+    iMODE_LED_FXTW =13,
 
-    iMODE_LED_MAX =14,
-    iMODE_LED_INVALID =15,
+    iMODE_LED_MAX =13,
+    iMODE_LED_INVALID =14,
     iLOGO_INVALID = 0x0F,
 } logo_mode_t;
-# 118 "../led\\led.h"
+# 117 "../led\\led.h"
 extern _Bool blogo_status;
 extern _Bool bled_bright_en;
 extern _Bool bback_led_status;
@@ -4170,8 +4168,10 @@ extern uint16_t delay_time_count;
 extern uint8_t rgb_index;
 extern uint8_t led_process_index;
 extern uint8_t hint_time_count;
+extern uint8_t led_fade;
 
 extern uint8_t pwm_rgb_tbl[(8)][3];
+extern uint8_t mode_led_rgb[3];
 
 extern uint8_t pwm_duty_array_0[];
 extern uint8_t pwm_duty_array_1[];
@@ -4207,7 +4207,6 @@ extern void rgb_w_max(void);
 
 extern void led_mode_on(void);
 extern void led_mode_breath(void);
-extern void led_mode_snake(void);
 extern void led_mode_nhjb(void);
 extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
@@ -4239,7 +4238,7 @@ extern void led_hint_process(void);
 # 55 "../main/mouse_hw.c" 2
 
 # 1 "../periph\\matrix_key.h" 1
-# 77 "../periph\\matrix_key.h"
+# 79 "../periph\\matrix_key.h"
 extern unsigned char const flash_key_win_tbl[];
 
 
@@ -4251,18 +4250,18 @@ extern uint8_t const key_delay_tbl[4];
 
 
 extern uint16_t key_ctrl;
-# 105 "../periph\\matrix_key.h"
+# 107 "../periph\\matrix_key.h"
 extern uint16_t key_ctrl_ex;
-# 119 "../periph\\matrix_key.h"
+# 122 "../periph\\matrix_key.h"
 extern uint8_t key_temp_flag;
 
 
 
 
 extern uint16_t special_key;
-# 145 "../periph\\matrix_key.h"
+# 148 "../periph\\matrix_key.h"
 extern uint16_t special_key_bak;
-# 165 "../periph\\matrix_key.h"
+# 168 "../periph\\matrix_key.h"
 extern uint8_t device_key;
 
 
@@ -4298,11 +4297,12 @@ extern unsigned char decode_index;
 extern unsigned char multi_data_tmp_l;
 extern unsigned char multi_data_tmp_h;
 extern unsigned char tmp_std_key[22];
-# 210 "../periph\\matrix_key.h"
+# 213 "../periph\\matrix_key.h"
 extern unsigned char ctrl_key_value;
 extern unsigned char std_key_value;
 extern unsigned char com_ctrl_index;
 extern uint8_t desk_mac_index;
+extern uint8_t mac_shot_index;
 
 extern unsigned char const matrixkey_win_tbl[];
 extern unsigned char const matrixkey_win_fn_tbl[];
@@ -4316,7 +4316,7 @@ extern void scan_mode_swtich(uint8_t type);
 extern void mode_swtich_init(void);
 # 57 "../main/mouse_hw.c" 2
 # 1 "../flash\\flash_process.h" 1
-# 152 "../flash\\flash_process.h"
+# 154 "../flash\\flash_process.h"
 enum key_mod
 {
     iKEY_MODE_MIN=0,
@@ -4361,7 +4361,7 @@ extern uint8_t sys_mode;
 extern uint8_t mouse_lod_set;
 extern uint8_t key_delay_set;
 extern uint16_t adv_cfg_value;
-# 204 "../flash\\flash_process.h"
+# 206 "../flash\\flash_process.h"
 extern uint8_t device_status_base;
 extern uint8_t sys_cfg_base;
 
@@ -4560,6 +4560,7 @@ __attribute((used, section("RAM_CODE"), noinline)) uint8_t ex2_app_mouse_scan(vo
         memcpy(temp_buff+2, std_key+1, 6);
         if(1 == ex2_hid_tx_notification_keyboard(temp_buff))
         {
+            rtc_init_value = drv_rtc_read(((OM_RTC_Type *) 0x40000200));
             m_data_flag &= ~(1<<1);
             key_tx_count = 0;
         }
@@ -4571,6 +4572,7 @@ __attribute((used, section("RAM_CODE"), noinline)) uint8_t ex2_app_mouse_scan(vo
         temp_buff[1] = mmk_data_h;
         if(1 == ex2_hid_tx_notification_consumer_control(temp_buff))
         {
+            rtc_init_value = drv_rtc_read(((OM_RTC_Type *) 0x40000200));
             m_data_flag &= ~(1<<2);
             mmk_tx_count = 0;
         }
@@ -4580,6 +4582,7 @@ __attribute((used, section("RAM_CODE"), noinline)) uint8_t ex2_app_mouse_scan(vo
     {
         if(1 == ex2_hid_tx_notification_bitmap_kb(std_key+7))
         {
+            rtc_init_value = drv_rtc_read(((OM_RTC_Type *) 0x40000200));
             m_data_flag &= ~(1<<3);
             key_ex_tx_count = 0;
         }
@@ -4601,6 +4604,7 @@ __attribute((used, section("RAM_CODE"), noinline)) uint8_t ex2_app_mouse_scan(vo
         temp_buff[5] = 0;
         if(1 == ex2_hid_tx_notification_mouse(temp_buff))
         {
+            rtc_init_value = drv_rtc_read(((OM_RTC_Type *) 0x40000200));
             m_data_flag &=~((1<<0));
             mouse_x = 0;
             mouse_y = 0;
@@ -4713,9 +4717,9 @@ void app_ble_evt_dispatch(uint32_t events)
         ble_24g_ctrl |= (1<<2);
         matrixkey_scan();
         scan_mode_swtich(2);
-        logo_off();
         led_hint_process();
         logo_process();
+        drv_ledc_write();
         device_led_process();
     }
 }

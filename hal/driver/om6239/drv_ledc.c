@@ -96,16 +96,52 @@ extern bool bargb_valid;
 
 __RAM_CODE om_error_t drv_ledc_write()
 {
-    __ALIGNED(4) static uint8_t pwm_temp[iLED_MAX*3];
+    __ALIGNED(4) static uint8_t pwm_temp[iLED_HW_MAX*3];
+    static uint8_t pwm_disp[iLED_MAX][3];               // 时间平滑后的显示值
 
     if(false == bargb_valid)
         return OM_ERROR_OK;
 OM_CRITICAL_BEGIN();
-    memcpy(pwm_temp, pwm_rgb_tbl, iLED_MAX*3);
+    // 第 1 颗为模式指示灯，保持不动；灯珠为反向接线，8 颗灯效灯倒序输出
+    // 时间平滑：每帧向目标色靠拢 1/4，柔化逐帧跳变；跳色类灯效旁路，保留台阶感
+    memcpy(pwm_temp, mode_led_rgb, 3);
 
+    uint8_t smooth_en = 1;
+    if((iMODE_LED_QCNH == led_cur_mode)
+        || (iMODE_LED_BS == led_cur_mode)
+        || (iMODE_LED_LHTW == led_cur_mode))
+        smooth_en = 0;
+
+    for(uint8_t i=0; i<iLED_MAX; i++)
+    {
+        uint8_t *dst = pwm_temp + 3 + (iLED_MAX-1-i)*3;
+
+        for(uint8_t ch=0; ch<3; ch++)
+        {
+            if(smooth_en)
+            {
+                int16_t d = (int16_t)pwm_rgb_tbl[i][ch] - (int16_t)pwm_disp[i][ch];
+
+                if(0 < d)
+                    d = (d + 3) >> 2;
+                else if(0 > d)
+                    d = -(((-d) + 3) >> 2);
+
+                pwm_disp[i][ch] += d;
+            }
+            else
+            {
+                pwm_disp[i][ch] = pwm_rgb_tbl[i][ch];
+            }
+
+            dst[ch] = pwm_disp[i][ch];
+        }
+    }
+
+    // 亮度调节只作用于后面 8 颗灯效灯，第 1 颗模式指示灯保持固定亮度
     if(iLED_LEV_2 == led_light_lev)
     {
-        for(uint8_t i=0; i<iLED_MAX*3; i++)
+        for(uint8_t i=3; i<iLED_HW_MAX*3; i++)
         {
             if(iPWM_MAX <= pwm_temp[i])
                 pwm_temp[i] = 0xFF;
@@ -115,16 +151,23 @@ OM_CRITICAL_BEGIN();
     }
     else if(iLED_LEV_1 == led_light_lev)
     {
-        for(uint8_t i=0; i<iLED_MAX*3; i++)
+        for(uint8_t i=3; i<iLED_HW_MAX*3; i++)
             pwm_temp[i] <<= 1;
     }
     else if(iLED_LEV_0 == led_light_lev)
     {
-        for(uint8_t i=0; i<iLED_MAX*3; i++)
+        for(uint8_t i=3; i<iLED_HW_MAX*3; i++)
             pwm_temp[i] >>= 1;
     }
 
-    OM_LEDC->DMA_CTL = ((uint32_t)pwm_temp << LEDC_DMA_CTL_DMA_ADDR_POS) | (LEDC_DMA_CTL_DMA_LEN_MASK & (iLED_MAX*3));
+    // 灯效切换过渡：仅缩放 8 颗灯效灯，模式指示灯不受影响
+    if(led_fade < iPWM_MAX)
+    {
+        for(uint8_t i=3; i<iLED_HW_MAX*3; i++)
+            pwm_temp[i] = (pwm_temp[i] * led_fade) >> 6;
+    }
+
+    OM_LEDC->DMA_CTL = ((uint32_t)pwm_temp << LEDC_DMA_CTL_DMA_ADDR_POS) | (LEDC_DMA_CTL_DMA_LEN_MASK & (iLED_HW_MAX*3));
     // enable ledc
     OM_LEDC->CR |= LEDC_CR_ENABLE_MASK;
 OM_CRITICAL_END();

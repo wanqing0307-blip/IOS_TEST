@@ -53,4 +53,5 @@
   ..\periph\lvd.h ..\main\main.h ..\flash\flash.h \
   ..\flash\flash_process.h ..\periph\matrix_key.h \
   ..\periph\matrix_key_tbl_win.h ..\periph\key_code_define.h \
-  ..\periph\matrix_key_tbl_win_fn.h
+  ..\periph\matrix_key_tbl_win_fn.h ..\periph\matrix_key_tbl_mac.h \
+  ..\periph\matrix_key_tbl_mac_fn.h

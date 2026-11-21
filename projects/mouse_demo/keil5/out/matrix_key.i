@@ -2387,7 +2387,7 @@ void drv_dynamic_load_app(app_t *app);
 # 59 "../../../hal/driver/include\\om_driver.h" 2
 # 11 "../periph/matrix_key.c" 2
 # 1 "../main\\main.h" 1
-# 237 "../main\\main.h"
+# 236 "../main\\main.h"
 typedef enum {
     iDEVICE_TYPE_BLE = 1U,
     iDEVICE_TYPE_BT0 = 0U,
@@ -2458,7 +2458,7 @@ extern uint8_t m_data_flag;
 
 
 extern uint8_t hint_led_status;
-# 316 "../main\\main.h"
+# 315 "../main\\main.h"
 extern uint8_t kb_led_status;
 
 
@@ -2472,7 +2472,7 @@ extern uint16_t mouse_y;
 extern uint8_t mouse_data_z;
 
 extern unsigned char std_key[];
-# 340 "../main\\main.h"
+# 339 "../main\\main.h"
 extern uint8_t mmk_data_l;
 extern uint8_t mmk_data_h;
 extern uint8_t kb_bd_addr[];
@@ -2842,7 +2842,7 @@ extern __attribute__((__nothrow__)) void __use_no_semihosting(void);
 
 
 # 1 "../periph\\matrix_key.h" 1
-# 77 "../periph\\matrix_key.h"
+# 79 "../periph\\matrix_key.h"
 extern unsigned char const flash_key_win_tbl[];
 
 
@@ -2854,18 +2854,18 @@ extern uint8_t const key_delay_tbl[4];
 
 
 extern uint16_t key_ctrl;
-# 105 "../periph\\matrix_key.h"
+# 107 "../periph\\matrix_key.h"
 extern uint16_t key_ctrl_ex;
-# 119 "../periph\\matrix_key.h"
+# 122 "../periph\\matrix_key.h"
 extern uint8_t key_temp_flag;
 
 
 
 
 extern uint16_t special_key;
-# 145 "../periph\\matrix_key.h"
+# 148 "../periph\\matrix_key.h"
 extern uint16_t special_key_bak;
-# 165 "../periph\\matrix_key.h"
+# 168 "../periph\\matrix_key.h"
 extern uint8_t device_key;
 
 
@@ -2901,11 +2901,12 @@ extern unsigned char decode_index;
 extern unsigned char multi_data_tmp_l;
 extern unsigned char multi_data_tmp_h;
 extern unsigned char tmp_std_key[22];
-# 210 "../periph\\matrix_key.h"
+# 213 "../periph\\matrix_key.h"
 extern unsigned char ctrl_key_value;
 extern unsigned char std_key_value;
 extern unsigned char com_ctrl_index;
 extern uint8_t desk_mac_index;
+extern uint8_t mac_shot_index;
 
 extern unsigned char const matrixkey_win_tbl[];
 extern unsigned char const matrixkey_win_fn_tbl[];
@@ -2919,7 +2920,7 @@ extern void scan_mode_swtich(uint8_t type);
 extern void mode_swtich_init(void);
 # 24 "../../../mode_24g\\main_24g.h" 2
 # 1 "../led\\led.h" 1
-# 56 "../led\\led.h"
+# 57 "../led\\led.h"
 enum led_level
 {
     iLED_LEV_MIN=0,
@@ -2944,25 +2945,23 @@ typedef enum {
     iMODE_LED_OFF =0,
     iMODE_LED_ON =1,
     iMODE_LED_BREATH =2,
-    iMODE_LED_SNAKE =3,
-    iMODE_LED_NHJB =4,
-    iMODE_LED_LG_L_R =5,
-    iMODE_LED_STAR =6,
-    iMODE_LED_SBZL =7,
-    iMODE_LED_BS =8,
-    iMODE_LED_QCNH =9,
-    iMODE_LED_LHTW =10,
-    iMODE_LED_DXTW =11,
-    iMODE_LED_SXTW =12,
-    iMODE_LED_TXTW =13,
-    iMODE_LED_FXTW =14,
-    iMODE_LED_JG =15,
+    iMODE_LED_NHJB =3,
+    iMODE_LED_LG_L_R =4,
+    iMODE_LED_STAR =5,
+    iMODE_LED_SBZL =6,
+    iMODE_LED_BS =7,
+    iMODE_LED_QCNH =8,
+    iMODE_LED_LHTW =9,
+    iMODE_LED_DXTW =10,
+    iMODE_LED_SXTW =11,
+    iMODE_LED_TXTW =12,
+    iMODE_LED_FXTW =13,
 
-    iMODE_LED_MAX =14,
-    iMODE_LED_INVALID =15,
+    iMODE_LED_MAX =13,
+    iMODE_LED_INVALID =14,
     iLOGO_INVALID = 0x0F,
 } logo_mode_t;
-# 118 "../led\\led.h"
+# 117 "../led\\led.h"
 extern _Bool blogo_status;
 extern _Bool bled_bright_en;
 extern _Bool bback_led_status;
@@ -3002,8 +3001,10 @@ extern uint16_t delay_time_count;
 extern uint8_t rgb_index;
 extern uint8_t led_process_index;
 extern uint8_t hint_time_count;
+extern uint8_t led_fade;
 
 extern uint8_t pwm_rgb_tbl[(8)][3];
+extern uint8_t mode_led_rgb[3];
 
 extern uint8_t pwm_duty_array_0[];
 extern uint8_t pwm_duty_array_1[];
@@ -3039,7 +3040,6 @@ extern void rgb_w_max(void);
 
 extern void led_mode_on(void);
 extern void led_mode_breath(void);
-extern void led_mode_snake(void);
 extern void led_mode_nhjb(void);
 extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
@@ -3121,7 +3121,7 @@ extern _Bool flash_read(unsigned int addr, unsigned int length);
 extern _Bool flash_erase(unsigned char bank);
 # 32 "../../../mode_24g\\main_24g.h" 2
 # 1 "../flash\\flash_process.h" 1
-# 152 "../flash\\flash_process.h"
+# 154 "../flash\\flash_process.h"
 enum key_mod
 {
     iKEY_MODE_MIN=0,
@@ -3166,7 +3166,7 @@ extern uint8_t sys_mode;
 extern uint8_t mouse_lod_set;
 extern uint8_t key_delay_set;
 extern uint16_t adv_cfg_value;
-# 204 "../flash\\flash_process.h"
+# 206 "../flash\\flash_process.h"
 extern uint8_t device_status_base;
 extern uint8_t sys_cfg_base;
 
@@ -3369,7 +3369,13 @@ uint8_t const desk_mac[] = {
     (0x18|0x14)&0x0F, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00,
 };
-# 101 "../periph/matrix_key.c"
+
+
+uint8_t const mac_shot[] = {
+    (0x18|0x12)&0x0F, 0x20, 0x00, 0x00,
+};
+uint8_t mac_shot_index;
+# 107 "../periph/matrix_key.c"
 void __attribute__((noinline)) key_process(void)
 {
     uint8_t i, temp_bit;
@@ -3445,6 +3451,22 @@ void __attribute__((noinline)) key_process(void)
             key_ctrl_ex &= ~(1<<4);
     }
 
+    if(0 != (key_ctrl_ex&(1<<3)))
+    {
+        if(0==(mac_shot_index&0x03))
+        {
+            i = mac_shot_index;
+
+            tmp_std_key[0] = mac_shot[i++];
+            tmp_std_key[1] = mac_shot[i++];
+            tmp_std_key[2] = mac_shot[i++];
+        }
+
+        mac_shot_index++;
+        if(sizeof(mac_shot) <= mac_shot_index)
+            key_ctrl_ex &= ~(1<<3);
+    }
+
     for(i=0; i<6; i++)
     {
         if(tmp_std_key[i] != std_key[i])
@@ -3479,7 +3501,7 @@ void __attribute__((noinline)) key_process(void)
         }
     }
 }
-# 218 "../periph/matrix_key.c"
+# 240 "../periph/matrix_key.c"
 void mode_swtich_init(void)
 {
  memset(std_key, 0x00, 22);
@@ -3489,7 +3511,7 @@ void mode_swtich_init(void)
 
     m_data_flag |= ((1<<0)|(1<<1)|(1<<2));
 }
-# 235 "../periph/matrix_key.c"
+# 257 "../periph/matrix_key.c"
 __attribute((used, section("RAM_CODE"), noinline)) void matrixkey_value(void)
 {
     unsigned char i, x;
@@ -3637,7 +3659,6 @@ __attribute((used, section("RAM_CODE"), noinline)) void ctrl_54e_inpull(void)
 
 void scan_key(void)
 {
-                ;
     {((OM_GPIO_Type *) 0x43000000)->OUTENCLR = 0x43E20000;};
     ctrl_54e_inpull();
     delayus(20);
@@ -3687,8 +3708,14 @@ void scan_key(void)
         {((OM_GPIO_Type *) 0x43000000)->DATAOUT ^= (1u<<(8*3+2));};
     }
     {((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1u<<(8*3+2));};
+
+
+
+
+
+
 }
-# 441 "../periph/matrix_key.c"
+# 468 "../periph/matrix_key.c"
 __attribute((used, section("RAM_CODE"), noinline)) void matrixkey_scan(void)
 {
     unsigned char i,j,k,m,key_temp[22];
@@ -3746,8 +3773,18 @@ __attribute((used, section("RAM_CODE"), noinline)) void matrixkey_scan(void)
         }
     }
 
-    matrix_status[3] &= 0x3F;
 
+    matrix_status[5] |= ((matrix_status[0] << 7) & 0x80)
+                       | ((matrix_status[1] << 4) & 0x10)
+                       | (matrix_status[1] & 0x40);
+    matrix_status[6] |= (matrix_status[0] << 4) & 0x20;
+    matrix_status[3] |= (matrix_status[0] << 3) & 0x80;
+    matrix_status[13] |= matrix_status[1] & 0x02;
+    matrix_status[17] |= ((matrix_status[2] & 0x07) << 2)
+                       | ((matrix_status[19] << 7) & 0x80);
+
+    if(matrix_status[3] & 0x01)
+        matrix_status[4] |= 0x80;
     matrixkey_value();
     key_process();
 }
@@ -3759,13 +3796,19 @@ static _Bool b5v_check_in;
 static uint32_t usb_io_status, mode_swtich_time;
 
 extern _Bool busb_valid;
-# 523 "../periph/matrix_key.c"
+# 560 "../periph/matrix_key.c"
 void scan_mode_swtich(uint8_t type)
 {
     static uint8_t mode_status;
     uint8_t mode_status_bak;
 
-    mode_status_bak = 2;
+
+    if(0 != ((((OM_GPIO_Type *) 0x43000000)->DATA & ((1<<(2*8+3))|(1<<(2*8+4)))) & (1<<(2*8+3))))
+        mode_status_bak = 1;
+    else if(0 != ((((OM_GPIO_Type *) 0x43000000)->DATA & ((1<<(2*8+3))|(1<<(2*8+4)))) & (1<<(2*8+4))))
+        mode_status_bak = 0;
+    else
+        mode_status_bak = 2;
 
     if(mode_status != mode_status_bak)
     {

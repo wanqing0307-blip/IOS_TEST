@@ -86,10 +86,16 @@ uint8_t const desk_mac[] = {
     (iLEFT_GUI|iLEFT_ALT)&0x0F, iSTD_NULL,  iSTD_NULL,  iSTD_NULL, 
     (iLEFT_GUI|iLEFT_ALT)&0x0F, iSTD_H,     iSTD_NULL,  iSTD_NULL, 
     (iLEFT_GUI|iLEFT_ALT)&0x0F, iSTD_H,     iSTD_M,     iSTD_NULL, 
-    (iLEFT_GUI|iLEFT_ALT)&0x0F, iSTD_H,     iSTD_NULL,  iSTD_NULL, 
-    (iLEFT_GUI|iLEFT_ALT)&0x0F, iSTD_NULL,  iSTD_NULL,  iSTD_NULL, 
-    0x00,                       iSTD_NULL,  iSTD_NULL,  iSTD_NULL, 
+    (iLEFT_GUI|iLEFT_ALT)&0x0F, iSTD_H,     iSTD_NULL,  iSTD_NULL,
+    (iLEFT_GUI|iLEFT_ALT)&0x0F, iSTD_NULL,  iSTD_NULL,  iSTD_NULL,
+    0x00,                       iSTD_NULL,  iSTD_NULL,  iSTD_NULL,
 };
+
+// MAC 截屏组合键：Cmd+Shift+3，一组保持 4 个扫描周期
+uint8_t const mac_shot[] = {
+    (iLEFT_GUI|iLEFT_SHIFT)&0x0F, iSTD_3,   iSTD_NULL,  iSTD_NULL,
+};
+uint8_t mac_shot_index;
 
 /******************************************************************************
 * 函数名称: void key_process(void)
@@ -171,6 +177,22 @@ void __attribute__((noinline)) key_process(void)
         desk_mac_index++;
         if(sizeof(desk_mac) <= desk_mac_index)
             key_ctrl_ex &= ~bdesk_mac;
+    }
+
+    if(0 != (key_ctrl_ex&bshot_mac))
+    {
+        if(0==(mac_shot_index&0x03))
+        {
+            i = mac_shot_index;
+
+            tmp_std_key[0] = mac_shot[i++];
+            tmp_std_key[1] = mac_shot[i++];
+            tmp_std_key[2] = mac_shot[i++];
+        }
+
+        mac_shot_index++;
+        if(sizeof(mac_shot) <= mac_shot_index)
+            key_ctrl_ex &= ~bshot_mac;
     }
 
     for(i=0; i<6; i++)
@@ -379,7 +401,6 @@ __RAM_CODE void ctrl_54e_inpull(void)
 
 void scan_key(void)
 {
-    mLED_VDD_DIS;
     MATRX_ALL_IN;
     ctrl_54e_inpull();
     delayus(20);
@@ -429,6 +450,12 @@ void scan_key(void)
         KEY_EX_TOGGLE;
     }
     KEY_EX_HIGH;
+
+    // for(uint32_t i=0; i<20; i++)
+    // {
+    //     printf("MATRIX[%02d]=0x%02X\r\n", i, matrix_status[i]);
+    // } 
+    // printf("\r\n\r\n");
 }
 
 /******************************************************************************
@@ -494,9 +521,19 @@ __RAM_CODE void matrixkey_scan(void)
             key_temp[j] = i;
         }
     }
+    
+    // C0/C1/C2/C19 上的按键映射到 C3-C18 键表的空闲节点（按目标下标合并）
+    matrix_status[5]  |= ((matrix_status[0] << 7) & 0x80)       // Z      C0R0 -> C5R7
+                       | ((matrix_status[1] << 4) & 0x10)       // C      C1R0 -> C5R4
+                       |  (matrix_status[1] & 0x40);            // Ctrl-R C1R6 -> C5R6
+    matrix_status[6]  |=  (matrix_status[0] << 4) & 0x20;       // M      C0R1 -> C6R5
+    matrix_status[3]  |=  (matrix_status[0] << 3) & 0x80;       // Alt-R  C0R4 -> C3R7
+    matrix_status[13] |=  matrix_status[1] & 0x02;              // B      C1R1 -> C13R1
+    matrix_status[17] |= ((matrix_status[2] & 0x07) << 2)       // F/F1/F5 C2R0-R2 -> C17R2-R4
+                       | ((matrix_status[19] << 7) & 0x80);     // 2      C19R0 -> C17R7
 
-    matrix_status[3] &= 0x3F;
-
+    if(matrix_status[3] & 0x01)
+        matrix_status[4] |= 0x80; // C3R0 -> C3R1
     matrixkey_value();
     key_process();
 }
@@ -525,7 +562,13 @@ void scan_mode_swtich(uint8_t type)
     static uint8_t mode_status;
     uint8_t mode_status_bak;
 
-    mode_status_bak = iMODE_USB;
+    // 三段式开关：开关把对应脚拉高为 BLE/2.4G 档，两脚都低(外部100K下拉)为 USB 档
+    if(0 != (MODE_DATA & (1<<MODE_BLE_PIN)))
+        mode_status_bak = iMODE_BLE;
+    else if(0 != (MODE_DATA & (1<<MODE_24G_PIN)))
+        mode_status_bak = iMODE_24G;
+    else
+        mode_status_bak = iMODE_USB;
 
     if(mode_status != mode_status_bak)
     {

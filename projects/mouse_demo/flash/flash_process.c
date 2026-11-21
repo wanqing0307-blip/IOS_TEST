@@ -20,6 +20,8 @@
 #include "matrix_key.h"
 #include "matrix_key_tbl_win.h"
 #include "matrix_key_tbl_win_fn.h"
+#include "matrix_key_tbl_mac.h"
+#include "matrix_key_tbl_mac_fn.h"
 
 //-----------------------------------------------------------------------------;
 // 常量定义区
@@ -105,7 +107,7 @@ uint32_t             const    ble_sleep_2_time_tbl[] =
 {
     mMS_TO_TICK(5*60*1000),                     // 5min
     mMS_TO_TICK(10*60*1000),                    // 10min
-    mMS_TO_TICK(15*60*1000),                    // 15min
+    mMS_TO_TICK(7*60*1000),                     // 15min
     mMS_TO_TICK(20*60*1000),                    // 20min
     mMS_TO_TICK(30*60*1000),                    // 30min
     mMS_TO_TICK(40*60*1000),                    // 40min
@@ -203,6 +205,8 @@ void laod_mouse_status(void)
                 key_ctrl |= bwin_mac_sataus;
 
             led_cur_mode = (flash_fifo[i+5]&0x1F);
+            if(iMODE_LED_MAX < led_cur_mode)
+                led_cur_mode = iMODE_LED_ON;
             bled_bright_en = false;
             if(flash_fifo[i+5]&(1<<7))
                 bled_bright_en = true;
@@ -269,8 +273,8 @@ void laod_cfg_dpi(void)
                 led_speed_lev = iSPEED_LEV_1;
                 led_rgb_index = iPWM_RGB;           // 全彩
 
-                sleep_time_24g = 0x25;              // 24g：1分钟一级休眠，10分钟深度休眠
-                sleep_time_ble = 0x25;              // ble：1分钟一级休眠，10分钟深度休眠
+                sleep_time_24g = 0x24;              // 24g：1分钟一级休眠，10分钟深度休眠
+                sleep_time_ble = 0x24;              // ble：1分钟一级休眠，10分钟深度休眠
 
                 adv_cfg_value = 0x0001;
                 mouse_lod_set = 1;                  // 静默高度
@@ -297,38 +301,71 @@ extern unsigned char    const   matrixkey_mac_fn_tbl[];
 *******************************************************************************/
 void laod_key_cfg(void)
 {
+    uint8_t tbl_ok;
+
 //----------------------------------------------------------------------------
 // WIN MODE
 //
-    flash_read(iKEY_MODE0_ADDR, 256);
-    if(0xA5 != flash_fifo[255])
-    {
-        memset(flash_fifo, 0xFF, 255);
-        memcpy(flash_fifo, matrixkey_win_tbl, 255);
-        flash_fifo[255] = 0xA5;
+    // 键表占满整页，版本标记放在下一 bank
+    flash_read(iKEY_MODE0_ADDR+256, 2);
+    tbl_ok = (0xA5 == flash_fifo[0]) && (iKEY_TBL_VERSION == flash_fifo[1]);
 
+    flash_read(iKEY_MODE0_ADDR, 256);
+    // 标记还在但表内容为空（表被单独擦除过）时视为无效
+    if((0xFF == flash_fifo[0]) && (0xFF == flash_fifo[1]))
+        tbl_ok = 0;
+
+    if(!tbl_ok)
+    {
+        memcpy(flash_fifo, matrixkey_win_tbl, iKEY_NODE_NUM*2);
         flash_erase(iKEY_MODE0_BANK);
         flash_write(iKEY_MODE0_ADDR, 256);
     }
 
     //if(0!=(key_ctrl&bwin_mac_sataus))
-        memcpy(def_key_dat, flash_fifo, 250);
+        memcpy(def_key_dat, flash_fifo, iKEY_NODE_NUM*2);
+
+    if(!tbl_ok)
+    {
+        flash_fifo[0] = 0xA5;
+        flash_fifo[1] = iKEY_TBL_VERSION;
+        flash_erase(iKEY_MODE0_BANK+1);
+        flash_write(iKEY_MODE0_ADDR+256, 2);
+    }
 //----------------------------------------------------------------------------
 // WIN FN MODE
 //
-    flash_read(iKEY_MODE1_ADDR, 256);
-    if(0xA5 != flash_fifo[0])
-    {
-        memset(flash_fifo, 0xFF, 255);
-        memcpy(flash_fifo, matrixkey_win_fn_tbl, 255);
-        flash_fifo[255] = 0xA5;
+    flash_read(iKEY_MODE1_ADDR+256, 2);
+    tbl_ok = (0xA5 == flash_fifo[0]) && (iKEY_TBL_VERSION == flash_fifo[1]);
 
+    flash_read(iKEY_MODE1_ADDR, 256);
+    if((0xFF == flash_fifo[0]) && (0xFF == flash_fifo[1]))
+        tbl_ok = 0;
+
+    if(!tbl_ok)
+    {
+        memcpy(flash_fifo, matrixkey_win_fn_tbl, iKEY_NODE_NUM*2);
         flash_erase(iKEY_MODE1_BANK);
         flash_write(iKEY_MODE1_ADDR, 256);
     }
 
     //if(0!=(key_ctrl&bwin_mac_sataus))
-        memcpy(def_key_fn_dat, flash_fifo, 250);
+        memcpy(def_key_fn_dat, flash_fifo, iKEY_NODE_NUM*2);
+
+    if(!tbl_ok)
+    {
+        flash_fifo[0] = 0xA5;
+        flash_fifo[1] = iKEY_TBL_VERSION;
+        flash_erase(iKEY_MODE1_BANK+1);
+        flash_write(iKEY_MODE1_ADDR+256, 2);
+    }
+
+    // MAC 模式（bwin_mac_sataus=0）：直接用编译表，F1~F12 与多媒体已对调
+    if(0 == (key_ctrl&bwin_mac_sataus))
+    {
+        memcpy(def_key_dat, matrixkey_mac_tbl, iKEY_NODE_NUM*2);
+        memcpy(def_key_fn_dat, matrixkey_mac_fn_tbl, iKEY_NODE_NUM*2);
+    }
 
 ////----------------------------------------------------------------------------
 //// MAC MODE

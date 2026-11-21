@@ -2381,7 +2381,7 @@ void drv_dynamic_load_app(app_t *app);
 # 12 "../led/led.c" 2
 
 # 1 "../main\\main.h" 1
-# 237 "../main\\main.h"
+# 236 "../main\\main.h"
 typedef enum {
     iDEVICE_TYPE_BLE = 1U,
     iDEVICE_TYPE_BT0 = 0U,
@@ -2452,7 +2452,7 @@ extern uint8_t m_data_flag;
 
 
 extern uint8_t hint_led_status;
-# 316 "../main\\main.h"
+# 315 "../main\\main.h"
 extern uint8_t kb_led_status;
 
 
@@ -2466,7 +2466,7 @@ extern uint16_t mouse_y;
 extern uint8_t mouse_data_z;
 
 extern unsigned char std_key[];
-# 340 "../main\\main.h"
+# 339 "../main\\main.h"
 extern uint8_t mmk_data_l;
 extern uint8_t mmk_data_h;
 extern uint8_t kb_bd_addr[];
@@ -2479,25 +2479,412 @@ extern uint32_t const ble_sleep_2_time_tbl[];
 
 extern void mouse_periph_wakeup_enable(uint8_t mask);
 # 14 "../led/led.c" 2
-# 1 "../periph\\lvd.h" 1
-# 175 "../periph\\lvd.h"
-extern unsigned char bat_status;
-# 186 "../periph\\lvd.h"
-extern _Bool bbat_update;
-extern unsigned char bat_value;
-extern uint8_t lvd_scan_count;
+# 1 "../../../mode_24g\\main_24g.h" 1
+# 18 "../../../mode_24g\\main_24g.h"
+# 1 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 1 3
+# 68 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+    typedef __builtin_va_list __va_list;
+# 87 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+typedef struct __fpos_t_struct {
+    unsigned long long int __pos;
 
 
 
 
-extern void usb_5v_check(void);
 
-extern void bat_init(void);
-extern unsigned char bat_voltage_check(void);
-extern void led_hint_process(void);
-# 15 "../led/led.c" 2
-# 1 "../led/led.h" 1
-# 56 "../led/led.h"
+    struct {
+        unsigned int __state1, __state2;
+    } __mbstate;
+} fpos_t;
+# 108 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+typedef struct __FILE FILE;
+# 119 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+struct __FILE {
+    union {
+        long __FILE_alignment;
+
+
+
+        char __FILE_size[84];
+
+    } __FILE_opaque;
+};
+# 138 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern FILE __stdin, __stdout, __stderr;
+extern FILE *__aeabi_stdin, *__aeabi_stdout, *__aeabi_stderr;
+# 224 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int remove(const char * ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int rename(const char * , const char * ) __attribute__((__nonnull__(1,2)));
+# 243 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) FILE *tmpfile(void);
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) char *tmpnam(char * );
+# 265 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fclose(FILE * ) __attribute__((__nonnull__(1)));
+# 275 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fflush(FILE * );
+# 285 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) FILE *fopen(const char * __restrict ,
+                           const char * __restrict ) __attribute__((__nonnull__(1,2)));
+# 329 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) FILE *freopen(const char * __restrict ,
+                    const char * __restrict ,
+                    FILE * __restrict ) __attribute__((__nonnull__(2,3)));
+# 342 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) void setbuf(FILE * __restrict ,
+                    char * __restrict ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int setvbuf(FILE * __restrict ,
+                   char * __restrict ,
+                   int , size_t ) __attribute__((__nonnull__(1)));
+# 370 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int fprintf(FILE * __restrict ,
+                    const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+# 393 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int _fprintf(FILE * __restrict ,
+                     const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int printf(const char * __restrict , ...) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int _printf(const char * __restrict , ...) __attribute__((__nonnull__(1)));
+
+
+
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int sprintf(char * __restrict , const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int _sprintf(char * __restrict , const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int __ARM_snprintf(char * __restrict , size_t ,
+                     const char * __restrict , ...) __attribute__((__nonnull__(3)));
+
+
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int snprintf(char * __restrict , size_t ,
+                     const char * __restrict , ...) __attribute__((__nonnull__(3)));
+# 460 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int _snprintf(char * __restrict , size_t ,
+                      const char * __restrict , ...) __attribute__((__nonnull__(3)));
+
+
+
+
+
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int fscanf(FILE * __restrict ,
+                    const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+# 503 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int _fscanf(FILE * __restrict ,
+                     const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int scanf(const char * __restrict , ...) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+
+
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int _scanf(const char * __restrict , ...) __attribute__((__nonnull__(1)));
+
+
+
+
+
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int sscanf(const char * __restrict ,
+                    const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+# 541 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __scanf_args
+extern __attribute__((__nothrow__)) int _sscanf(const char * __restrict ,
+                     const char * __restrict , ...) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int vfscanf(FILE * __restrict , const char * __restrict , __va_list) __attribute__((__nonnull__(1,2)));
+extern __attribute__((__nothrow__)) int vscanf(const char * __restrict , __va_list) __attribute__((__nonnull__(1)));
+extern __attribute__((__nothrow__)) int vsscanf(const char * __restrict , const char * __restrict , __va_list) __attribute__((__nonnull__(1,2)));
+
+extern __attribute__((__nothrow__)) int _vfscanf(FILE * __restrict , const char * __restrict , __va_list) __attribute__((__nonnull__(1,2)));
+extern __attribute__((__nothrow__)) int _vscanf(const char * __restrict , __va_list) __attribute__((__nonnull__(1)));
+extern __attribute__((__nothrow__)) int _vsscanf(const char * __restrict , const char * __restrict , __va_list) __attribute__((__nonnull__(1,2)));
+extern __attribute__((__nothrow__)) int __ARM_vsscanf(const char * __restrict , const char * __restrict , __va_list) __attribute__((__nonnull__(1,2)));
+
+extern __attribute__((__nothrow__)) int vprintf(const char * __restrict , __va_list ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int _vprintf(const char * __restrict , __va_list ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+extern __attribute__((__nothrow__)) int vfprintf(FILE * __restrict ,
+                    const char * __restrict , __va_list ) __attribute__((__nonnull__(1,2)));
+# 584 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int vsprintf(char * __restrict ,
+                     const char * __restrict , __va_list ) __attribute__((__nonnull__(1,2)));
+# 594 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int __ARM_vsnprintf(char * __restrict , size_t ,
+                     const char * __restrict , __va_list ) __attribute__((__nonnull__(3)));
+
+extern __attribute__((__nothrow__)) int vsnprintf(char * __restrict , size_t ,
+                     const char * __restrict , __va_list ) __attribute__((__nonnull__(3)));
+# 609 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int _vsprintf(char * __restrict ,
+                      const char * __restrict , __va_list ) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+extern __attribute__((__nothrow__)) int _vfprintf(FILE * __restrict ,
+                     const char * __restrict , __va_list ) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+extern __attribute__((__nothrow__)) int _vsnprintf(char * __restrict , size_t ,
+                      const char * __restrict , __va_list ) __attribute__((__nonnull__(3)));
+# 635 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+#pragma __printf_args
+extern __attribute__((__nothrow__)) int __ARM_asprintf(char ** , const char * __restrict , ...) __attribute__((__nonnull__(2)));
+extern __attribute__((__nothrow__)) int __ARM_vasprintf(char ** , const char * __restrict , __va_list ) __attribute__((__nonnull__(2)));
+# 649 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fgetc(FILE * ) __attribute__((__nonnull__(1)));
+# 659 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) char *fgets(char * __restrict , int ,
+                    FILE * __restrict ) __attribute__((__nonnull__(1,3)));
+# 673 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fputc(int , FILE * ) __attribute__((__nonnull__(2)));
+# 683 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fputs(const char * __restrict , FILE * __restrict ) __attribute__((__nonnull__(1,2)));
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int getc(FILE * ) __attribute__((__nonnull__(1)));
+# 704 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+    extern __attribute__((__nothrow__)) int (getchar)(void);
+# 713 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) char *gets(char * ) __attribute__((__nonnull__(1)));
+# 725 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int putc(int , FILE * ) __attribute__((__nonnull__(2)));
+# 737 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+    extern __attribute__((__nothrow__)) int (putchar)(int );
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int puts(const char * ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int ungetc(int , FILE * ) __attribute__((__nonnull__(2)));
+# 778 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) size_t fread(void * __restrict ,
+                    size_t , size_t , FILE * __restrict ) __attribute__((__nonnull__(1,4)));
+# 794 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) size_t __fread_bytes_avail(void * __restrict ,
+                    size_t , FILE * __restrict ) __attribute__((__nonnull__(1,3)));
+# 810 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) size_t fwrite(const void * __restrict ,
+                    size_t , size_t , FILE * __restrict ) __attribute__((__nonnull__(1,4)));
+# 822 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fgetpos(FILE * __restrict , fpos_t * __restrict ) __attribute__((__nonnull__(1,2)));
+# 833 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fseek(FILE * , long int , int ) __attribute__((__nonnull__(1)));
+# 850 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int fsetpos(FILE * __restrict , const fpos_t * __restrict ) __attribute__((__nonnull__(1,2)));
+# 863 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) long int ftell(FILE * ) __attribute__((__nonnull__(1)));
+# 877 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) void rewind(FILE * ) __attribute__((__nonnull__(1)));
+# 886 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) void clearerr(FILE * ) __attribute__((__nonnull__(1)));
+
+
+
+
+
+
+
+extern __attribute__((__nothrow__)) int feof(FILE * ) __attribute__((__nonnull__(1)));
+
+
+
+
+extern __attribute__((__nothrow__)) int ferror(FILE * ) __attribute__((__nonnull__(1)));
+
+
+
+
+extern __attribute__((__nothrow__)) void perror(const char * );
+# 917 "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\..\\include\\stdio.h" 3
+extern __attribute__((__nothrow__)) int _fisatty(FILE * ) __attribute__((__nonnull__(1)));
+
+
+
+extern __attribute__((__nothrow__)) void __use_no_semihosting_swi(void);
+extern __attribute__((__nothrow__)) void __use_no_semihosting(void);
+# 19 "../../../mode_24g\\main_24g.h" 2
+
+
+
+
+# 1 "../periph\\matrix_key.h" 1
+# 79 "../periph\\matrix_key.h"
+extern unsigned char const flash_key_win_tbl[];
+
+
+
+
+extern uint8_t const key_delay_tbl[4];
+
+
+
+
+extern uint16_t key_ctrl;
+# 107 "../periph\\matrix_key.h"
+extern uint16_t key_ctrl_ex;
+# 122 "../periph\\matrix_key.h"
+extern uint8_t key_temp_flag;
+
+
+
+
+extern uint16_t special_key;
+# 148 "../periph\\matrix_key.h"
+extern uint16_t special_key_bak;
+# 168 "../periph\\matrix_key.h"
+extern uint8_t device_key;
+
+
+
+
+
+
+
+extern uint8_t device_key_bak;
+
+
+
+
+
+
+
+extern unsigned char decode_data_l_n;
+extern unsigned char decode_data_h_n;
+
+extern unsigned char matrix_status[];
+extern unsigned char define_key_fifo[];
+extern unsigned char key_fn_status[];
+
+
+
+
+
+
+extern unsigned char gKeyScan_bak[];
+extern unsigned char device_type_bak;
+extern unsigned char decode_index;
+
+extern unsigned char multi_data_tmp_l;
+extern unsigned char multi_data_tmp_h;
+extern unsigned char tmp_std_key[22];
+# 213 "../periph\\matrix_key.h"
+extern unsigned char ctrl_key_value;
+extern unsigned char std_key_value;
+extern unsigned char com_ctrl_index;
+extern uint8_t desk_mac_index;
+extern uint8_t mac_shot_index;
+
+extern unsigned char const matrixkey_win_tbl[];
+extern unsigned char const matrixkey_win_fn_tbl[];
+
+
+
+
+extern void matrixkey_scan(void);
+extern void scan_mode_swtich(uint8_t type);
+
+extern void mode_swtich_init(void);
+# 24 "../../../mode_24g\\main_24g.h" 2
+# 1 "../led\\led.h" 1
+# 57 "../led\\led.h"
 enum led_level
 {
     iLED_LEV_MIN=0,
@@ -2522,25 +2909,23 @@ typedef enum {
     iMODE_LED_OFF =0,
     iMODE_LED_ON =1,
     iMODE_LED_BREATH =2,
-    iMODE_LED_SNAKE =3,
-    iMODE_LED_NHJB =4,
-    iMODE_LED_LG_L_R =5,
-    iMODE_LED_STAR =6,
-    iMODE_LED_SBZL =7,
-    iMODE_LED_BS =8,
-    iMODE_LED_QCNH =9,
-    iMODE_LED_LHTW =10,
-    iMODE_LED_DXTW =11,
-    iMODE_LED_SXTW =12,
-    iMODE_LED_TXTW =13,
-    iMODE_LED_FXTW =14,
-    iMODE_LED_JG =15,
+    iMODE_LED_NHJB =3,
+    iMODE_LED_LG_L_R =4,
+    iMODE_LED_STAR =5,
+    iMODE_LED_SBZL =6,
+    iMODE_LED_BS =7,
+    iMODE_LED_QCNH =8,
+    iMODE_LED_LHTW =9,
+    iMODE_LED_DXTW =10,
+    iMODE_LED_SXTW =11,
+    iMODE_LED_TXTW =12,
+    iMODE_LED_FXTW =13,
 
-    iMODE_LED_MAX =14,
-    iMODE_LED_INVALID =15,
+    iMODE_LED_MAX =13,
+    iMODE_LED_INVALID =14,
     iLOGO_INVALID = 0x0F,
 } logo_mode_t;
-# 118 "../led/led.h"
+# 117 "../led\\led.h"
 extern _Bool blogo_status;
 extern _Bool bled_bright_en;
 extern _Bool bback_led_status;
@@ -2580,8 +2965,10 @@ extern uint16_t delay_time_count;
 extern uint8_t rgb_index;
 extern uint8_t led_process_index;
 extern uint8_t hint_time_count;
+extern uint8_t led_fade;
 
 extern uint8_t pwm_rgb_tbl[(8)][3];
+extern uint8_t mode_led_rgb[3];
 
 extern uint8_t pwm_duty_array_0[];
 extern uint8_t pwm_duty_array_1[];
@@ -2617,7 +3004,6 @@ extern void rgb_w_max(void);
 
 extern void led_mode_on(void);
 extern void led_mode_breath(void);
-extern void led_mode_snake(void);
 extern void led_mode_nhjb(void);
 extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
@@ -2629,7 +3015,62 @@ extern void led_mode_lhtw(void);
 extern void led_mode_dxtw(void);
 extern void led_mode_sxtw(void);
 extern void led_mode_txtw(void);
-# 16 "../led/led.c" 2
+# 25 "../../../mode_24g\\main_24g.h" 2
+# 1 "../periph\\lvd.h" 1
+# 175 "../periph\\lvd.h"
+extern unsigned char bat_status;
+# 186 "../periph\\lvd.h"
+extern _Bool bbat_update;
+extern unsigned char bat_value;
+extern uint8_t lvd_scan_count;
+
+
+
+
+extern void usb_5v_check(void);
+
+extern void bat_init(void);
+extern unsigned char bat_voltage_check(void);
+extern void led_hint_process(void);
+# 26 "../../../mode_24g\\main_24g.h" 2
+
+# 1 "../../../mode_24g/sleep.h" 1
+# 56 "../../../mode_24g/sleep.h"
+extern void mcu_sleep(void);
+extern void rtc_init(void);
+extern void sleep_process(void);
+# 28 "../../../mode_24g\\main_24g.h" 2
+# 1 "../periph\\userdefined_key.h" 1
+# 32 "../periph\\userdefined_key.h"
+extern _Bool bkey_break_or_realse;
+
+extern unsigned char define_key_status;
+
+
+
+
+extern unsigned char define_key_ctrl;
+# 48 "../periph\\userdefined_key.h"
+extern uint8_t decode_data_l;
+# 59 "../periph\\userdefined_key.h"
+extern uint8_t decode_data_h;
+# 71 "../periph\\userdefined_key.h"
+extern unsigned char define_key_fifo[];
+extern unsigned char com_key_index;
+
+
+
+extern unsigned char define_key_flag;
+# 101 "../periph\\userdefined_key.h"
+extern void define_key_process(void);
+# 29 "../../../mode_24g\\main_24g.h" 2
+# 1 "../periph\\time_delay.h" 1
+# 56 "../periph\\time_delay.h"
+extern void delayus(unsigned int time);
+
+extern void uart_init(void);
+extern void uart_tx(unsigned char data);
+# 30 "../../../mode_24g\\main_24g.h" 2
 
 # 1 "../flash\\flash.h" 1
 # 61 "../flash\\flash.h"
@@ -2642,9 +3083,9 @@ extern _Bool flash_write(unsigned int addr, unsigned int length);
 extern _Bool flash_write_ble_addr(unsigned int addr);
 extern _Bool flash_read(unsigned int addr, unsigned int length);
 extern _Bool flash_erase(unsigned char bank);
-# 18 "../led/led.c" 2
+# 32 "../../../mode_24g\\main_24g.h" 2
 # 1 "../flash\\flash_process.h" 1
-# 152 "../flash\\flash_process.h"
+# 154 "../flash\\flash_process.h"
 enum key_mod
 {
     iKEY_MODE_MIN=0,
@@ -2689,7 +3130,7 @@ extern uint8_t sys_mode;
 extern uint8_t mouse_lod_set;
 extern uint8_t key_delay_set;
 extern uint16_t adv_cfg_value;
-# 204 "../flash\\flash_process.h"
+# 206 "../flash\\flash_process.h"
 extern uint8_t device_status_base;
 extern uint8_t sys_cfg_base;
 
@@ -2708,7 +3149,81 @@ extern void flash_save_cfg_dpi(void);
 
 extern void flash_load_ble_addr(void);
 extern void flash_save_ble_addr(void);
-# 19 "../led/led.c" 2
+# 33 "../../../mode_24g\\main_24g.h" 2
+
+# 1 "../../../mode_24g/rf_hardware.h" 1
+# 35 "../../../mode_24g\\main_24g.h" 2
+# 1 "../../../mode_24g/rf_protocol.h" 1
+# 204 "../../../mode_24g/rf_protocol.h"
+extern void rf_device_info(void);
+extern void rf_normal_mode_sleep(void);
+
+extern void rf_connect_process(void);
+extern void rf_sync_process(void);
+extern void rf_nromal_process(void);
+
+extern void rf_mode_convert(unsigned char mode);
+extern void rf_encrypt_cb(uint8_t* p_rf_data_fifo,uint8_t rf_data_length_temp);
+# 36 "../../../mode_24g\\main_24g.h" 2
+# 1 "../../../mode_24g/rf_data_process.h" 1
+# 51 "../../../mode_24g/rf_data_process.h"
+extern _Bool rf_conn_ing_callback(void);
+extern void rf_conn_rsp_data(uint8_t *rf_fifo, uint8_t *tx_length);
+
+extern _Bool rf_sreach_ok_callback(uint8_t *rf_fifo);
+extern void rf_sync_ok_callback(void);
+
+extern void rf_hid_rx_callback(void);
+extern void rf_tx_data_process(void);
+
+extern void rf_tx1_idle_callback(void);
+extern void rf_tx1_irq_callback(void);
+extern void rf_normal_mode_sleep(void);
+
+extern void rf_rx_begin_callback(void);
+extern void rf_rsp_ok_callback(uint8_t * rf_fifo);
+extern void rf_no_rx_callback(void);
+extern void rf_mode_convert(unsigned char mode);
+# 37 "../../../mode_24g\\main_24g.h" 2
+# 73 "../../../mode_24g\\main_24g.h"
+extern unsigned char in_report_data[];
+extern unsigned char out_report_data[];
+extern uint32_t adv_interval_ms;
+# 104 "../../../mode_24g\\main_24g.h"
+extern _Bool bencrypted_en;
+extern _Bool b24g_nromal;
+
+extern uint16_t rf_ctrl_reg;
+# 128 "../../../mode_24g\\main_24g.h"
+extern volatile uint8_t rf_work_mode;
+
+
+
+
+
+
+
+extern unsigned char dat_24g_0[];
+extern unsigned char dat_24g_1[];
+
+extern uint8_t rf_data_fifo[32];
+# 178 "../../../mode_24g\\main_24g.h"
+extern unsigned int sync_word;
+extern volatile uint32_t rtc_reload_value;
+extern uint32_t connect_time_count;
+
+
+
+
+
+extern void mouse_24g_init(void);
+extern int main_24g(void);
+# 15 "../led/led.c" 2
+
+
+
+
+
 # 1 "../../../mode_usb\\usb_cfg_info.h" 1
 # 71 "../../../mode_usb\\usb_cfg_info.h"
 extern _Bool busb_mouse_in_en;
@@ -2723,85 +3238,8 @@ extern unsigned char g_USB_State;
 
 
 extern void usb_data_process(void);
-# 20 "../led/led.c" 2
-# 1 "../periph\\matrix_key.h" 1
-# 77 "../periph\\matrix_key.h"
-extern unsigned char const flash_key_win_tbl[];
-
-
-
-
-extern uint8_t const key_delay_tbl[4];
-
-
-
-
-extern uint16_t key_ctrl;
-# 105 "../periph\\matrix_key.h"
-extern uint16_t key_ctrl_ex;
-# 119 "../periph\\matrix_key.h"
-extern uint8_t key_temp_flag;
-
-
-
-
-extern uint16_t special_key;
-# 145 "../periph\\matrix_key.h"
-extern uint16_t special_key_bak;
-# 165 "../periph\\matrix_key.h"
-extern uint8_t device_key;
-
-
-
-
-
-
-
-extern uint8_t device_key_bak;
-
-
-
-
-
-
-
-extern unsigned char decode_data_l_n;
-extern unsigned char decode_data_h_n;
-
-extern unsigned char matrix_status[];
-extern unsigned char define_key_fifo[];
-extern unsigned char key_fn_status[];
-
-
-
-
-
-
-extern unsigned char gKeyScan_bak[];
-extern unsigned char device_type_bak;
-extern unsigned char decode_index;
-
-extern unsigned char multi_data_tmp_l;
-extern unsigned char multi_data_tmp_h;
-extern unsigned char tmp_std_key[22];
-# 210 "../periph\\matrix_key.h"
-extern unsigned char ctrl_key_value;
-extern unsigned char std_key_value;
-extern unsigned char com_ctrl_index;
-extern uint8_t desk_mac_index;
-
-extern unsigned char const matrixkey_win_tbl[];
-extern unsigned char const matrixkey_win_fn_tbl[];
-
-
-
-
-extern void matrixkey_scan(void);
-extern void scan_mode_swtich(uint8_t type);
-
-extern void mode_swtich_init(void);
 # 21 "../led/led.c" 2
-# 30 "../led/led.c"
+# 31 "../led/led.c"
 _Bool bdevice_led_status;
 _Bool bled_bright_en;
 _Bool bback_led_status;
@@ -2846,8 +3284,11 @@ uint16_t delay_time_count;
 uint8_t rgb_index;
 uint8_t led_process_index;
 uint8_t hint_time_count;
+uint8_t led_fade = 64;
+uint8_t led_fade_dir;
 
 __attribute__((aligned(4))) uint8_t pwm_rgb_tbl[(8)][3];
+uint8_t mode_led_rgb[3];
 
 uint8_t pwm_duty_array_0[0x20];
 uint8_t pwm_duty_array_1[0x20];
@@ -2855,7 +3296,7 @@ uint8_t pwm_duty_array_2[0x20];
 uint8_t pwm_duty_array_3[0x20];
 
 extern _Bool b24g_nromal;
-# 95 "../led/led.c"
+# 99 "../led/led.c"
 void ledc_init(void)
 {
     ledc_config_t config = {
@@ -2866,82 +3307,85 @@ void ledc_init(void)
     drv_ledc_init(((OM_LEDC_Type *) 0x40000A00), &config);
     bargb_valid = 1;
 }
-# 113 "../led/led.c"
+# 117 "../led/led.c"
 void led_status_hint(void)
 {
     uint8_t i=0;
+    uint8_t r=0, g=0, b=0;
 
-                ;
- if(hint_led_status&(1<<7))
+
+    if((10 >= bat_value) && (0 == (bat_status&(1<<6))))
     {
-        if(hint_led_status&(1<<0))
-        {
-            i = 1;
-            {((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1u<<(2*8+2));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(2*8+2));};
-        }
-        else
-        {
-            {((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1u<<(2*8+2));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(2*8+2));};
-        }
-
-        if(hint_led_status&(1<<1))
-        {
-            i = 1;
-            {((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1u<<(3*8+4));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(3*8+4));};
-        }
-        else
-        {
-            {((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1u<<(3*8+4));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(3*8+4));};
-        }
-
-        if(hint_led_status&(1<<2))
-        {
-            i = 1;
-
-        }
-        else
-        {
-
-        }
+        if(0 != (hint_led_status&(1<<4)))
+            r = 64;
     }
     else
     {
-        if(kb_led_status&(1<<0))
-        {
-            i = 1;
-            {((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1u<<(2*8+2));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(2*8+2));};
-        }
+        uint8_t connected;
+
+        if(iDEVICE_TYPE_USB == device_type)
+            connected = 1;
+        else if(iDEVICE_TYPE_24G == device_type)
+            connected = (0x03 == dat_24g_0[26]);
         else
-        {
-            {((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1u<<(2*8+2));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(2*8+2));};
-        }
+            connected = (0 != (ble_24g_ctrl&(1<<3)));
 
-        if(kb_led_status&(1<<1))
-        {
-            i = 1;
-            {((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1u<<(3*8+4));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(3*8+4));};
-        }
-        else
-        {
-            {((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1u<<(3*8+4));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(3*8+4));};
-        }
 
-        if(hint_led_status&(1<<4))
+        if(0 != (hint_led_status&(1<<7)))
+            connected = (0 != bdevice_led_status);
+
+        if(0 != connected)
         {
-            i = 1;
-
+            if(iDEVICE_TYPE_BT0 == device_type)
+            {
+                b = 64;
+            }
+            else if(iDEVICE_TYPE_BT1 == device_type)
+            {
+                r = 64>>1;
+                b = 64;
+            }
+            else if(iDEVICE_TYPE_BT2 == device_type)
+            {
+                g = 64;
+                b = 64;
+            }
+            else if(iDEVICE_TYPE_24G == device_type)
+            {
+                g = 64;
+            }
+            else if(iDEVICE_TYPE_USB == device_type)
+            {
+                r = 64;
+                g = 64>>2;
+                b = 64>>1;
+            }
         }
-        else
-        {
-
-        }
-
-        if(0==i)
-            return;
     }
-               ;
+
+    mode_led_rgb[0x01] = r;
+    mode_led_rgb[0x00] = g;
+    mode_led_rgb[0x02] = b;
+
+ if(kb_led_status&(1<<0))
+    {
+        {((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1u<<(2*8+2));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(2*8+2));}
+    }
+    else
+    {
+        {((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1u<<(2*8+2));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(2*8+2));};
+    }
+
+    if(kb_led_status&(1<<1))
+    {
+        {((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1u<<(3*8+4));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(3*8+4));};
+    }
+    else
+    {
+        {((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1u<<(3*8+4));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(3*8+4));};
+    }
 }
-# 195 "../led/led.c"
+# 202 "../led/led.c"
 void device_led_on(void)
 {
     bdevice_led_status = 1;
@@ -2954,7 +3398,7 @@ void device_led_on(void)
     else if(iDEVICE_TYPE_24G == device_type)
         hint_led_status |= ((1<<2)|(1<<7));
 }
-# 215 "../led/led.c"
+# 222 "../led/led.c"
 void device_led_off(void)
 {
     bdevice_led_status = 0;
@@ -3011,7 +3455,7 @@ __attribute((used, section("RAM_CODE"), noinline)) void rgb_w_max(void)
 }
 
 extern void key_into_fcc_test(void);
-# 279 "../led/led.c"
+# 286 "../led/led.c"
 void device_led_process(void)
 {
 
@@ -3058,6 +3502,7 @@ void device_led_process(void)
                     device_conn_index++;
                     led_delay_count = rtc_cur_value;
                     device_hint_count = 0;
+                    bdevice_led_status = 0;
                 }
 
                 key_into_fcc_test();
@@ -3096,6 +3541,7 @@ void device_led_process(void)
                             hint_led_status &= ~(1<<7);
                             device_conn_index = 0;
                             ble_24g_ctrl &= ~(1<<0);
+                            ble_24g_ctrl &= ~(1<<2);
                         }
                     }
                 }
@@ -3129,6 +3575,7 @@ void device_led_process(void)
                     device_conn_index++;
                     led_delay_count = rtc_cur_value;
                     device_hint_count = 0;
+                    bdevice_led_status = 0;
                 }
 
                 if(0 == bdevice_led_status)
@@ -3190,7 +3637,7 @@ void device_led_process(void)
             return;
     }
 }
-# 465 "../led/led.c"
+# 475 "../led/led.c"
 void logo_process(void)
 {
     uint8_t i;
@@ -3223,15 +3670,26 @@ void logo_process(void)
     {
         if(ble_24g_ctrl&(1<<2))
         {
-            logo_off();
+            if(0 == bargb_valid)
+            {
+                ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+1));
+                ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
+                ledc_init();
+            }
+            clr_rgb();
             return;
         }
     }
 
-    if((0 == bled_bright_en) || (10>=bat_value))
+    if(0 == bled_bright_en)
     {
+        if(0 == bargb_valid)
+        {
+            ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+1));
+            ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
+            ledc_init();
+        }
         clr_rgb();
-        logo_off();
         return;
     }
 
@@ -3242,8 +3700,32 @@ void logo_process(void)
         ledc_init();
     }
 
-    if(led_pre_mode != led_cur_mode)
+    if(10>=bat_value)
     {
+        clr_rgb();
+        return;
+    }
+
+
+    if(0 == led_fade_dir)
+    {
+        if(led_pre_mode != led_cur_mode)
+        {
+            led_fade = 64;
+            led_fade_dir = 1;
+        }
+    }
+
+    if(1 == led_fade_dir)
+    {
+        if(led_fade > 4)
+        {
+            led_fade -= 4;
+            return;
+        }
+
+        led_fade = 0;
+        led_fade_dir = 2;
         led_pre_mode = led_cur_mode;
 
         led_process_index = 0;
@@ -3267,11 +3749,6 @@ void logo_process(void)
                 pwm_time_count = 0;
                 delay_time_count = 0xFF;
                 rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-
-                break;
-            case iMODE_LED_SNAKE:
-                snake_led_index = 4;
-                pwm_duty_array_0[4] = ((64*4)/4);
 
                 break;
             case iMODE_LED_NHJB:
@@ -3307,6 +3784,7 @@ void logo_process(void)
                 }
                 break;
             case iMODE_LED_BS:
+                delay_time_count = 0xFF;
                 break;
             case iMODE_LED_QCNH:
                 break;
@@ -3326,13 +3804,18 @@ void logo_process(void)
                 snake_led_index = 3;
                 pwm_duty_array_0[snake_led_index] = 64;
                 break;
-            case iMODE_LED_JG:
-                led_use_flag = 0;
-                break;
         }
     }
-    else
+    else if(2 == led_fade_dir)
     {
+        led_fade += 4;
+        if(64 <= led_fade)
+        {
+            led_fade = 64;
+            led_fade_dir = 0;
+        }
+    }
+
 
         switch(led_cur_mode)
         {
@@ -3343,9 +3826,6 @@ void logo_process(void)
                 break;
             case iMODE_LED_BREATH:
                 led_mode_breath();
-                break;
-            case iMODE_LED_SNAKE:
-                led_mode_snake();
                 break;
             case iMODE_LED_NHJB:
                 led_mode_nhjb();
@@ -3379,5 +3859,4 @@ void logo_process(void)
                 led_mode_txtw();
                 break;
         }
-    }
 }

@@ -104,6 +104,8 @@
         #define iKEY_CTRL_SPACE   0x43
         #define iKEY_CMD_SPACE    0x44
         #define iKEY_DESK_MAC     0x45
+        #define iKEY_MAC_SEARCH_SIRI 0x46   // MAC：短按搜索，长按 Siri
+        #define iKEY_MAC_SHOT     0x47      // MAC：截屏 Cmd+Shift+3
       //}
     //}
 //}
@@ -340,6 +342,11 @@
 #define iMMK_BRIGHT_ADD_L       0x6F
 #define iMMK_BRIGHT_SUM_H       0x00
 #define iMMK_BRIGHT_SUM_L       0x70
+
+#define iMMK_MAC_MCONTROL_H     0x02            // MAC 任务窗口(Mission Control)
+#define iMMK_MAC_MCONTROL_L     0x9F
+#define iMMK_MAC_LAUNCHPAD_H    0x02            // MAC 控制台(Launchpad)
+#define iMMK_MAC_LAUNCHPAD_L    0xA0
 
 #define iMMK_NEXT_TRACK_H       0x00
 #define iMMK_NEXT_TRACK_L       0xB5

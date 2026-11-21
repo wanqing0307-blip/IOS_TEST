@@ -191,6 +191,7 @@ __RAM_CODE uint8_t ex2_app_mouse_scan(void)
         memcpy(temp_buff+2, std_key+1, 6);
         if(true == ex2_hid_tx_notification_keyboard(temp_buff))
         {
+            rtc_init_value = drv_rtc_read(OM_RTC);  // 按键有数据，重置休眠计时
             m_data_flag &= ~bstd_kb_data_send;
             key_tx_count = 0;
         }
@@ -202,6 +203,7 @@ __RAM_CODE uint8_t ex2_app_mouse_scan(void)
         temp_buff[1] = mmk_data_h;
         if(true == ex2_hid_tx_notification_consumer_control(temp_buff))
         {
+            rtc_init_value = drv_rtc_read(OM_RTC);  // 多媒体键有数据，重置休眠计时
             m_data_flag &= ~bmmk_data_send;
             mmk_tx_count = 0;
         }
@@ -211,6 +213,7 @@ __RAM_CODE uint8_t ex2_app_mouse_scan(void)
     {
         if(true == ex2_hid_tx_notification_bitmap_kb(std_key+7))
         {
+            rtc_init_value = drv_rtc_read(OM_RTC);  // 扩展按键有数据，重置休眠计时
             m_data_flag &= ~bstd_ex_data_send;
             key_ex_tx_count = 0;
         }
@@ -232,6 +235,7 @@ __RAM_CODE uint8_t ex2_app_mouse_scan(void)
         temp_buff[5] = 0;                         //til
         if(true == ex2_hid_tx_notification_mouse(temp_buff))
         {
+            rtc_init_value = drv_rtc_read(OM_RTC);  // 鼠标有数据，重置休眠计时
             m_data_flag &=~(bmouse_data_send);
             mouse_x = 0;
             mouse_y = 0;
@@ -344,9 +348,9 @@ void app_ble_evt_dispatch(uint32_t events)
         ble_24g_ctrl |= bom6239_sync_ing;
         matrixkey_scan();
         scan_mode_swtich(iMODE_CHECK_DELAY);
-        logo_off();
         led_hint_process();
-        logo_process();
+        logo_process();                     // sync_ing 时只清灯效，保留第1颗模式指示灯
+        drv_ledc_write();                   // 未连接时也要输出配对/回连提示
         device_led_process();
     }
 }

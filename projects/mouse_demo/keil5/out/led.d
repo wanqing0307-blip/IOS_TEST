@@ -49,6 +49,9 @@
   ..\..\..\hal\driver\include\..\om6239\drv_ledc.h \
   ..\..\..\hal\driver\include\..\om6239\drv_encoder.h \
   ..\..\..\hal\driver\include\..\om6239\drv_dynamic_load.h \
-  ..\main\main.h ..\periph\lvd.h ..\led\led.h ..\flash\flash.h \
-  ..\flash\flash_process.h ..\..\..\mode_usb\usb_cfg_info.h \
-  ..\periph\matrix_key.h
+  ..\main\main.h ..\..\..\mode_24g\main_24g.h ..\periph\matrix_key.h \
+  ..\led\led.h ..\periph\lvd.h ..\..\..\mode_24g\sleep.h \
+  ..\periph\userdefined_key.h ..\periph\time_delay.h ..\flash\flash.h \
+  ..\flash\flash_process.h ..\..\..\mode_24g\rf_hardware.h \
+  ..\..\..\mode_24g\rf_protocol.h ..\..\..\mode_24g\rf_data_process.h \
+  ..\led\led.h ..\..\..\mode_usb\usb_cfg_info.h

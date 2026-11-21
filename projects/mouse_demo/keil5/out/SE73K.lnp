@@ -42,7 +42,7 @@
 ".\out\flash_process.o"
 ".\out\led.o"
 ".\out\logo_mode.o"
---library_type=microlib --nodebug --strict --scatter "../../../hal/device/om6239/ARM/om6239_ac6.sct"
+--library_type=microlib --strict --scatter "../../../hal/device/om6239/ARM/om6239_ac6.sct"
 --diag_suppress=L6314 --diag_suppress=L6312 ../../../components/exble2/stack/exble2_20260316_new.lib --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
 --list ".\out\SE73K.map" -o .\out\SE73K.axf

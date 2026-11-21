@@ -2257,7 +2257,7 @@ void drv_dynamic_load_app(app_t *app);
 # 59 "../../../hal/driver/include\\om_driver.h" 2
 # 47 "../../../hal/driver/om6239/drv_pmu.c" 2
 # 1 "../main\\main.h" 1
-# 237 "../main\\main.h"
+# 236 "../main\\main.h"
 typedef enum {
     iDEVICE_TYPE_BLE = 1U,
     iDEVICE_TYPE_BT0 = 0U,
@@ -2328,7 +2328,7 @@ extern uint8_t m_data_flag;
 
 
 extern uint8_t hint_led_status;
-# 316 "../main\\main.h"
+# 315 "../main\\main.h"
 extern uint8_t kb_led_status;
 
 
@@ -2342,7 +2342,7 @@ extern uint16_t mouse_y;
 extern uint8_t mouse_data_z;
 
 extern unsigned char std_key[];
-# 340 "../main\\main.h"
+# 339 "../main\\main.h"
 extern uint8_t mmk_data_l;
 extern uint8_t mmk_data_h;
 extern uint8_t kb_bd_addr[];
@@ -2467,13 +2467,13 @@ __attribute((used, section("RAM_CODE"), noinline)) void drv_pmu_set_low_power_mo
                 ((OM_PMU_Type *) 0x40000000)->LPMS = (lpms & (~(0x7U << 0))) | (uint32_t)lpm;
                 if (lpm == PMU_LPM_DEEP_SLEEP) {
                     ((OM_PMU_Type *) 0x40000000)->PAD_PU_CTRL = 0x00AAAA00;
-                    ((OM_PMU_Type *) 0x40000000)->PAD_PU_CTRL_1 = 0x02000005;
-                    ((OM_PMU_Type *) 0x40000000)->PAD_PD_CTRL = 0x6000000C;
-                    ((OM_PMU_Type *) 0x40000000)->PAD_BUF_EN &= ~(1<<(2*8+3))|(1<<(2*8+4));
+                    ((OM_PMU_Type *) 0x40000000)->PAD_PU_CTRL_1 = 0x00000002;
+                    ((OM_PMU_Type *) 0x40000000)->PAD_PD_CTRL = 0x0000000C;
+                    ((OM_PMU_Type *) 0x40000000)->PAD_BUF_EN &= ~((1<<(2*8+3))|(1<<(2*8+4)));
 
-                    ((OM_GPIO_Type *) 0x43000000)->DATAOUT = 0xF803FFF2;
-                    ((OM_GPIO_Type *) 0x43000000)->OUTENSET = 0x07FC0003;
-                    ((OM_GPIO_Type *) 0x43000000)->OUTENCLR = ~0x07FC0003;
+                    ((OM_GPIO_Type *) 0x43000000)->DATAOUT = 0xA819FFF2;
+                    ((OM_GPIO_Type *) 0x43000000)->OUTENSET = 0x57E60003;
+                    ((OM_GPIO_Type *) 0x43000000)->OUTENCLR = ~0x57E60003;
                     delayus(3000);
 
                     ((OM_RCC_Type *) 0x40000600)->CLKGATE = 0x0742;

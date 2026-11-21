@@ -2410,7 +2410,7 @@ extern void app_ble_evt_dispatch(uint32_t events);
 extern void ex2_app_mouse_broadcast_fsm(void);
 # 13 "../flash/flash.c" 2
 # 1 "../main\\main.h" 1
-# 237 "../main\\main.h"
+# 236 "../main\\main.h"
 typedef enum {
     iDEVICE_TYPE_BLE = 1U,
     iDEVICE_TYPE_BT0 = 0U,
@@ -2481,7 +2481,7 @@ extern uint8_t m_data_flag;
 
 
 extern uint8_t hint_led_status;
-# 316 "../main\\main.h"
+# 315 "../main\\main.h"
 extern uint8_t kb_led_status;
 
 
@@ -2495,7 +2495,7 @@ extern uint16_t mouse_y;
 extern uint8_t mouse_data_z;
 
 extern unsigned char std_key[];
-# 340 "../main\\main.h"
+# 339 "../main\\main.h"
 extern uint8_t mmk_data_l;
 extern uint8_t mmk_data_h;
 extern uint8_t kb_bd_addr[];
@@ -2509,7 +2509,7 @@ extern uint32_t const ble_sleep_2_time_tbl[];
 extern void mouse_periph_wakeup_enable(uint8_t mask);
 # 14 "../flash/flash.c" 2
 # 1 "../flash/flash_process.h" 1
-# 152 "../flash/flash_process.h"
+# 154 "../flash/flash_process.h"
 enum key_mod
 {
     iKEY_MODE_MIN=0,
@@ -2554,7 +2554,7 @@ extern uint8_t sys_mode;
 extern uint8_t mouse_lod_set;
 extern uint8_t key_delay_set;
 extern uint16_t adv_cfg_value;
-# 204 "../flash/flash_process.h"
+# 206 "../flash/flash_process.h"
 extern uint8_t device_status_base;
 extern uint8_t sys_cfg_base;
 

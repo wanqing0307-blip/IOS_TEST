@@ -159,11 +159,10 @@
 #define mLED_NUM_PIN            (2*8+2)
 #define mLED_CAPS_PIN           (3*8+4)
 
-#define mLED_VDD_DIS            
+#define mLED_VDD_DIS            {OM_GPIO0->DATAOUTCLR = ((1u<<mLED_NUM_PIN)|(1u<<mLED_CAPS_PIN));OM_GPIO0->OUTENSET = ((1u<<mLED_NUM_PIN)|(1u<<mLED_CAPS_PIN));}
 #define mLED_NUM_LOW            {OM_GPIO0->DATAOUTCLR = (1u<<mLED_NUM_PIN);OM_GPIO0->OUTENSET = (1u<<mLED_NUM_PIN);}
 #define mLED_CAPS_LOW           {OM_GPIO0->DATAOUTCLR = (1u<<mLED_CAPS_PIN);OM_GPIO0->OUTENSET = (1u<<mLED_CAPS_PIN);}          
-
-#define mLED_VDD_EN             
+           
 #define mLED_NUM_HIGH           {OM_GPIO0->DATAOUTSET = (1u<<mLED_NUM_PIN);OM_GPIO0->OUTENSET = (1u<<mLED_NUM_PIN);}
 #define mLED_CAPS_HIGH          {OM_GPIO0->DATAOUTSET = (1u<<mLED_CAPS_PIN);OM_GPIO0->OUTENSET = (1u<<mLED_CAPS_PIN);}         
 //
@@ -176,7 +175,7 @@
 
 #define MODE_BLE_PIN            (2*8+3)
 #define MODE_24G_PIN            (2*8+4)
-#define MODE_DATA               (OM_GPIO0->DATA & (1<<MODE_BLE_PIN)|(1<<MODE_24G_PIN))
+#define MODE_DATA               (OM_GPIO0->DATA & ((1<<MODE_BLE_PIN)|(1<<MODE_24G_PIN)))
 
 #define USB_DN_PIN              (0*8+2)
 #define USB_DP_PIN              (0*8+3)
@@ -189,7 +188,7 @@
 #define CE_PIN                  (2*8+5)
 #define IRQ_PIN                 (2*8+5)
 
-#define UART_PIN                (2*8+2)
+#define UART_PIN                (0*8+0)
 //
 //----------------------------------------------------------------------------;
 

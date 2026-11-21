@@ -1,0 +1,6 @@
+--cpu Cortex-M0 --lto
+".\out_boot\boot_img.o"
+--library_type=microlib --strict --scatter ".\out_boot\SE73_BOOT.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list ".\out_boot\SE73_BOOT.map" -o .\out_boot\SE73_BOOT.axf

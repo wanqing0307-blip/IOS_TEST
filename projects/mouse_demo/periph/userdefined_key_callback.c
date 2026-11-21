@@ -35,6 +35,10 @@ uint32_t                        press_bt2_time_count;
 uint32_t                        press_24g_time_count;
 uint32_t                        default_time_count;
 
+static uint8_t                  mac_siri_state;     // 0空闲 1按住 2已发Siri
+static uint32_t                 mac_siri_time;
+static uint8_t                  mac_shot_done;
+
 //-----------------------------------------------------------------------------
 //表格定义区
 //
@@ -171,7 +175,7 @@ void __attribute__((noinline)) key_decode_cmd_0x10(void)
                 special_key_bak |= bkey_mode_cyc_bak;
                 led_cur_mode++;
                 if(iMODE_LED_MAX<led_cur_mode)
-                    led_cur_mode = iMODE_LED_MIN;
+                    led_cur_mode = iMODE_LED_ON;    // 循环跳过关闭档，关灯用 FN+ScrollLock
 
                 hid_ctrl_reg |= bdevice_status_change;
                 key_ctrl |= bfn_save_status;
@@ -347,14 +351,23 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             }
             break;
         case iMODE_KEY_BT0&0x0F:
-            if(iDEVICE_TYPE_BT0 != device_type)
-                break;
-
             device_key |= bkey_bt0_press;
             if(0==(device_key_bak&bkey_bt0_press_bak))
             {
                 device_key_bak |= bkey_bt0_press_bak;
                 press_bt0_time_count = conn_rtc_value;
+
+                if(iDEVICE_TYPE_BT0 != device_type)
+                {
+                    device_type = iDEVICE_TYPE_BT0;
+                    bt_index = iDEVICE_TYPE_BT0;
+                    key_ctrl &= ~bwin_mac_sataus;
+                    if(sys_mode&(1<<(device_type&0x07)))
+                        key_ctrl |= bwin_mac_sataus;
+                    flash_save_status();
+                    delayus(10000);
+                    NVIC_SystemReset();
+                }
             }
             else
             {
@@ -370,14 +383,23 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
 
             break;
         case iMODE_KEY_BT1&0x0F:
-            if(iDEVICE_TYPE_BT1 != device_type)
-                break;
-
             device_key |= bkey_bt1_press;
             if(0==(device_key_bak&bkey_bt1_press_bak))
             {
                 device_key_bak |= bkey_bt1_press_bak;
                 press_bt1_time_count = conn_rtc_value;
+
+                if(iDEVICE_TYPE_BT1 != device_type)
+                {
+                    device_type = iDEVICE_TYPE_BT1;
+                    bt_index = iDEVICE_TYPE_BT1;
+                    key_ctrl &= ~bwin_mac_sataus;
+                    if(sys_mode&(1<<(device_type&0x07)))
+                        key_ctrl |= bwin_mac_sataus;
+                    flash_save_status();
+                    delayus(10000);
+                    NVIC_SystemReset();
+                }
             }
             else
             {
@@ -393,14 +415,23 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
 
             break;
         case iMODE_KEY_BT2&0x0F:
-            if(iDEVICE_TYPE_BT2 != device_type)
-                break;
-
             device_key |= bkey_bt2_press;
             if(0==(device_key_bak&bkey_bt2_press_bak))
             {
                 device_key_bak |= bkey_bt2_press_bak;
                 press_bt2_time_count = conn_rtc_value;
+
+                if(iDEVICE_TYPE_BT2 != device_type)
+                {
+                    device_type = iDEVICE_TYPE_BT2;
+                    bt_index = iDEVICE_TYPE_BT2;
+                    key_ctrl &= ~bwin_mac_sataus;
+                    if(sys_mode&(1<<(device_type&0x07)))
+                        key_ctrl |= bwin_mac_sataus;
+                    flash_save_status();
+                    delayus(10000);
+                    NVIC_SystemReset();
+                }
             }
             else
             {
@@ -416,14 +447,20 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
 
             break;
         case iMODE_KEY_24G&0x0F:
-            if(iDEVICE_TYPE_24G != device_type)
-                break;
-
             device_key |= bkey_24g_press;
             if(0==(device_key_bak&bkey_24g_press_bak))
             {
                 device_key_bak |= bkey_24g_press_bak;
                 press_24g_time_count = conn_rtc_value;
+
+                if(iDEVICE_TYPE_24G != device_type)
+                {
+                    device_type = iDEVICE_TYPE_24G;
+                    bt_index = iDEVICE_TYPE_24G;
+                    flash_save_status();
+                    delayus(10000);
+                    NVIC_SystemReset();
+                }
             }
             else
             {
@@ -536,9 +573,13 @@ void __attribute__((noinline)) key_decode_cmd_0x40(void)
                     logo_off();
 
                     flash_erase(iKEY_MODE0_BANK);
+                    flash_erase(iKEY_MODE0_BANK+1);     // 键表版本标记，必须一起擦
                     flash_erase(iKEY_MODE1_BANK);
+                    flash_erase(iKEY_MODE1_BANK+1);
                     flash_erase(iKEY_MODE2_BANK);
+                    flash_erase(iKEY_MODE2_BANK+1);
                     flash_erase(iKEY_MODE3_BANK);
+                    flash_erase(iKEY_MODE3_BANK+1);
 
                     flash_erase(iCFG_BANK);
                     flash_erase(iFLASH_STATUS_BANK);
@@ -649,6 +690,46 @@ void __attribute__((noinline)) key_decode_cmd_0x40(void)
                     key_ctrl_ex |= bdesk_mac;
                     desk_mac_index = 0;
                 }
+            }
+            define_key_ctrl |= bdefine_key_send;
+
+            break;
+        case iKEY_MAC_SEARCH_SIRI&0x0F:
+            if(define_key_flag & bkey_decode_end)       // 松开
+            {
+                if(1 == mac_siri_state)                 // 短按：搜索
+                {
+                    multi_data_tmp_l = iMMK_WWW_SEARCH_L;
+                    multi_data_tmp_h = iMMK_WWW_SEARCH_H;
+                }
+                mac_siri_state = 0;
+            }
+            else if(0 == mac_siri_state)                // 按下
+            {
+                mac_siri_state = 1;
+                mac_siri_time = conn_rtc_value;
+            }
+            else if(1 == mac_siri_state)                // 按住超过 1 秒：Siri
+            {
+                if(mMS_TO_TICK(1000) < (conn_rtc_value-mac_siri_time))
+                {
+                    mac_siri_state = 2;
+                    multi_data_tmp_l = iMMK_IOS_SIRI_L;
+                    multi_data_tmp_h = iMMK_IOS_SIRI_H;
+                }
+            }
+            break;
+        case iKEY_MAC_SHOT&0x0F:
+            if(define_key_flag & bkey_decode_end)
+            {
+                mac_shot_done = 0;
+                break;
+            }
+            if(0 == mac_shot_done)
+            {
+                mac_shot_done = 1;
+                mac_shot_index = 0;
+                key_ctrl_ex |= bshot_mac;
             }
             define_key_ctrl |= bdefine_key_send;
 

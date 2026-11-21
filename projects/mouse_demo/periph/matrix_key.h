@@ -21,7 +21,9 @@
 #define iMATRIX_ROW_NUM         8
 #define iMATRIX_NUM_MAX         iMATRIX_COL_NUM*iMATRIX_ROW_NUM
 
-#define iKEY_INDEX_FN           (8*9 + 7)
+// 键表为 C3-C18 共 16 列 x 8 行，未使用节点补 iSTD_NULL
+#define iKEY_NODE_NUM           128
+#define iKEY_INDEX_FN           55      // decode_index, C9 R7
 #define iKEY_DELAY_COUNT        2
 
 #define iKEY_FN_C               8
@@ -33,15 +35,15 @@
 #define iKEY_24G_C              12
 #define iKEY_24G_R              0x80
 
-#define iKEY_INDEX_W            ((iMATRIX_ROW_NUM*(10-3) + 0)*2)
-#define iKEY_INDEX_A            ((iMATRIX_ROW_NUM*(6-3) + 0)*2)
-#define iKEY_INDEX_S            ((iMATRIX_ROW_NUM*(8-3) + 0)*2)
-#define iKEY_INDEX_D            ((iMATRIX_ROW_NUM*(9-3) + 0)*2)
+#define iKEY_INDEX_W            (56*2)  // C10 R0
+#define iKEY_INDEX_A            (24*2)  // C6  R0
+#define iKEY_INDEX_S            (40*2)  // C8  R0
+#define iKEY_INDEX_D            (48*2)  // C9  R0
 
-#define iKEY_INDEX_UP           ((iMATRIX_ROW_NUM*(18-3)+2)*2)
-#define iKEY_INDEX_LEFT         ((iMATRIX_ROW_NUM*(18-3)+3)*2)
-#define iKEY_INDEX_DOWN         ((iMATRIX_ROW_NUM*(6-3)+4)*2)
-#define iKEY_INDEX_RIGHT        ((iMATRIX_ROW_NUM*(16-3)+7)*2)
+#define iKEY_INDEX_UP           (122*2) // C18 R2
+#define iKEY_INDEX_LEFT         (123*2) // C18 R3
+#define iKEY_INDEX_DOWN         (124*2) // C18 R4
+#define iKEY_INDEX_RIGHT        (127*2) // C18 R7
 
 //-----------------------------------------------------------------------------;
 //配置常量定义区
@@ -110,6 +112,7 @@ extern uint16_t                 key_ctrl_ex;
 
     #define bkey_all_realse     (1<<7)
     #define bdesk_mac           (1<<4)
+    #define bshot_mac           (1<<3)      // MAC 截屏组合键
 
     #define bcom_ctrl_long      (1<<2)
     #define bcom_ctrl_status    (1<<1)
@@ -211,6 +214,7 @@ extern unsigned char            ctrl_key_value;
 extern unsigned char            std_key_value;
 extern unsigned char            com_ctrl_index;
 extern uint8_t                  desk_mac_index;
+extern uint8_t                  mac_shot_index;
 
 extern unsigned char    const   matrixkey_win_tbl[];
 extern unsigned char    const   matrixkey_win_fn_tbl[];

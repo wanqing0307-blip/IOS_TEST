@@ -29,10 +29,36 @@ bool                            bled_run_dir;
 uint16_t                        lfsr_value;
 uint8_t                         start_dec_count;
 uint8_t                         snake_led_index;
+static uint8_t                 qcnh_phase;
+static uint8_t                 qcnh_first = 1;
+static uint8_t                 qcnh_cur[iLED_MAX][3];
 
 //-----------------------------------------------------------------------------;
 // 表格定义区
 //
+
+#define iHUE_NUM        48
+
+// 呼吸用 gamma 表（0~64 -> 0~64，gamma≈2.2，人眼感知线性）
+static const unsigned char gamma_tbl[65] = {
+     0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  2,  2,  2,  3,
+     3,  3,  4,  4,  5,  6,  6,  7,  7,  8,  9, 10, 10, 11, 12, 13,
+    14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 25, 27, 28, 29, 31, 32,
+    34, 36, 37, 39, 41, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62,
+    64,
+};
+
+// 48 阶平滑色环（R,G,B，满量程 iPWM_MAX）
+static const unsigned char hue_rgb_tbl[iHUE_NUM][3] = {
+    {64,  0,  0}, {64,  8,  0}, {64, 16,  0}, {64, 24,  0}, {64, 32,  0}, {64, 40,  0},
+    {64, 48,  0}, {64, 56,  0}, {64, 64,  0}, {56, 64,  0}, {48, 64,  0}, {40, 64,  0},
+    {32, 64,  0}, {24, 64,  0}, {16, 64,  0}, { 8, 64,  0}, { 0, 64,  0}, { 0, 64,  8},
+    { 0, 64, 16}, { 0, 64, 24}, { 0, 64, 32}, { 0, 64, 40}, { 0, 64, 48}, { 0, 64, 56},
+    { 0, 64, 64}, { 0, 56, 64}, { 0, 48, 64}, { 0, 40, 64}, { 0, 32, 64}, { 0, 24, 64},
+    { 0, 16, 64}, { 0,  8, 64}, { 0,  0, 64}, { 8,  0, 64}, {16,  0, 64}, {24,  0, 64},
+    {32,  0, 64}, {40,  0, 64}, {48,  0, 64}, {56,  0, 64}, {64,  0, 64}, {64,  0, 56},
+    {64,  0, 48}, {64,  0, 40}, {64,  0, 32}, {64,  0, 24}, {64,  0, 16}, {64,  0,  8},
+};
 
 //=============================================================================;
 // 代码区                                                                      ;
@@ -47,11 +73,21 @@ uint8_t                         snake_led_index;
 ******************************************************************************/
 void led_mode_on(void)
 {
+    unsigned char h;
+
     rgb_enable = rgb_en_tbl[led_rgb_index&0x07];
     for(gtemp_j=0; gtemp_j<iLED_MAX; gtemp_j++)
     {
         if(iRGB_QICAI == led_rgb_index)
-            rgb_enable = rgb_en_tbl[gtemp_j&0x07];
+        {
+            // 平滑色环：8 颗灯色相依次相差 45°
+            h = (gtemp_j*(iHUE_NUM/iLED_MAX)) % iHUE_NUM;
+
+            pwm_rgb_tbl[gtemp_j][iR_INDEX] = hue_rgb_tbl[h][0];
+            pwm_rgb_tbl[gtemp_j][iG_INDEX] = hue_rgb_tbl[h][1];
+            pwm_rgb_tbl[gtemp_j][iB_INDEX] = hue_rgb_tbl[h][2];
+            continue;
+        }
         rgb_w_max();
     }
 }
@@ -65,7 +101,7 @@ void led_mode_on(void)
 ******************************************************************************/
 void led_mode_breath(void)
 {
-    unsigned char i;
+    unsigned char i, h;
 
     if(led_speed_lev>delay_time_count)
     {
@@ -80,14 +116,14 @@ void led_mode_breath(void)
         if(pwm_time_count >= iPWM_MAX)
             pwm_value = 0;
         else
-            pwm_value = (iPWM_MAX - i);
+            pwm_value = gamma_tbl[iPWM_MAX - i];    // gamma 曲线，呼吸更柔和
     }
     else
     {
         if(pwm_time_count >= iPWM_MAX)
             pwm_value = iPWM_MAX;
         else
-            pwm_value = i;
+            pwm_value = gamma_tbl[i];
     }
 
     if(pwm_time_count == iPWM_MAX)   // 最亮和最暗的时间加长
@@ -98,29 +134,14 @@ void led_mode_breath(void)
             rgb_index++;
     }
 
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x07];
-
+    // 色环：8 颗灯色相依次相差 45°，随呼吸周期缓慢旋转
     for(i=0; i<iLED_MAX; i++)
     {
-        //if(iRGB_QICAI == led_rgb_index)
-        {
-            rgb_enable = ((rgb_index+i)&0x07);
-            if(0==rgb_enable)
-                rgb_enable = 4;
-        }
+        h = (rgb_index*3 + i*(iHUE_NUM/iLED_MAX)) % iHUE_NUM;
 
-        if(rgb_enable&iPWM_R)
-            pwm_rgb_tbl[i][iR_INDEX] = pwm_value;
-        else
-            pwm_rgb_tbl[i][iR_INDEX] = 0;
-        if(rgb_enable&iPWM_G)
-            pwm_rgb_tbl[i][iG_INDEX] = pwm_value;
-        else
-            pwm_rgb_tbl[i][iG_INDEX] = 0;
-        if(rgb_enable&iPWM_B)
-            pwm_rgb_tbl[i][iB_INDEX] = pwm_value;
-        else
-            pwm_rgb_tbl[i][iB_INDEX] = 0;
+        pwm_rgb_tbl[i][iR_INDEX] = (hue_rgb_tbl[h][0] * pwm_value) >> 6;
+        pwm_rgb_tbl[i][iG_INDEX] = (hue_rgb_tbl[h][1] * pwm_value) >> 6;
+        pwm_rgb_tbl[i][iB_INDEX] = (hue_rgb_tbl[h][2] * pwm_value) >> 6;
     }
 
     pwm_time_count++;
@@ -133,111 +154,6 @@ void led_mode_breath(void)
 * 输出参数: 无
 * 说    明:
 ******************************************************************************/
-void led_mode_snake(void)
-{
-    unsigned char x, y ,k;
-
-    if(led_speed_lev>delay_time_count)
-    {
-		delay_time_count++;
-        return;
-	}
-    delay_time_count = 0;
-
-	if(!bled_run_dir)
-    {
-	    if(iLED_SNAKE <= snake_led_index)
-		    snake_led_index = 0;
-
-	    k = snake_led_index;
-	    y = k;
-	    x = --pwm_duty_array_0[y];
-
-	    if(((iPWM_SNAKE_MAX*3)/4)>=x)
-        {
-	    	snake_led_index++;
-            if(iLED_SNAKE<=snake_led_index)
-                snake_led_index = 0;
-            pwm_duty_array_0[y] = ((iPWM_SNAKE_MAX*3)/4);
-            y = snake_led_index;
-            pwm_duty_array_0[y] = iPWM_SNAKE_MAX;
-        }
-	    x = pwm_duty_array_0[k];
-        
-	    if(0!=k)
-	    	k--;
-	    else
-	        k = (iLED_SNAKE-1);
-	    y = k;
-	    pwm_duty_array_0[y] = x-((iPWM_SNAKE_MAX*1)/4);
-
-	    if(0!=k)
-	    	k--;
-	    else
-	        k = (iLED_SNAKE-1);
-	    y = k;
-	    pwm_duty_array_0[y] = x-((iPWM_SNAKE_MAX*2)/4);
-
-	    if(0!=k)
-	    	k--;
-	    else
-	        k = (iLED_SNAKE-1);
-	    y = k;
-	    pwm_duty_array_0[y] = x-((iPWM_SNAKE_MAX*3)/4);
-    }
-    else
-    {
-	    if(iLED_SNAKE <= snake_led_index)
-		    snake_led_index = iLED_SNAKE-1;
-
-	    k = snake_led_index;
-	    y = k;
-	    x = --pwm_duty_array_0[y];
-
-	    if(((iPWM_SNAKE_MAX*3)/4)>=x)
-        {
-	    	snake_led_index--;
-            if(iLED_SNAKE<=snake_led_index)
-		        snake_led_index = iLED_SNAKE-1;
-            pwm_duty_array_0[y] = ((iPWM_SNAKE_MAX*3)/4);
-            y = snake_led_index;
-            pwm_duty_array_0[y] = iPWM_SNAKE_MAX;
-        }
-	    x = pwm_duty_array_0[k];
-        
-	    k++;
-	    if(iLED_SNAKE <= k)
-	        k = 0;
-	    y = k;
-	    pwm_duty_array_0[y] = x-((iPWM_SNAKE_MAX*1)/4);
-
-	    k++;
-	    if(iLED_SNAKE <= k)
-	        k = 0;
-	    y = k;
-	    pwm_duty_array_0[y] = x-((iPWM_SNAKE_MAX*2)/4);
-
-	    k++;
-	    if(iLED_SNAKE <= k)
-	        k = 0;
-	    y = k;
-	    pwm_duty_array_0[y] = x-((iPWM_SNAKE_MAX*3)/4);
-    }
-    
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-    for(gtemp_x = 0; gtemp_x<iLED_NUM_MAX; gtemp_x++)
-    {
-        //if(iRGB_QICAI == led_rgb_index)
-        {
-            rgb_enable = (gtemp_x&0x07);
-            if(0==rgb_enable)
-                rgb_enable = 4;
-        }
-
-        gtemp_j = gtemp_x;
-        rgb_pwm0_w();
-    }
-}
 
 /******************************************************************************
 * 函数名称: led_mode_snake
@@ -665,6 +581,20 @@ unsigned int       const   qcnh_dec_delay[]={
     140,
     200,
 };
+
+// QCNH 行走色带：12 色等间隔、色相单调递增（无白、无重复）
+// 偏移 15° 避开纯红/绿/蓝，饱和度 0.7 使颜色为混合色
+static const unsigned char qcnh_hue12_tbl[12][3] = {
+    {64,30,19}, {64,53,19}, {53,64,19}, {30,64,19}, {19,64,30}, {19,64,53},
+    {19,53,64}, {19,30,64}, {30,19,64}, {53,19,64}, {64,19,53}, {64,19,30},
+};
+
+// 固定亮度轮廓：中间亮、两端稍暗，提供稳定的空间层次（不会逐拍翻转）
+static const unsigned char qcnh_layer_tbl[iLED_MAX] = { 36, 48, 58, 64, 64, 58, 48, 36 };
+
+#define iQCNH_HUE_NUM   12
+
+
 /******************************************************************************
 * 函数名称: led_mode_snake
 * 功能描述:
@@ -674,34 +604,46 @@ unsigned int       const   qcnh_dec_delay[]={
 ******************************************************************************/
 void led_mode_qcnh(void)
 {
-    unsigned char i;
+    unsigned char i, k, light;
 
     delay_time_count++;
-    if(qcnh_dec_delay[led_speed_lev&0x07] > delay_time_count)
-        return;
-
-    delay_time_count = 0;
-    clr_rgb();
-
-    for(i = 0; i<iLED_MAX; i++)
+    if(qcnh_first || (qcnh_dec_delay[led_speed_lev&0x07] <= delay_time_count))
     {
-        rgb_enable = qcnh_en_tbl[(rgb_index+i)&0x0F];
+        qcnh_first = 0;
+        delay_time_count = 0;
 
-	    gtemp_j = i;
-	    rgb_w_max();
+        if(++qcnh_phase >= iQCNH_HUE_NUM)
+            qcnh_phase = 0;
+
+        for(i = 0; i<iLED_MAX; i++)
+        {
+            k = qcnh_phase + (iLED_MAX - i);        // 方向反向（配合灯珠反向接线）
+            if(iQCNH_HUE_NUM <= k)
+                k -= iQCNH_HUE_NUM;
+
+            qcnh_cur[i][0] = qcnh_hue12_tbl[k][0];
+            qcnh_cur[i][1] = qcnh_hue12_tbl[k][1];
+            qcnh_cur[i][2] = qcnh_hue12_tbl[k][2];
+        }
     }
 
-    rgb_index++;
-    if(7<=rgb_index)
-        rgb_index = 0;
+    // 固定亮度轮廓形成层次，颜色在下面流动
+    for(i = 0; i<iLED_MAX; i++)
+    {
+        light = qcnh_layer_tbl[i];
+
+        pwm_rgb_tbl[i][iR_INDEX] = (qcnh_cur[i][0] * light) >> 6;
+        pwm_rgb_tbl[i][iG_INDEX] = (qcnh_cur[i][1] * light) >> 6;
+        pwm_rgb_tbl[i][iB_INDEX] = (qcnh_cur[i][2] * light) >> 6;
+    }
 }
 
 unsigned int       const   lhtw_dec_delay[]={
-    10,
-    20,
-    30,
-    40,
-    50,
+    8,
+    12,
+    18,
+    24,
+    32,
 };
 /******************************************************************************
 * 函数名称: led_mode_snake

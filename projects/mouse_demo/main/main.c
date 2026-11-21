@@ -156,7 +156,7 @@ void mouse_periph_wakeup_enable(uint8_t mask)
         drv_pmu_wakeup_pin_set(KEY_R7_PIN, PMU_PIN_WAKEUP_TYPE_DISABLE);
         NVIC_DisableIRQ(WAKEUP_GPIO0_IRQn);
 
-        OM_PMU->PAD_PU_CTRL_1 = 0x0A0AAA25;
+        OM_PMU->PAD_PU_CTRL_1 = 0x0A0AA825;     // P20(MODE_24G) 清掉内部上拉，模式脚只靠外部100K下拉
         MATRX_ALL_IN;
 
         led_status_hint();
@@ -205,6 +205,12 @@ int main(void)
     OM_GPIO0->DATAOUT = 0xEFFBFFFE;
     OM_GPIO0->OUTENSET = 0x14040003;
     OM_GPIO0->OUTENCLR = ~0x14040003;
+
+    // ARGB 上电初始化：数据脚低、关断脚高，启动 LEDC
+    OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+    OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+    ledc_init();
+
     device_type = iDEVICE_TYPE_ERR;
 
                                                 // ???????????????????????
@@ -255,7 +261,7 @@ int main(void)
     {
         OM_RCC->CLKGATE |= RCC_DEV_CLK_GATE_SWD_CLK_GATE_MASK; // disable jtag
         delayus(1000);                       // 调试的时候一定需要打开，不然芯片下载不了程序
-
+ 
         sys_ctrl = 0;
         OM_PMU->SW_RSVD7 = 0;
         OM_RCC->CLKGATE &= ~RCC_DEV_CLK_GATE_SWD_CLK_GATE_MASK; // disable jtag
