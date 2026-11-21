@@ -837,8 +837,8 @@ static const unsigned char qcnh_color_tbl[iQCNH_COLOR_NUM][3] = {
 };
 
 // 每 15ms 相位步进，下标 = 速度档（0 最快）
-// 一圈周期约：6.7s / 9.0s / 13.4s / 26.9s / 26.9s
-static const unsigned char qcnh_step_tbl[] = { 4, 3, 2, 1, 1 };
+// 一圈周期约：4.5s / 6.7s / 9.0s / 13.4s / 26.9s（较原 6.7/9.0/13.4s 加快约 1.3~1.5 倍）
+static const unsigned char qcnh_step_tbl[] = { 6, 4, 3, 2, 1 };
 #define iQCNH_TICK          mMS_TO_TICK(15)
 
 // 固定亮度轮廓：中间亮、两端稍暗，提供稳定的空间层次
@@ -891,8 +891,8 @@ void led_mode_qcnh(void)
 
     for(i = 0; i<iLED_MAX; i++)
     {
-        // 方向反向（配合灯珠反向接线）：颜色从低序号灯流向高序号灯
-        pos = qcnh_phase + (iLED_MAX - i) * iQCNH_LED_SPACING;
+        // 色块流向：从高序号灯流向低序号灯（灯 i 显示的是灯 i+1 稍早的颜色）
+        pos = qcnh_phase + i * iQCNH_LED_SPACING;
         while(iQCNH_RING_LEN <= pos)
             pos -= iQCNH_RING_LEN;
 
