@@ -22,7 +22,6 @@
 // 变量定义区
 //
 
-#define iLFSR_MULTINOMIAL       0xF521
 
 bool                            bled_run_dir;
 
@@ -62,7 +61,6 @@ typedef struct {
 } led_timer_t;
 
 static led_timer_t              led_timer_main;             // 灯效主节拍
-static led_timer_t              led_timer_aux;              // 灯效辅助节拍（繁星衰减）
 
 /******************************************************************************
 * 函数名称: led_timer_reset
@@ -71,7 +69,6 @@ static led_timer_t              led_timer_aux;              // 灯效辅助节�
 void led_timer_reset(void)
 {
     led_timer_main.refresh = true;
-    led_timer_aux.refresh  = true;
 }
 
 /******************************************************************************
@@ -457,67 +454,147 @@ void led_mode_liuguang(void)
     }
 }
 
-// 繁星：新星出现间隔(基准节拍数)，下标 = 速度档
+//-----------------------------------------------------------------------------;
+// 繁星点点
+//
+// 每颗星：快速亮起（寿命前 20%）-> 柔和熄灭（后 80%），γ2.2 校正，像真正的“一闪”
+// 新星只落在空闲的灯上，出现间隔带 ±50% 随机抖动
+//
+// 新星平均出现间隔(基准节拍 7.5ms 数)，下标 = 速度档：约 150 / 300 / 525ms（与原设定一致）
 static const unsigned char star_spawn_tbl[] = { 20, 40, 70, 110, 160 };
+// 单颗星寿命(基准节拍数)，下标 = 速度档：约 0.6 / 0.72 / 0.96s
+static const unsigned char star_life_tbl[]  = { 80, 96, 128, 160, 192 };
+
+#define iSTAR_IDLE          0xFF                            // 该灯无星
+
+// 星亮度随寿命变化（33 点，0~4096）
+static const unsigned short star_curve_tbl[33] = {
+       0,  182,  783, 1706, 2729, 3588, 4053, 4090, 4053, 3982, 3880,
+    3748, 3588, 3402, 3195, 2969, 2729, 2478, 2221, 1962, 1706, 1456,
+    1216,  991,  783,  596,  432,  294,  182,   98,   40,    9,    0,
+};
+
+static uint8_t                  star_age[iLED_MAX];         // 星龄(基准节拍数)，iSTAR_IDLE 表示空闲
+static uint8_t                  star_hue[iLED_MAX];         // 七彩时每颗星的色相（0~47）
+static int16_t                  star_next;                  // 距下一颗新星的节拍数
+
+// 16 位 Galois LFSR（多项式 0xB400，最长周期 65535）
+static uint16_t star_rand(void)
+{
+    lfsr_value = (lfsr_value >> 1) ^ ((uint16_t)(-(int16_t)(lfsr_value & 0x01)) & 0xB400);
+    return lfsr_value;
+}
 
 /******************************************************************************
-* 函数名称: led_mode_star_decay
-* 功能描述: 繁星：所有星点亮度衰减一级并刷新输出
+* 函数名称: led_mode_star_init
+* 功能描述: 繁星进入初始化（切换灯效时调用），立即出第一颗星
 ******************************************************************************/
-static void led_mode_star_decay(void)
+void led_mode_star_init(void)
 {
-    unsigned char i;
+    uint8_t i;
 
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
+    for(i=0; i<iLED_MAX; i++)
+        star_age[i] = iSTAR_IDLE;
+    if(0 == lfsr_value)
+        lfsr_value = 0x55AA;                        // LFSR 不能为 0
+    star_next = 0;
+}
+
+// 在空闲灯里随机点亮一颗新星；全部亮着则本次不出
+static void led_mode_star_spawn(void)
+{
+    uint8_t i, cnt = 0, pick;
+    uint8_t idle[iLED_MAX];
+
     for(i=0; i<iLED_MAX; i++)
     {
-        if(0 != pwm_duty_array_0[i])
-        {
-            pwm_duty_array_0[i]--;
+        if(iSTAR_IDLE == star_age[i])
+            idle[cnt++] = i;
+    }
+    if(0 == cnt)
+        return;
 
-            //if(iRGB_QICAI <= led_rgb_index)
-                rgb_enable = (pwm_duty_array_1[i]&0x0F);
+    pick = idle[star_rand() % cnt];
+    star_age[pick] = 0;
+    star_hue[pick] = star_rand() % iHUE_NUM;
+}
 
-            if(rgb_enable&iPWM_R)
-                pwm_rgb_tbl[i][iR_INDEX] = pwm_duty_array_0[i];
-            else
-                pwm_rgb_tbl[i][iR_INDEX] = 0;
-            if(rgb_enable&iPWM_G)
-                pwm_rgb_tbl[i][iG_INDEX] = pwm_duty_array_0[i];
-            else
-                pwm_rgb_tbl[i][iG_INDEX] = 0;
-            if(rgb_enable&iPWM_B)
-                pwm_rgb_tbl[i][iB_INDEX] = pwm_duty_array_0[i];
-            else
-                pwm_rgb_tbl[i][iB_INDEX] = 0;          
-        }
+/******************************************************************************
+* 函数名称: led_mode_star
+* 功能描述: 繁星点点：随机位置的星点快速亮起、柔和熄灭
+* 输入参数: 无
+* 输出参数: 无
+* 说    明: 按 RTC 时间推进；七彩时每颗星随机取色环颜色，
+*           否则按 led_rgb_index 所选单色（与常亮一致）
+******************************************************************************/
+void led_mode_star(void)
+{
+    uint8_t  i, n, lev, life, en, idx, frac;
+    uint16_t x, a;
+    uint32_t lum;
+
+    n = led_timer_take(&led_timer_main, iLED_BASE_TICK, iLED_CATCHUP_MAX);
+    if(0 == n)
+        return;
+
+    lev  = led_speed_index();
+    life = star_life_tbl[lev];
+
+    // 星龄推进，寿命到则熄灭
+    for(i=0; i<iLED_MAX; i++)
+    {
+        if(iSTAR_IDLE == star_age[i])
+            continue;
+        if(life <= (uint16_t)star_age[i] + n)
+            star_age[i] = iSTAR_IDLE;
         else
+            star_age[i] += n;
+    }
+
+    // 新星：间隔 = 平均间隔 × (0.5 ~ 1.5) 随机
+    star_next -= n;
+    if(star_next <= 0)
+    {
+        led_mode_star_spawn();
+        star_next = (star_spawn_tbl[lev] >> 1) + (star_rand() % (star_spawn_tbl[lev] + 1));
+    }
+
+    en = rgb_en_tbl[led_rgb_index&0x07];
+    for(i=0; i<iLED_MAX; i++)
+    {
+        uint16_t r, g, b;
+
+        if(iSTAR_IDLE == star_age[i])
         {
             pwm_rgb_tbl[i][iR_INDEX] = 0;
             pwm_rgb_tbl[i][iG_INDEX] = 0;
             pwm_rgb_tbl[i][iB_INDEX] = 0;
+            continue;
         }
+
+        x    = ((uint16_t)star_age[i] * 1024) / life;   // 0~1023
+        idx  = x >> 5;
+        frac = x & 0x1F;
+        a    = star_curve_tbl[idx];
+        lum  = (int32_t)a + ((((int32_t)star_curve_tbl[idx+1] - a) * frac) >> 5);
+
+        if(iRGB_QICAI == (led_rgb_index&0x07))
+        {
+            r = hue_rgb_tbl[star_hue[i]][0];
+            g = hue_rgb_tbl[star_hue[i]][1];
+            b = hue_rgb_tbl[star_hue[i]][2];
+        }
+        else
+        {
+            r = (en & iPWM_R) ? iPWM_MAX : 0;
+            g = (en & iPWM_G) ? iPWM_MAX : 0;
+            b = (en & iPWM_B) ? iPWM_MAX : 0;
+        }
+
+        pwm_rgb_tbl[i][iR_INDEX] = (r * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][iG_INDEX] = (g * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][iB_INDEX] = (b * lum + 2048) >> 12;
     }
-}
-
-/******************************************************************************
-* 函数名称: led_mode_star_spawn
-* 功能描述: 繁星：随机点亮一颗新星（LFSR 伪随机位置和颜色）
-******************************************************************************/
-static void led_mode_star_spawn(void)
-{
-    unsigned char j;
-
-    lfsr_value = lfsr_value>>1;
-    if(lfsr_value & 0x01)
-        lfsr_value ^= iLFSR_MULTINOMIAL;
-
-    j = ((lfsr_value+(lfsr_value>>8))&0x0F);
-
-    pwm_duty_array_0[j] = iPWM_MAX;
-    pwm_duty_array_1[j] = ((lfsr_value>>8)&0x0F);
-    if(0==pwm_duty_array_1[j])
-        pwm_duty_array_1[j] = 1;
 }
 
 //-----------------------------------------------------------------------------;
@@ -1126,23 +1203,4 @@ void led_mode_txtw(void)
     uint8_t n = led_speed_steps();
     while(n--)
         led_mode_txtw_step();
-}
-
-/******************************************************************************
-* 函数名称: led_mode_star
-* 功能描述: 繁星点点：随机位置出现星点并逐渐熄灭
-* 说    明: 新星按 star_spawn_tbl 间隔出现（不补帧）；
-*           衰减每 (速度档/2+1) 个基准节拍一级，与原分频一致
-******************************************************************************/
-void led_mode_star(void)
-{
-    uint8_t n;
-    uint8_t lev = led_speed_index();
-
-    if(led_timer_take(&led_timer_main, star_spawn_tbl[lev] * iLED_BASE_TICK, 1))
-        led_mode_star_spawn();
-
-    n = led_timer_take(&led_timer_aux, ((lev >> 1) + 1) * iLED_BASE_TICK, iLED_CATCHUP_MAX);
-    while(n--)
-        led_mode_star_decay();
 }
