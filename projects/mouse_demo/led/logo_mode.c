@@ -711,23 +711,34 @@ void led_mode_sbzl(void)
 
 //-----------------------------------------------------------------------------;
 // 爆闪（BS）
-// 画面由“进入后经过的绝对时间”直接算出帧号，不做逐帧累加：
+// 画面由“进入后经过的绝对时间”直接算出节拍号与拍内时刻，不做逐帧累加：
 // 无论 logo_process 调用快慢、是否被写 flash/休眠打断，节奏始终与时钟严格一致
 //
-// 每帧间隔(ms)，下标 = 速度档（0 最快）
+// 每拍 = 一次“爆闪”：满亮 iBS_ON_MS -> 余辉快速衰减 iBS_DECAY_MS -> 熄灭至下一拍
+// （原实现整拍常亮、亮灭各半，更像奇偶交替闪烁而非爆闪）
+//
+// 每拍间隔(ms)，下标 = 速度档（0 最快），与原一致
 static const unsigned short bs_period_ms_tbl[] = { 300, 450, 675, 1050, 1500 };
 
-#define iBS_COLOR_NUM       7                               // 颜色序列：rgb_en_tbl[0..6]
-#define iBS_SUB_NUM         4                               // 每色 4 帧：偶数灯正色/奇数灯正色/偶数灯反色/奇数灯反色
-#define iBS_FRAME_NUM       (iBS_COLOR_NUM * iBS_SUB_NUM)   // 一轮 28 帧
+#define iBS_ON_MS           50                              // 满亮时长
+#define iBS_DECAY_MS        60                              // 余辉衰减时长
+#define iBS_DOUBLE          0                               // 1 = 每拍双闪（第二闪在 iBS_DOUBLE_GAP_MS 后），闪烁频率翻倍
+#define iBS_DOUBLE_GAP_MS   110
 
-static uint32_t                 bs_start;                   // 帧号基准时刻
-static uint8_t                  bs_base;                    // 基准时刻对应的帧号
+// 七彩色相（hue_rgb_tbl 下标，7.5°/级）：红 橙 黄 绿 青 蓝 紫，不含白色；补色 = +180°
+static const unsigned char bs_hue_tbl[] = { 0, 4, 8, 16, 24, 32, 38 };
+
+#define iBS_COLOR_NUM       7
+#define iBS_SUB_NUM         4                               // 每色 4 拍：偶数灯本色 / 奇数灯本色 / 偶数灯补色 / 奇数灯补色
+#define iBS_FRAME_NUM       (iBS_COLOR_NUM * iBS_SUB_NUM)   // 一轮 28 拍
+
+static uint32_t                 bs_start;                   // 节拍号基准时刻
+static uint8_t                  bs_base;                    // 基准时刻对应的节拍号
 static uint8_t                  bs_lev;                     // 基准时刻采用的速度档
 
 /******************************************************************************
 * 函数名称: led_mode_baoshan_init
-* 功能描述: 爆闪进入初始化（切换灯效时调用），从第 0 帧开始计时
+* 功能描述: 爆闪进入初始化（切换灯效时调用），从第 0 拍开始计时，进入即闪
 ******************************************************************************/
 void led_mode_baoshan_init(void)
 {
@@ -736,30 +747,50 @@ void led_mode_baoshan_init(void)
     bs_lev   = led_speed_index();
 }
 
+// 单次闪光包络：t 为距本次闪光起点的时间(RTC tick) -> 亮度 0~4096
+static uint16_t bs_pulse(uint32_t t)
+{
+    uint32_t x;
+
+    if(t < mMS_TO_TICK(iBS_ON_MS))
+        return 4096;
+    t -= mMS_TO_TICK(iBS_ON_MS);
+    if(t >= mMS_TO_TICK(iBS_DECAY_MS))
+        return 0;
+
+    x = 256 - (t * 256) / mMS_TO_TICK(iBS_DECAY_MS);       // 256 -> 0
+    return (uint16_t)((x * x) >> 4);                        // ≈γ2 余辉，快速收尾
+}
+
 /******************************************************************************
 * 函数名称: led_mode_baoshan
-* 功能描述: 爆闪：奇偶灯交替、正反色交替闪烁，7 色循环
+* 功能描述: 爆闪：奇偶灯交替、本色/补色交替的短促强闪，7 色循环
 * 输入参数: 无
 * 输出参数: 无
-* 说    明: 帧号 = 基准帧 + (当前时刻 - 基准时刻) / 帧周期；每次调用都按帧号
-*           重画，外部清灯（关灯/休眠/回连）恢复后立即回到正确画面
+* 说    明: 节拍号 = 基准拍 + (当前时刻 - 基准时刻) / 拍周期，拍内时刻决定亮度；
+*           每次调用都重画，外部清灯（关灯/休眠/回连）恢复后立即回到正确画面。
+*           七彩时按 bs_hue_tbl 取色，否则按 led_rgb_index 所选单色奇偶交替闪
 ******************************************************************************/
 void led_mode_baoshan(void)
 {
-    uint32_t now, period, k;
-    uint8_t  frame, sub, en, j;
+    uint32_t now, period, elapsed, k, t;
+    uint16_t lum, r, g, b;
+    uint8_t  frame, sub, hue, en, j;
 
-    now    = drv_rtc_read(OM_RTC);
-    period = mMS_TO_TICK(bs_period_ms_tbl[bs_lev]);
-    k      = (now - bs_start) / period;
+    now     = drv_rtc_read(OM_RTC);
+    period  = mMS_TO_TICK(bs_period_ms_tbl[bs_lev]);
+    elapsed = now - bs_start;
+    k       = elapsed / period;
+    t       = elapsed - k * period;                 // 拍内时刻
 
-    // 运行中改速度档：保持当前帧，从此刻起按新周期计时
+    // 运行中改速度档：从此刻起开始新的一拍，按新周期计时
     if(bs_lev != led_speed_index())
     {
-        bs_base  = (bs_base + k) % iBS_FRAME_NUM;
+        bs_base  = (bs_base + k + 1) % iBS_FRAME_NUM;
         bs_start = now;
         bs_lev   = led_speed_index();
         k        = 0;
+        t        = 0;
     }
 
     // 每满一轮把基准时刻前移，保证差值不会溢出
@@ -772,20 +803,35 @@ void led_mode_baoshan(void)
     frame = (bs_base + k) % iBS_FRAME_NUM;
     sub   = frame % iBS_SUB_NUM;
 
-    en = rgb_en_tbl[frame / iBS_SUB_NUM];
-    if(2 <= sub)
+    lum = bs_pulse(t);
+#if (1 == iBS_DOUBLE)
+    if((0 == lum) && (t >= mMS_TO_TICK(iBS_DOUBLE_GAP_MS)))
+        lum = bs_pulse(t - mMS_TO_TICK(iBS_DOUBLE_GAP_MS));
+#endif
+
+    if(iRGB_QICAI == (led_rgb_index&0x07))
     {
-        en = ~en;                               // 后两帧为反色
-        if(0 == (en & iPWM_RGB))
-            en = iPWM_R;
+        hue = bs_hue_tbl[frame / iBS_SUB_NUM];
+        if(2 <= sub)
+            hue = (hue + iHUE_NUM/2) % iHUE_NUM;    // 后两拍为补色
+        r = hue_rgb_tbl[hue][0];
+        g = hue_rgb_tbl[hue][1];
+        b = hue_rgb_tbl[hue][2];
+    }
+    else
+    {
+        en = rgb_en_tbl[led_rgb_index&0x07];
+        r = (en & iPWM_R) ? iPWM_MAX : 0;
+        g = (en & iPWM_G) ? iPWM_MAX : 0;
+        b = (en & iPWM_B) ? iPWM_MAX : 0;
     }
 
     clr_rgb();
-    rgb_enable = en;
-    for(j = (sub & 0x01); j < iLED_MAX; j += 2) // 偶数帧点亮偶数灯，奇数帧点亮奇数灯
+    for(j = (sub & 0x01); j < iLED_MAX; j += 2)    // 偶数拍点亮偶数灯，奇数拍点亮奇数灯
     {
-        gtemp_j = j;
-        rgb_w_max();
+        pwm_rgb_tbl[j][iR_INDEX] = ((uint32_t)r * lum + 2048) >> 12;
+        pwm_rgb_tbl[j][iG_INDEX] = ((uint32_t)g * lum + 2048) >> 12;
+        pwm_rgb_tbl[j][iB_INDEX] = ((uint32_t)b * lum + 2048) >> 12;
     }
 }
 
