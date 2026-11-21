@@ -823,7 +823,7 @@ unsigned char       const   lhtw_en_tbl[]={
 //   - 色环按色相重排，赤橙黄三色拉开、更易分辨
 //
 // ---- 可调参数 ----
-#define iQCNH_DIR           1                               // 流向：1 = 高序号 -> 低序号，0 = 低序号 -> 高序号
+#define iQCNH_DIR           0                               // 流向：1 = 高序号 -> 低序号，0 = 低序号 -> 高序号（上板确认用 0）
 #define iQCNH_LED_PER_COLOR 2                               // 每个色块约占几颗灯（8 颗灯上约 4 个色块）
 #define iQCNH_HOLD          96                              // 每块中心纯色区宽度（0~256，其余为过渡）
 
