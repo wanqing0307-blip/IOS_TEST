@@ -618,7 +618,7 @@ void logo_process(void)
                 }
                 break;
             case iMODE_LED_BS:
-                delay_time_count = 0xFF;    // 进入爆闪立即刷新首帧，避免起步等待
+                led_mode_baoshan_init();    // 进入爆闪立即刷新首帧，之后按 RTC 时间固定节奏
                 break;
             case iMODE_LED_QCNH:
                 led_mode_qcnh_init();

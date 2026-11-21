@@ -451,28 +451,58 @@ void led_mode_sbzl(void)
     }
 }
 
-unsigned int       const   bs_dec_delay[8]={
-    40,
-    60,
-    90,
-    140,
-    200,
-};
+//-----------------------------------------------------------------------------;
+// 爆闪（BS）：按 RTC 实际时间计时，不受 logo_process 调用频率、
+// 写 flash 阻塞、关灯/休眠/回连期间暂停的影响，起步即为正常节奏
+//
+// 每帧间隔(ms)，下标 = led_speed_lev（0 最快），与原 7.5ms 节拍下的 40/60/90/140/200 拍一致
+static const unsigned short bs_period_ms_tbl[] = { 300, 450, 675, 1050, 1500 };
+#define iBS_PERIOD_NUM      (sizeof(bs_period_ms_tbl) / sizeof(bs_period_ms_tbl[0]))
+
+static uint32_t                 bs_last_time;           // 上一帧刷新的 RTC 时刻
+static bool                     bs_refresh;             // 置位后下一次调用立即出帧
 
 /******************************************************************************
-* 函数名称: led_mode_snake
-* 功能描述:
+* 函数名称: led_mode_baoshan_init
+* 功能描述: 爆闪进入初始化（切换灯效时调用），首帧立即刷新
 * 输入参数: 无
 * 输出参数: 无
-* 说    明:
+******************************************************************************/
+void led_mode_baoshan_init(void)
+{
+    bs_refresh = true;
+}
+
+/******************************************************************************
+* 函数名称: led_mode_baoshan
+* 功能描述: 爆闪：奇偶灯交替、正反色交替闪烁
+* 输入参数: 无
+* 输出参数: 无
+* 说    明: 按 RTC 时间判定出帧；落后超过一帧（如写 flash、暂停后恢复）
+*           时直接以当前时刻重新对齐，不连闪补帧
 ******************************************************************************/
 void led_mode_baoshan(void)
 {
-    delay_time_count++;
-    if(bs_dec_delay[led_speed_lev&0x07] > delay_time_count)
+    uint32_t now, period, elapsed;
+    unsigned char idx;
+
+    idx = led_speed_lev;
+    if(iBS_PERIOD_NUM <= idx)
+        idx = iBS_PERIOD_NUM - 1;
+
+    now     = drv_rtc_read(OM_RTC);
+    period  = mMS_TO_TICK(bs_period_ms_tbl[idx]);
+    elapsed = now - bs_last_time;
+
+    if((!bs_refresh) && (elapsed < period))
         return;
 
-    delay_time_count = 0;
+    if(bs_refresh || ((period << 1) <= elapsed))
+        bs_last_time = now;                     // 首帧或长时间未调用：从现在重新计时
+    else
+        bs_last_time += period;                 // 正常节奏：按固定周期累加，避免误差积累
+    bs_refresh = false;
+
     clr_rgb();
 
 	if(0 == led_process_index)
