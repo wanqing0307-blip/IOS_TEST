@@ -112,12 +112,6 @@ static uint8_t led_speed_index(void)
     return (iLED_SPEED_LEV_CLAMP < led_speed_lev) ? iLED_SPEED_LEV_CLAMP : led_speed_lev;
 }
 
-// 通用连续灯效：每 (速度档+1) 个基准节拍走一步，与原“每 (led_speed_lev+1) 次调用走一步”一致
-static uint8_t led_speed_steps(void)
-{
-    return led_timer_take(&led_timer_main, (led_speed_index() + 1) * iLED_BASE_TICK, iLED_CATCHUP_MAX);
-}
-
 //=============================================================================;
 // 代码区                                                                      ;
 //=============================================================================;
@@ -136,7 +130,7 @@ void led_mode_on(void)
     rgb_enable = rgb_en_tbl[led_rgb_index&0x07];
     for(gtemp_j=0; gtemp_j<iLED_MAX; gtemp_j++)
     {
-        if(iRGB_QICAI == led_rgb_index)
+        if(iRGB_QICAI == (led_rgb_index&0x07))
         {
             // 平滑色环：8 颗灯色相依次相差 45°
             h = (gtemp_j*(iHUE_NUM/iLED_MAX)) % iHUE_NUM;
@@ -271,68 +265,70 @@ void led_mode_breath(void)
     }
 }
 
-/******************************************************************************
-* 函数名称: led_mode_snake
-* 功能描述:
-* 输入参数: 无
-* 输出参数: 无
-* 说    明:
-******************************************************************************/
+//-----------------------------------------------------------------------------;
+// 霓虹渐变
+//
+// 整条灯带同色，沿色环 红->黄->绿->青->蓝->紫 平滑循环
+// 色环转一圈的时间(基准节拍 7.5ms 数)，下标 = 速度档：约 2.88s / 5.76s / 8.64s，与原速度一致
+static const unsigned short nhjb_cycle_tbl[] = { 384, 768, 1152, 1536, 1920 };
+
+static uint16_t                 nhjb_phase;                 // 周期内相位（基准节拍数）
 
 /******************************************************************************
-* 函数名称: led_mode_snake
-* 功能描述:
-* 输入参数: 无
-* 输出参数: 无
-* 说    明:
+* 函数名称: led_mode_nhjb_init
+* 功能描述: 霓虹渐变进入初始化（切换灯效时调用），从红色开始
 ******************************************************************************/
-static void led_mode_nhjb_step(void)
+void led_mode_nhjb_init(void)
 {
-    unsigned char i;
+    nhjb_phase = 0;
+}
 
+/******************************************************************************
+* 函数名称: led_mode_nhjb
+* 功能描述: 霓虹渐变：整条灯带沿色环平滑变色
+* 输入参数: 无
+* 输出参数: 无
+* 说    明: 按 RTC 时间推进；48 阶色环插值。
+*           黄/青/紫等双通道满量程混色的功率是纯色的 2 倍，原效果每到这些颜色
+*           整条灯带明显变亮、像在闪；这里按通道和做等功率压缩（双通道全亮时
+*           压到 0.707 倍），整体亮度更平稳
+******************************************************************************/
+void led_mode_nhjb(void)
+{
+    uint8_t  i, n, h0, h1, hf;
+    uint16_t cycle, hue, sum, r, g, b;
+    uint32_t k;
 
-    if(0 == led_process_index)
-    {
-        pwm_duty_array_0[1]++;
-        if(iPWM_MAX <= pwm_duty_array_0[1])
-            led_process_index++;
-    }
-    else if(1 == led_process_index)
-    {
-        pwm_duty_array_0[0]--;
-        if(0 == pwm_duty_array_0[0])
-            led_process_index++;
-    }
-    else if(2 == led_process_index)
-    {
-        pwm_duty_array_0[2]++;
-        if(iPWM_MAX <= pwm_duty_array_0[2])
-            led_process_index++;
-    }
-    else if(3 == led_process_index)
-    {
-        pwm_duty_array_0[1]--;
-        if(0 == pwm_duty_array_0[1])
-            led_process_index++;
-    }
-    else if(4 == led_process_index)
-    {
-        pwm_duty_array_0[0]++;
-        if(iPWM_MAX <= pwm_duty_array_0[0])
-            led_process_index++;
-    }
-    else //if(5 == led_process_index)
-    {
-        pwm_duty_array_0[2]--;
-        if(0 == pwm_duty_array_0[2])
-            led_process_index = 0;
-    }
+    n = led_timer_take(&led_timer_main, iLED_BASE_TICK, iLED_CATCHUP_MAX);
+    if(0 == n)
+        return;
+
+    cycle = nhjb_cycle_tbl[led_speed_index()];
+    nhjb_phase += n;
+    while(cycle <= nhjb_phase)
+        nhjb_phase -= cycle;
+
+    hue = ((uint32_t)nhjb_phase * (iHUE_NUM * 256)) / cycle;
+    h0  = hue >> 8;
+    hf  = hue & 0xFF;
+    h1  = (iHUE_NUM-1 <= h0) ? 0 : (h0 + 1);
+
+    // 颜色 ×256 精度
+    r = hue_rgb_tbl[h0][0] * (256 - hf) + hue_rgb_tbl[h1][0] * hf;
+    g = hue_rgb_tbl[h0][1] * (256 - hf) + hue_rgb_tbl[h1][1] * hf;
+    b = hue_rgb_tbl[h0][2] * (256 - hf) + hue_rgb_tbl[h1][2] * hf;
+
+    // 等功率压缩：k = 64 / (64 + (sum-64)·0.414)，sum 为通道和（64~128）
+    sum = (r + g + b) >> 8;
+    if(sum < iPWM_MAX)
+        sum = iPWM_MAX;                             // 插值取整可能差 1，防止下面减成负数
+    k   =(64UL << 12) / (64 + (((uint32_t)(sum - iPWM_MAX) * 106) >> 8));   // 0.414 ≈ 106/256
 
     for(i=0; i<iLED_MAX; i++)
     {
-        pwm_rgb_tbl[i][0] = pwm_duty_array_0[iR_INDEX];
-        pwm_rgb_tbl[i][1] = pwm_duty_array_0[iG_INDEX];
-        pwm_rgb_tbl[i][2] = pwm_duty_array_0[iB_INDEX];
+        pwm_rgb_tbl[i][iR_INDEX] = ((uint32_t)r * k + (1UL << 19)) >> 20;
+        pwm_rgb_tbl[i][iG_INDEX] = ((uint32_t)g * k + (1UL << 19)) >> 20;
+        pwm_rgb_tbl[i][iB_INDEX] = ((uint32_t)b * k + (1UL << 19)) >> 20;
     }
 }
 
@@ -823,7 +819,7 @@ unsigned char       const   lhtw_en_tbl[]={
 //   - 色环按色相重排，赤橙黄三色拉开、更易分辨
 //
 // ---- 可调参数 ----
-#define iQCNH_DIR           1                               // 流向：1 = 高序号 -> 低序号，0 = 低序号 -> 高序号
+#define iQCNH_DIR           0                               // 流向：1 = 高序号 -> 低序号，0 = 低序号 -> 高序号（上板确认用 0）
 #define iQCNH_LED_PER_COLOR 2                               // 每个色块约占几颗灯（8 颗灯上约 4 个色块）
 #define iQCNH_HOLD          96                              // 每块中心纯色区宽度（0~256，其余为过渡）
 
@@ -953,297 +949,226 @@ void led_mode_qcnh(void)
     }
 }
 
-// 来回拖尾：每步间隔(基准节拍数)，下标 = 速度档
+//-----------------------------------------------------------------------------;
+// 拖尾类公共：彗星亮度、按位置取色
+//
+#define iTW_TAIL            4                               // 彗星长度（灯数，含头）
+#define iTW_PAUSE           256                             // 每轮开始前的空档（1/256 灯，1 灯时间）
+
+// 彗星尾部亮度（距头 0 ~ iTW_TAIL 灯 -> 33 点，0~4096）：(1-x)^2.2
+// 感知亮度依次约 100% / 75% / 50% / 25%，头尾分明
+static const unsigned short tw_tail_tbl[33] = {
+    4096, 3820, 3554, 3298, 3053, 2819, 2594, 2380, 2175, 1981, 1796,
+    1621, 1456, 1301, 1155, 1019,  891,  773,  665,  565,  473,  391,
+     317,  251,  194,  145,  103,   69,   42,   22,    9,    2,    0,
+};
+
+static uint16_t                 tw_phase;                   // 周期内相位（基准节拍数）
+
+/******************************************************************************
+* 函数名称: led_mode_tw_init
+* 功能描述: 拖尾类灯效进入初始化（切换灯效时调用）
+******************************************************************************/
+void led_mode_tw_init(void)
+{
+    tw_phase = 0;
+}
+
+// d：灯在头后方的距离（1/256 灯，负值为头前方）-> 亮度 0~4096
+// 头前方半颗灯线性渐亮，头部亚像素平滑移动，不再一格一格跳
+static uint16_t tw_comet(int16_t d)
+{
+    uint16_t x, a;
+    uint8_t  idx, frac;
+
+    if(d <= -128)
+        return 0;
+    if(d < 0)
+        return (uint16_t)(d + 128) << 5;                    // 0~4096
+    if((iTW_TAIL * 256) <= d)
+        return 0;
+
+    x    = ((uint32_t)d * 1024) / (iTW_TAIL * 256);         // 0~1023
+    idx  = x >> 5;
+    frac = x & 0x1F;
+    a    = tw_tail_tbl[idx];
+    return a - (((a - tw_tail_tbl[idx+1]) * frac) >> 5);
+}
+
+// 按位置取色并输出：七彩时取色环 hue(0~47)，否则按 led_rgb_index 所选单色
+static void tw_put(uint8_t i, uint8_t hue, uint16_t lum)
+{
+    uint16_t r, g, b;
+    uint8_t  en;
+
+    if(iRGB_QICAI == (led_rgb_index&0x07))
+    {
+        r = hue_rgb_tbl[hue][0];
+        g = hue_rgb_tbl[hue][1];
+        b = hue_rgb_tbl[hue][2];
+    }
+    else
+    {
+        en = rgb_en_tbl[led_rgb_index&0x07];
+        r = (en & iPWM_R) ? iPWM_MAX : 0;
+        g = (en & iPWM_G) ? iPWM_MAX : 0;
+        b = (en & iPWM_B) ? iPWM_MAX : 0;
+    }
+
+    pwm_rgb_tbl[i][iR_INDEX] = ((uint32_t)r * lum + 2048) >> 12;
+    pwm_rgb_tbl[i][iG_INDEX] = ((uint32_t)g * lum + 2048) >> 12;
+    pwm_rgb_tbl[i][iB_INDEX] = ((uint32_t)b * lum + 2048) >> 12;
+}
+
+// 推进相位并返回周期内相位；tpl = 移动一颗灯的节拍数，len = 一轮长度（灯数，可为 1/256 精度）
+// 返回 0xFFFF 表示本次未到时间
+static uint16_t tw_advance(uint16_t tpl, uint32_t len256)
+{
+    uint8_t  n;
+    uint16_t cycle;
+
+    n = led_timer_take(&led_timer_main, iLED_BASE_TICK, iLED_CATCHUP_MAX);
+    if(0 == n)
+        return 0xFFFF;
+
+    cycle = (uint16_t)((len256 * tpl) >> 8);
+    tw_phase += n;
+    while(cycle <= tw_phase)
+        tw_phase -= cycle;
+    return tw_phase;
+}
+
+// 相位 -> 头位置（1/256 灯），从 -iTW_PAUSE-128 起步（先空档，再从第 0 颗灯外侧进入）
+static int16_t tw_head(uint16_t phase, uint16_t tpl)
+{
+    return (int16_t)(((uint32_t)phase * 256) / tpl) - iTW_PAUSE - 128;
+}
+
+// 移动一颗灯的节拍数：17 × (速度档+1)，即 127.5 / 255 / 382.5ms，与原速度一致
+// （原实现头部亮度从 64 减到 48 以下才前进一格，共 17 步）
+#define mTW_TPL()           ((uint16_t)17 * (led_speed_index() + 1))
+
+// 单程长度：空档 + 进入半颗 + 8 颗灯 + 尾巴完全离场，约 13 颗灯（原单向拖尾一轮 13 格）
+#define iTW_RUN_LEN256      (iTW_PAUSE + 128 + iLED_MAX * 256 + iTW_TAIL * 256 - 128)
+
+/******************************************************************************
+* 函数名称: led_mode_dxtw
+* 功能描述: 单向拖尾：彗星从低序号灯平滑划向高序号灯，循环
+******************************************************************************/
+void led_mode_dxtw(void)
+{
+    uint8_t  i;
+    uint16_t tpl = mTW_TPL(), ph;
+    int16_t  h;
+
+    ph = tw_advance(tpl, iTW_RUN_LEN256);
+    if(0xFFFF == ph)
+        return;
+
+    h = tw_head(ph, tpl);
+    for(i=0; i<iLED_MAX; i++)
+        tw_put(i, (i * (iHUE_NUM/iLED_MAX)) % iHUE_NUM, tw_comet(h - (int16_t)i * 256));
+}
+
+/******************************************************************************
+* 函数名称: led_mode_sxtw
+* 功能描述: 双向拖尾：彗星划到高序号端离场后，再从高序号端反向划回，往复
+******************************************************************************/
+void led_mode_sxtw(void)
+{
+    uint8_t  i, back;
+    uint16_t tpl = mTW_TPL(), ph, leg;
+    int16_t  h;
+
+    ph = tw_advance(tpl, 2UL * iTW_RUN_LEN256);
+    if(0xFFFF == ph)
+        return;
+
+    leg  = (uint16_t)(((uint32_t)iTW_RUN_LEN256 * tpl) >> 8);
+    back = (leg <= ph);
+    if(back)
+        ph -= leg;
+
+    h = tw_head(ph, tpl);
+    for(i=0; i<iLED_MAX; i++)
+    {
+        uint8_t pos = back ? (iLED_MAX - 1 - i) : i;        // 回程镜像：头朝低序号、尾在高序号侧
+        tw_put(i, (i * (iHUE_NUM/iLED_MAX)) % iHUE_NUM, tw_comet(h - (int16_t)pos * 256));
+    }
+}
+
+/******************************************************************************
+* 函数名称: led_mode_txtw
+* 功能描述: 对向拖尾（两端 -> 中间）/ 反向拖尾（中间 -> 两端）
+* 说    明: 两颗彗星镜像对称；灯 i 与灯 7-i 为一对，同色
+******************************************************************************/
+void led_mode_txtw(void)
+{
+    uint8_t  i, pair;
+    uint16_t tpl = mTW_TPL(), ph;
+    int16_t  h;
+
+    // 半边 4 颗灯：空档 + 4 颗 + 尾巴离场，一轮 8 格（与原一致，尾巴末端已接近全暗）
+    ph = tw_advance(tpl, iTW_PAUSE + (iLED_MAX/2) * 256 + iTW_TAIL * 256 - 256);
+    if(0xFFFF == ph)
+        return;
+
+    h = tw_head(ph, tpl);
+    for(i=0; i<iLED_MAX; i++)
+    {
+        pair = (i < iLED_MAX/2) ? i : (iLED_MAX - 1 - i);   // 0 = 两端，3 = 中间
+        if(iMODE_LED_FXTW == led_cur_mode)
+            pair = (iLED_MAX/2 - 1) - pair;                 // 反向：中间先亮
+        tw_put(i, (((i < iLED_MAX/2) ? i : (iLED_MAX - 1 - i)) * 12) % iHUE_NUM,
+               tw_comet(h - (int16_t)pair * 256));
+    }
+}
+
+//-----------------------------------------------------------------------------;
+// 来回拖尾：灯条从低序号逐颗亮满，再从高序号逐颗熄灭，往复
+//
+// 每格时间(基准节拍数)，下标 = 速度档：约 60 / 90 / 135ms，与原速度一致
 static const unsigned char lhtw_step_tbl[] = { 8, 12, 18, 24, 32 };
+
+/******************************************************************************
+* 函数名称: led_mode_lhtw_init
+* 功能描述: 来回拖尾进入初始化（切换灯效时调用）
+******************************************************************************/
+void led_mode_lhtw_init(void)
+{
+    tw_phase = 0;
+}
+
 /******************************************************************************
 * 函数名称: led_mode_lhtw
-* 功能描述: 来回拖尾
-* 输入参数: 无
-* 输出参数: 无
-* 说    明:
+* 功能描述: 来回拖尾：灯条亮满 -> 停 1 格 -> 熄灭 -> 停 2 格，每颗灯渐亮渐灭
+* 说    明: 一轮 19 格，与原一致
 ******************************************************************************/
 void led_mode_lhtw(void)
 {
-    unsigned char i;
+    uint8_t  i;
+    uint16_t tpl = lhtw_step_tbl[led_speed_index()], ph;
+    int32_t  lv, x;
 
-    if(0 == led_timer_take(&led_timer_main, lhtw_step_tbl[led_speed_index()] * iLED_BASE_TICK, 1))
-        return;                                 // 离散跳帧，不补帧
+    ph = tw_advance(tpl, (2 * iLED_MAX + 3) * 256);
+    if(0xFFFF == ph)
+        return;
 
-    if(!bback_led_status)
-    {
-        for(i=0; i<led_process_index; i++)
-        {
-            rgb_enable = lhtw_en_tbl[i];
-	        gtemp_j = i;
-	        rgb_w_max();
-        }
-        led_process_index++;
-        if(iLED_MAX < led_process_index)
-            bback_led_status = 1;
-    }
+    lv = ((uint32_t)ph * 256) / tpl;                        // 0 ~ 19×256
+    if(lv < iLED_MAX * 256)
+        ;                                                   // 亮起中：灯条长度 = lv
+    else if(lv < (iLED_MAX + 1) * 256)
+        lv = iLED_MAX * 256;                                // 全亮停 1 格
+    else if(lv < (2 * iLED_MAX + 1) * 256)
+        lv = (2 * iLED_MAX + 1) * 256 - lv;                 // 熄灭中
     else
+        lv = 0;                                             // 全灭停 2 格
+
+    for(i=0; i<iLED_MAX; i++)
     {
-        for(i=led_process_index; i<iLED_MAX; i++)
-        {
-            rgb_enable = lhtw_en_tbl[i];
-            pwm_rgb_tbl[i][iR_INDEX] = 0;
-            pwm_rgb_tbl[i][iG_INDEX] = 0;
-            pwm_rgb_tbl[i][iB_INDEX] = 0;
-        }
-
-        if(0 != led_process_index)
-            led_process_index--;
-        else
-            bback_led_status = 0;
+        x = lv - (int32_t)i * 256;                          // 本颗灯的点亮进度
+        if(x < 0)   x = 0;
+        if(x > 256) x = 256;
+        tw_put(i, (i * (iHUE_NUM/iLED_MAX)) % iHUE_NUM, (uint16_t)((x * x) >> 4));   // ≈γ2
     }
-}
-
-/******************************************************************************
-* 函数名称: led_mode_dxtw
-* 功能描述:
-* 输入参数: 无
-* 输出参数: 无
-* 说    明:
-******************************************************************************/
-static void led_mode_dxtw_step(void)
-{
-    unsigned char x;
-
-
-	snake_led_index &= 0x0F;
-    x = --pwm_duty_array_0[snake_led_index];
-    if(((iPWM_SNAKE_MAX*3)/4)>x)
-    {
-    	snake_led_index++;
-        if(iLED_DXTW<=snake_led_index)
-        {
-            snake_led_index = 3;
-            pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
-            return;
-        }
-        pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
-    }
-    x = pwm_duty_array_0[snake_led_index];
-    pwm_duty_array_0[snake_led_index-1] = x-((iPWM_SNAKE_MAX*1)/4);
-    pwm_duty_array_0[snake_led_index-2] = x-((iPWM_SNAKE_MAX*2)/4);
-    pwm_duty_array_0[snake_led_index-3] = x-((iPWM_SNAKE_MAX*3)/4);
-
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-    for(gtemp_x=5; gtemp_x<(iLED_MAX+5); gtemp_x++)
-    {
-        //if(iRGB_QICAI == led_rgb_index)
-        {
-            rgb_enable = (gtemp_x&0x07);
-            if(0==rgb_enable)
-                rgb_enable = 4;
-        }
-
-        gtemp_j = (gtemp_x-5);
-        rgb_pwm0_w();
-    }
-}
-
-/******************************************************************************
-* 函数名称: led_mode_dxtw
-* 功能描述:
-* 输入参数: 无
-* 输出参数: 无
-* 说    明:
-******************************************************************************/
-static void led_mode_sxtw_step(void)
-{
-    unsigned char x;
-
-
-	snake_led_index &= 0x0F;
-    if(!bback_led_status)
-    {
-        x = --pwm_duty_array_0[snake_led_index];
-        if(((iPWM_SNAKE_MAX*3)/4)>x)
-        {
-        	snake_led_index++;
-            if(iLED_DXTW<=snake_led_index)
-            {
-                snake_led_index = (iLED_DXTW-4);
-                pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
-                bback_led_status = 1;
-                return;
-            }
-            pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
-        }
-        x = pwm_duty_array_0[snake_led_index];
-        pwm_duty_array_0[snake_led_index-1] = x-((iPWM_SNAKE_MAX*1)/4);
-        pwm_duty_array_0[snake_led_index-2] = x-((iPWM_SNAKE_MAX*2)/4);
-        pwm_duty_array_0[snake_led_index-3] = x-((iPWM_SNAKE_MAX*3)/4);
-    }
-    else
-    {
-        x = --pwm_duty_array_0[snake_led_index];
-        if(((iPWM_SNAKE_MAX*3)/4)>x)
-        {
-            if(0 != snake_led_index)
-            {
-        	    snake_led_index--;
-            }
-            else
-            {
-                snake_led_index = 3;
-                pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
-                bback_led_status = 0;
-                return;
-            }
-            pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
-        }
-        x = pwm_duty_array_0[snake_led_index];
-        pwm_duty_array_0[snake_led_index+1] = x-((iPWM_SNAKE_MAX*1)/4);
-        pwm_duty_array_0[snake_led_index+2] = x-((iPWM_SNAKE_MAX*2)/4);
-        pwm_duty_array_0[snake_led_index+3] = x-((iPWM_SNAKE_MAX*3)/4);
-    }
-
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-    for(gtemp_x=5; gtemp_x<(iLED_MAX+5); gtemp_x++)
-    {
-        //if(iRGB_QICAI == led_rgb_index)
-        {
-            rgb_enable = (gtemp_x&0x07);
-            if(0==rgb_enable)
-                rgb_enable = 4;
-        }
-
-        gtemp_j = (gtemp_x-5);
-        rgb_pwm0_w();
-    }
-}
-/******************************************************************************
-* 函数名称: led_mode_dxtw
-* 功能描述:
-* 输入参数: 无
-* 输出参数: 无
-* 说    明:
-******************************************************************************/
-static void led_mode_txtw_step(void)
-{
-    unsigned char x;
-
-
-	snake_led_index &= 0x0F;
-    x = --pwm_duty_array_0[snake_led_index];
-    if(((iPWM_SNAKE_MAX*3)/4)>x)
-    {
-    	snake_led_index++;
-        if(iLED_TXTW<=snake_led_index)
-        {
-            snake_led_index = 3;
-            pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
-            return;
-        }
-        pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
-    }
-    x = pwm_duty_array_0[snake_led_index];
-    pwm_duty_array_0[snake_led_index-1] = x-((iPWM_SNAKE_MAX*1)/4);
-    pwm_duty_array_0[snake_led_index-2] = x-((iPWM_SNAKE_MAX*2)/4);
-    pwm_duty_array_0[snake_led_index-3] = x-((iPWM_SNAKE_MAX*3)/4);
-
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-
-    if(iMODE_LED_TXTW == led_cur_mode)
-    {
-        //if(iRGB_QICAI == led_rgb_index)
-            rgb_enable = 0x01;
-        gtemp_x = 4;
-        gtemp_j = 0;
-        rgb_pwm0_w();
-        gtemp_j = 7;
-        rgb_pwm0_w();
-    
-        //if(iRGB_QICAI == led_rgb_index)
-            rgb_enable = 0x02;
-        gtemp_x = 5;
-        gtemp_j = 1;
-        rgb_pwm0_w();
-        gtemp_j = 6;
-        rgb_pwm0_w();
-    
-        //if(iRGB_QICAI == led_rgb_index)
-            rgb_enable = 0x04;
-        gtemp_x = 6;
-        gtemp_j = 2;
-        rgb_pwm0_w();
-        gtemp_j = 5;
-        rgb_pwm0_w();
-    
-        //if(iRGB_QICAI == led_rgb_index)
-            rgb_enable = 0x03;
-        gtemp_x = 7;
-        gtemp_j = 3;
-        rgb_pwm0_w();
-        gtemp_j = 4;
-        rgb_pwm0_w();
-    }
-    else if(iMODE_LED_FXTW == led_cur_mode)
-    {
-        //if(iRGB_QICAI == led_rgb_index)
-            rgb_enable = 0x01;
-        gtemp_x = 7;
-        gtemp_j = 0;
-        rgb_pwm0_w();
-        gtemp_j = 7;
-        rgb_pwm0_w();
-    
-        //if(iRGB_QICAI == led_rgb_index)
-            rgb_enable = 0x02;
-        gtemp_x = 6;
-        gtemp_j = 1;
-        rgb_pwm0_w();
-        gtemp_j = 6;
-        rgb_pwm0_w();
-    
-        //if(iRGB_QICAI == led_rgb_index)
-            rgb_enable = 0x04;
-        gtemp_x = 5;
-        gtemp_j = 2;
-        rgb_pwm0_w();
-        gtemp_j = 5;
-        rgb_pwm0_w();
-    
-       // if(iRGB_QICAI == led_rgb_index)
-            rgb_enable = 0x03;
-        gtemp_x = 4;
-        gtemp_j = 3;
-        rgb_pwm0_w();
-        gtemp_j = 4;
-        rgb_pwm0_w();
-    }
-}
-
-//=============================================================================;
-// 灯效对外入口：按 RTC 时间取出到期步数，逐步执行
-//=============================================================================;
-
-void led_mode_nhjb(void)
-{
-    uint8_t n = led_speed_steps();
-    while(n--)
-        led_mode_nhjb_step();
-}
-
-void led_mode_dxtw(void)
-{
-    uint8_t n = led_speed_steps();
-    while(n--)
-        led_mode_dxtw_step();
-}
-
-void led_mode_sxtw(void)
-{
-    uint8_t n = led_speed_steps();
-    while(n--)
-        led_mode_sxtw_step();
-}
-
-void led_mode_txtw(void)
-{
-    uint8_t n = led_speed_steps();
-    while(n--)
-        led_mode_txtw_step();
 }
