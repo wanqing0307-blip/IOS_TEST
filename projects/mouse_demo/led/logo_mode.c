@@ -344,67 +344,116 @@ static void led_mode_nhjb_step(void)
 // 代码区                                                                      ;
 //=============================================================================;
 
-static void led_mode_liuguang_step(void)
+//-----------------------------------------------------------------------------;
+// 流光
+//
+// 亮带波长 = 4 颗灯（8 颗灯上同时有两条亮带），向高序号方向流动
+// 流过一个波长的时间(基准节拍 7.5ms 数)，下标 = 速度档：约 0.96s / 1.92s / 2.88s，与原速度一致
+static const unsigned short lg_period_tbl[] = { 128, 256, 384, 512, 640 };
+
+#define iLG_WAVE_LED        4                               // 波长（灯数）
+#define iLG_POS_MAX         1024                            // 一个波长的相位细分
+#define iLG_HUE_SPAN        (iHUE_NUM * 256)                // 色环相位（8.8 定点）
+#define iLG_HUE_PER_WAVE    (iLG_HUE_SPAN / 8)              // 每流过一个波长色环转 1/8 圈
+
+// 亮带截面（半个波长，33 点，0~4096）：((1+cos)/2)^2.2
+// 亮带中心最亮、两侧快速变暗，带间留出暗隙，流动感清晰
+static const unsigned short lg_band_tbl[33] = {
+    4096, 4074, 4010, 3904, 3761, 3583, 3375, 3142, 2891, 2627, 2356,
+    2085, 1818, 1562, 1319, 1095,  891,  710,  553,  419,  308,  219,
+     150,   97,   60,   34,   18,    8,    3,    1,    0,    0,    0,
+};
+
+static unsigned short           lg_phase;                   // 波相位（基准节拍数，0 ~ 周期-1）
+static unsigned short           lg_hue;                     // 七彩色环相位（8.8 定点）
+
+/******************************************************************************
+* 函数名称: led_mode_liuguang_init
+* 功能描述: 流光进入初始化（切换灯效时调用）
+******************************************************************************/
+void led_mode_liuguang_init(void)
 {
-    unsigned char i, k;
-    uint16_t x;
+    lg_phase = 0;
+    lg_hue = 0;
+}
 
+// x: 距亮带中心的相位 0~1023（循环）-> 亮度 0~4096
+static unsigned short lg_band(unsigned short x)
+{
+    unsigned char  idx, frac;
+    unsigned short a;
 
-    x = 0x01;
+    if(iLG_POS_MAX/2 < x)
+        x = iLG_POS_MAX - x;                        // 对称：只用半个波长的表
+    x <<= 1;                                        // 0~1024
+    if(1024 <= x)
+        return 0;
+
+    idx  = x >> 5;
+    frac = x & 0x1F;
+    a    = lg_band_tbl[idx];
+    return a - (((a - lg_band_tbl[idx+1]) * frac) >> 5);
+}
+
+/******************************************************************************
+* 函数名称: led_mode_liuguang
+* 功能描述: 流光：两条柔和亮带沿灯带连续流动
+* 输入参数: 无
+* 输出参数: 无
+* 说    明: 按 RTC 时间推进相位；七彩时颜色沿灯带渐变（相邻灯 45°）并随流动
+*           缓慢旋转，否则按 led_rgb_index 所选单色流动（与常亮一致）
+******************************************************************************/
+void led_mode_liuguang(void)
+{
+    unsigned char  i, n, h0, h1, hf, en;
+    unsigned short period, pos, x, hue;
+    uint32_t       lum;
+
+    n = led_timer_take(&led_timer_main, iLED_BASE_TICK, iLED_CATCHUP_MAX);
+    if(0 == n)
+        return;
+
+    period = lg_period_tbl[led_speed_index()];
+
+    // 色环随波相位同步推进：每流过一个波长转 1/8 圈
+    lg_hue = (lg_hue + ((uint32_t)iLG_HUE_PER_WAVE * n) / period) % iLG_HUE_SPAN;
+
+    lg_phase += n;
+    while(period <= lg_phase)
+        lg_phase -= period;                         // 也兼容运行中切换到更短周期
+
+    pos = ((uint32_t)lg_phase * iLG_POS_MAX) / period;
+    en  = rgb_en_tbl[led_rgb_index&0x07];
+
     for(i=0; i<iLED_MAX; i++)
     {
-        if(led_status_reg & x)
+        unsigned short r, g, b;
+
+        // 灯 i 比灯 i-1 晚 1/4 波长到达亮带中心 -> 亮带向高序号流动
+        x   = (pos + iLG_POS_MAX - (i % iLG_WAVE_LED) * (iLG_POS_MAX / iLG_WAVE_LED)) % iLG_POS_MAX;
+        lum = lg_band(x);
+
+        if(iRGB_QICAI == (led_rgb_index&0x07))
         {
-            pwm_duty_array_0[i]++;
-            if(iPWM_MAX <= pwm_duty_array_0[i])
-            {
-                led_status_reg &= ~x;
-            }
+            // 色相插值：相邻灯相差 45°，整体随时间旋转
+            hue = (lg_hue + (uint32_t)i * (iLG_HUE_SPAN / iLED_MAX)) % iLG_HUE_SPAN;
+            h0  = hue >> 8;
+            hf  = hue & 0xFF;
+            h1  = (iHUE_NUM-1 <= h0) ? 0 : (h0 + 1);
+            r   = (hue_rgb_tbl[h0][0] * (256 - hf) + hue_rgb_tbl[h1][0] * hf) >> 8;
+            g   = (hue_rgb_tbl[h0][1] * (256 - hf) + hue_rgb_tbl[h1][1] * hf) >> 8;
+            b   = (hue_rgb_tbl[h0][2] * (256 - hf) + hue_rgb_tbl[h1][2] * hf) >> 8;
         }
         else
         {
-            pwm_duty_array_0[i]--;
-            if(0 == pwm_duty_array_0[i])
-            {
-                pwm_duty_array_1[i]++;
-                if(7 < pwm_duty_array_1[i])
-                    pwm_duty_array_1[i]=1;
-                led_status_reg |= x;
-            }
-        }
-        x <<= 1;
-    }
-
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-    rgb_enable = iPWM_RGB;
-
-    for(k=0; k<iLED_MAX; k++)
-    {
-        if(bled_run_dir)
-        {
-            gtemp_j = pwm_duty_array_0[k];
-            if(iRGB_QICAI == led_rgb_index)
-                rgb_enable = pwm_duty_array_1[k];
-        }
-        else
-        {
-            gtemp_j = pwm_duty_array_0[iLED_MAX-1-k];
-            if(iRGB_QICAI == led_rgb_index)
-                rgb_enable = pwm_duty_array_1[iLED_MAX-1-k];
+            r = (en & iPWM_R) ? iPWM_MAX : 0;
+            g = (en & iPWM_G) ? iPWM_MAX : 0;
+            b = (en & iPWM_B) ? iPWM_MAX : 0;
         }
 
-        if(rgb_enable&iPWM_R)
-            pwm_rgb_tbl[k][iR_INDEX] = gtemp_j;
-        else
-            pwm_rgb_tbl[k][iR_INDEX] = 0;
-        if(rgb_enable&iPWM_G)
-            pwm_rgb_tbl[k][iG_INDEX] = gtemp_j;
-        else
-            pwm_rgb_tbl[k][iG_INDEX] = 0;
-        if(rgb_enable&iPWM_B)
-            pwm_rgb_tbl[k][iB_INDEX] = gtemp_j;
-        else
-            pwm_rgb_tbl[k][iB_INDEX] = 0;
+        pwm_rgb_tbl[i][iR_INDEX] = (r * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][iG_INDEX] = (g * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][iB_INDEX] = (b * lum + 2048) >> 12;
     }
 }
 
@@ -1015,13 +1064,6 @@ void led_mode_nhjb(void)
     uint8_t n = led_speed_steps();
     while(n--)
         led_mode_nhjb_step();
-}
-
-void led_mode_liuguang(void)
-{
-    uint8_t n = led_speed_steps();
-    while(n--)
-        led_mode_liuguang_step();
 }
 
 void led_mode_sbzl(void)
