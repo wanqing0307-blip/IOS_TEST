@@ -27,7 +27,6 @@ bool                            bled_run_dir;
 
 uint16_t                        lfsr_value;
 uint8_t                         snake_led_index;
-static uint16_t                qcnh_phase;          // 七彩霓虹色环相位（8.8 定点：高字节=色号，低字节=插值）
 
 //-----------------------------------------------------------------------------;
 // 表格定义区
@@ -818,95 +817,139 @@ unsigned char       const   lhtw_en_tbl[]={
 //-----------------------------------------------------------------------------;
 // 七彩霓虹（QCNH）
 //
-#define iQCNH_COLOR_NUM     7                                   // 赤橙黄绿青蓝紫
-#define iQCNH_COLOR_SPAN    256                                 // 相邻两色之间的插值细分
-#define iQCNH_RING_LEN      (iQCNH_COLOR_NUM * iQCNH_COLOR_SPAN)// 色环总长 1792
-#define iQCNH_LED_SPACING   (iQCNH_RING_LEN / 12)               // 相邻灯相位差约 30°：8 颗灯覆盖约 2/3 色环，
-                                                                // 整体颜色随时间明显变换（不再整条铺满一圈）
-#define iQCNH_HOLD          96                                  // 每色纯色停留占比 96/256，其余为过渡 → 色带分明
+// 赤橙黄绿青蓝紫 7 个色块沿灯带流动，像一节一节的霓虹灯管：
+//   - 色块中心纯色最亮，交界处色相平滑过渡、亮度下降到约 60%（感知）
+//   - 亮度只跟随色块，不再固定在灯位上（原两端灯恒定偏暗）
+//   - 色环按色相重排，赤橙黄三色拉开、更易分辨
+//
+// ---- 可调参数 ----
+#define iQCNH_DIR           1                               // 流向：1 = 高序号 -> 低序号，0 = 低序号 -> 高序号
+#define iQCNH_LED_PER_COLOR 2                               // 每个色块约占几颗灯（8 颗灯上约 4 个色块）
+#define iQCNH_HOLD          96                              // 每块中心纯色区宽度（0~256，其余为过渡）
 
-// 七彩色环（R,G,B，满量程 iPWM_MAX），首尾相接循环插值
-static const unsigned char qcnh_color_tbl[iQCNH_COLOR_NUM][3] = {
-    {64,  0,  0},   // 赤
-    {64, 20,  0},   // 橙
-    {64, 56,  0},   // 黄
-    { 0, 64,  0},   // 绿
-    { 0, 64, 48},   // 青
-    { 0,  0, 64},   // 蓝
-    {40,  0, 64},   // 紫
+// 色环转一圈的时间(ms)，下标 = 速度档（0 最快），与现行 4.5/6.7/9.0s 一致
+static const unsigned short qcnh_cycle_ms_tbl[] = { 4500, 6700, 9000, 13400, 26900 };
+
+// 七彩色环（R,G,B，满量程 iPWM_MAX）
+// 色相 0/28/55/120/180/235/280°：暖色拉开（原赤橙黄挤在一起），黄绿、青蓝间距收窄。
+// 未做亮度补偿：按灯珠典型发光强度 R:G:B ≈ 0.29:0.58:0.13 估算，转一圈总亮度波动约 ±37%
+// （旧版约 ±30%），平均亮度约为旧版 85%。
+// 实测补偿代价过大：k=0.3 部分补偿（因子 (Lmin/L)^0.3）只能把波动拉回约 ±28%，
+// 平均亮度却降到旧版约 61%，要压到 ±15% 需降到约 28%。如需补偿版可替换为：
+//   {55,0,0},{45,21,0},{40,37,0},{0,45,0},{0,42,42},{0,5,64},{36,0,54}
+static const unsigned char qcnh_color_tbl[7][3] = {
+    {64,  0,  0},   // 赤   0°
+    {64, 30,  0},   // 橙  28°
+    {64, 59,  0},   // 黄  55°
+    { 0, 64,  0},   // 绿 120°
+    { 0, 64, 64},   // 青 180°
+    { 0,  5, 64},   // 蓝 235°
+    {43,  0, 64},   // 紫 280°
 };
 
-// 每 15ms 相位步进，下标 = 速度档（0 最快）
-// 一圈周期约：4.5s / 6.7s / 9.0s / 13.4s / 26.9s（较原 6.7/9.0/13.4s 加快约 1.3~1.5 倍）
-static const unsigned char qcnh_step_tbl[] = { 6, 4, 3, 2, 1 };
-#define iQCNH_TICK          mMS_TO_TICK(15)
+// 色块亮度截面（半块，距块中心 0~128 -> 33 点，0~4096）：(1 - 0.4·(1-cos)/2)^2.2
+// 块中心 100%，交界处感知亮度 60%（线性约 32%）
+static const unsigned short qcnh_block_tbl[33] = {
+    4096, 4087, 4061, 4019, 3960, 3886, 3798, 3698, 3587, 3466, 3337,
+    3203, 3065, 2925, 2784, 2644, 2507, 2374, 2246, 2124, 2009, 1903,
+    1804, 1715, 1634, 1563, 1501, 1449, 1407, 1374, 1350, 1336, 1331,
+};
 
-// 固定亮度轮廓：中间亮、两端稍暗，提供稳定的空间层次
-static const unsigned char qcnh_layer_tbl[iLED_MAX] = { 36, 48, 58, 64, 64, 58, 48, 36 };
+// ---- 内部常量 ----
+#define iQCNH_COLOR_NUM     7
+#define iQCNH_COLOR_SPAN    256                             // 相邻两色块中心之间的相位细分
+#define iQCNH_RING_LEN      (iQCNH_COLOR_NUM * iQCNH_COLOR_SPAN)    // 1792
+#define iQCNH_LED_SPACING   (iQCNH_COLOR_SPAN / iQCNH_LED_PER_COLOR)
+#define iQCNH_HOLD_LO       (iQCNH_HOLD / 2)                // f <= 此值：仍为当前色
+#define iQCNH_HOLD_HI       (iQCNH_COLOR_SPAN - iQCNH_HOLD / 2)     // f >= 此值：已为下一色
 
-// 色带整形：前 iQCNH_HOLD 保持纯色，其后 smoothstep 平滑过渡到下一色
-// 输入/输出 0~255
-static unsigned char qcnh_band(unsigned char f)
-{
-    uint32_t t;
-
-    if(f < iQCNH_HOLD)
-        return 0;
-
-    t = ((uint32_t)(f - iQCNH_HOLD) * 256) / (256 - iQCNH_HOLD);   // 0~255
-    return (unsigned char)((t * t * (768 - 2 * t)) >> 16);          // 3t²-2t³
-}
+static uint16_t                 qcnh_phase;                 // 周期内相位（基准节拍 7.5ms 数）
 
 /******************************************************************************
 * 函数名称: led_mode_qcnh_init
 * 功能描述: 七彩霓虹进入初始化（切换灯效时调用）
-* 输入参数: 无
-* 输出参数: 无
 ******************************************************************************/
 void led_mode_qcnh_init(void)
 {
     qcnh_phase = 0;
 }
 
+// 色相混合比：f 为距当前色块中心的相位 0~255 -> 下一色占比 0~256
+// 两端各 iQCNH_HOLD/2 为纯色，中间 smoothstep(3t²-2t³) 过渡
+static uint16_t qcnh_blend(uint8_t f)
+{
+    uint32_t t;
+
+    if(f <= iQCNH_HOLD_LO)
+        return 0;
+    if(f >= iQCNH_HOLD_HI)
+        return 256;
+
+    t = ((uint32_t)(f - iQCNH_HOLD_LO) * 256) / (iQCNH_HOLD_HI - iQCNH_HOLD_LO);   // 0~255
+    return (uint16_t)((t * t * (768 - 2 * t)) >> 16);
+}
+
+// 色块亮度：f 为距当前色块中心的相位 0~255 -> 0~4096（交界 f=128 最暗）
+static uint16_t qcnh_block(uint8_t f)
+{
+    uint8_t  x, idx, frac;
+    uint16_t a;
+
+    x    = (f <= 128) ? f : (uint8_t)(256 - f);           // 0~128，对称
+    idx  = x >> 2;
+    frac = x & 0x03;
+    a    = qcnh_block_tbl[idx];
+    if(32 <= idx)
+        return a;
+    return a - (((a - qcnh_block_tbl[idx+1]) * frac) >> 2);
+}
+
 /******************************************************************************
 * 函数名称: led_mode_qcnh
-* 功能描述: 七彩霓虹：赤橙黄绿青蓝紫色带在灯带上平滑流动，整体颜色持续变换
+* 功能描述: 七彩霓虹：7 个色块像霓虹灯管一样沿灯带流动
 * 输入参数: 无
 * 输出参数: 无
-* 说    明: 按 RTC 时间每 15ms 推进相位；相位 8.8 定点，相邻两色线性插值，无跳变
+* 说    明: 按 RTC 时间推进相位，运行中改速度档不跳变；
+*           颜色与亮度以 12bit 精度相乘后一次四舍五入到 0~64
 ******************************************************************************/
 void led_mode_qcnh(void)
 {
-    unsigned char  i, c, n, frac, light, steps;
-    unsigned short pos;
+    uint8_t  i, n, c, nc, f;
+    uint16_t cycle, pos, p, t, lum;
     const unsigned char *a, *b;
 
-    steps = led_timer_take(&led_timer_main, iQCNH_TICK, iLED_CATCHUP_MAX);
-    if(0 == steps)
+    n = led_timer_take(&led_timer_main, iLED_BASE_TICK, iLED_CATCHUP_MAX);
+    if(0 == n)
         return;
 
-    qcnh_phase += (unsigned short)qcnh_step_tbl[led_speed_index()] * steps;
-    while(iQCNH_RING_LEN <= qcnh_phase)
-        qcnh_phase -= iQCNH_RING_LEN;
+    cycle = ((uint32_t)qcnh_cycle_ms_tbl[led_speed_index()] * 2) / 15;    // ms -> 7.5ms 节拍数
+    qcnh_phase += n;
+    while(cycle <= qcnh_phase)
+        qcnh_phase -= cycle;
+
+    pos = ((uint32_t)qcnh_phase * iQCNH_RING_LEN) / cycle;
 
     for(i = 0; i<iLED_MAX; i++)
     {
-        // 色块流向：从高序号灯流向低序号灯（灯 i 显示的是灯 i+1 稍早的颜色）
-        pos = qcnh_phase + i * iQCNH_LED_SPACING;
-        while(iQCNH_RING_LEN <= pos)
-            pos -= iQCNH_RING_LEN;
+#if (1 == iQCNH_DIR)
+        // 灯 i 显示的是灯 i+1 稍早的颜色 -> 色块从高序号流向低序号
+        p = (pos + i * iQCNH_LED_SPACING) % iQCNH_RING_LEN;
+#else
+        // 灯 i 显示的是灯 i-1 稍早的颜色 -> 色块从低序号流向高序号
+        p = (pos + (iLED_MAX - 1 - i) * iQCNH_LED_SPACING) % iQCNH_RING_LEN;
+#endif
+        c   = p / iQCNH_COLOR_SPAN;
+        f   = p % iQCNH_COLOR_SPAN;
+        nc  = (iQCNH_COLOR_NUM - 1 <= c) ? 0 : (c + 1);
+        a   = qcnh_color_tbl[c];
+        b   = qcnh_color_tbl[nc];
+        t   = qcnh_blend(f);
+        lum = qcnh_block(f);
 
-        c    = pos / iQCNH_COLOR_SPAN;
-        frac = qcnh_band(pos % iQCNH_COLOR_SPAN);
-        n    = (iQCNH_COLOR_NUM-1 <= c) ? 0 : (c + 1);
-        a    = qcnh_color_tbl[c];
-        b    = qcnh_color_tbl[n];
-        light = qcnh_layer_tbl[i];
-
-        // 先插值得到颜色，再乘亮度轮廓（>>6 对应满量程 64）
-        pwm_rgb_tbl[i][iR_INDEX] = ((((a[0] * (256 - frac)) + (b[0] * frac)) >> 8) * light) >> 6;
-        pwm_rgb_tbl[i][iG_INDEX] = ((((a[1] * (256 - frac)) + (b[1] * frac)) >> 8) * light) >> 6;
-        pwm_rgb_tbl[i][iB_INDEX] = ((((a[2] * (256 - frac)) + (b[2] * frac)) >> 8) * light) >> 6;
+        // (颜色 0~16384) × (亮度 0~4096) >> 20，四舍五入
+        pwm_rgb_tbl[i][iR_INDEX] = ((uint32_t)(a[0] * (256 - t) + b[0] * t) * lum + (1UL << 19)) >> 20;
+        pwm_rgb_tbl[i][iG_INDEX] = ((uint32_t)(a[1] * (256 - t) + b[1] * t) * lum + (1UL << 19)) >> 20;
+        pwm_rgb_tbl[i][iB_INDEX] = ((uint32_t)(a[2] * (256 - t) + b[2] * t) * lum + (1UL << 19)) >> 20;
     }
 }
 
