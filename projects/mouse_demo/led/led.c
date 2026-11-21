@@ -599,8 +599,7 @@ void logo_process(void)
                 led_mode_liuguang_init();
                 break;
             case iMODE_LED_STAR:
-                snake_led_index = 0xFF;
-                lfsr_value = 0x55AA;
+                led_mode_star_init();
                 break;
             case iMODE_LED_SBZL:
                 led_mode_sbzl_init();
