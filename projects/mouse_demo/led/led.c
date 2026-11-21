@@ -590,10 +590,7 @@ void logo_process(void)
 
                 break;
             case iMODE_LED_NHJB:
-                pwm_duty_array_0[0] = iPWM_MAX;
-                pwm_duty_array_0[1] = 0x00;
-                pwm_duty_array_0[2] = 0x00;
-
+                led_mode_nhjb_init();
                 break;
             case iMODE_LED_LG_L_R:
                 led_mode_liuguang_init();
@@ -613,20 +610,13 @@ void logo_process(void)
                 led_mode_qcnh_init();
                 break;
             case iMODE_LED_LHTW:
+                led_mode_lhtw_init();
                 break;
             case iMODE_LED_DXTW:
-                snake_led_index = 3;
-                pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
-                break;
             case iMODE_LED_SXTW:
-                snake_led_index = 3;
-                pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
-                bback_led_status = 0;
-                break;
             case iMODE_LED_TXTW:
             case iMODE_LED_FXTW:
-                snake_led_index = 3;
-                pwm_duty_array_0[snake_led_index] = iPWM_SNAKE_MAX;
+                led_mode_tw_init();
                 break;
         }
     }
