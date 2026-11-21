@@ -547,98 +547,83 @@ static void led_mode_sbzl_step(void)
     }
 }
 
-// 每帧间隔(ms)，下标 = 速度档（0 最快），与原 7.5ms 节拍下的 40/60/90/140/200 拍一致
+//-----------------------------------------------------------------------------;
+// 爆闪（BS）
+// 画面由“进入后经过的绝对时间”直接算出帧号，不做逐帧累加：
+// 无论 logo_process 调用快慢、是否被写 flash/休眠打断，节奏始终与时钟严格一致
+//
+// 每帧间隔(ms)，下标 = 速度档（0 最快）
 static const unsigned short bs_period_ms_tbl[] = { 300, 450, 675, 1050, 1500 };
+
+#define iBS_COLOR_NUM       7                               // 颜色序列：rgb_en_tbl[0..6]
+#define iBS_SUB_NUM         4                               // 每色 4 帧：偶数灯正色/奇数灯正色/偶数灯反色/奇数灯反色
+#define iBS_FRAME_NUM       (iBS_COLOR_NUM * iBS_SUB_NUM)   // 一轮 28 帧
+
+static uint32_t                 bs_start;                   // 帧号基准时刻
+static uint8_t                  bs_base;                    // 基准时刻对应的帧号
+static uint8_t                  bs_lev;                     // 基准时刻采用的速度档
+
+/******************************************************************************
+* 函数名称: led_mode_baoshan_init
+* 功能描述: 爆闪进入初始化（切换灯效时调用），从第 0 帧开始计时
+******************************************************************************/
+void led_mode_baoshan_init(void)
+{
+    bs_start = drv_rtc_read(OM_RTC);
+    bs_base  = 0;
+    bs_lev   = led_speed_index();
+}
 
 /******************************************************************************
 * 函数名称: led_mode_baoshan
-* 功能描述: 爆闪：奇偶灯交替、正反色交替闪烁
+* 功能描述: 爆闪：奇偶灯交替、正反色交替闪烁，7 色循环
 * 输入参数: 无
 * 输出参数: 无
-* 说    明: 进入即出首帧，之后按 RTC 时间固定节奏；离散跳帧，不补帧
+* 说    明: 帧号 = 基准帧 + (当前时刻 - 基准时刻) / 帧周期；每次调用都按帧号
+*           重画，外部清灯（关灯/休眠/回连）恢复后立即回到正确画面
 ******************************************************************************/
 void led_mode_baoshan(void)
 {
-    if(0 == led_timer_take(&led_timer_main, mMS_TO_TICK(bs_period_ms_tbl[led_speed_index()]), 1))
-        return;
+    uint32_t now, period, k;
+    uint8_t  frame, sub, en, j;
+
+    now    = drv_rtc_read(OM_RTC);
+    period = mMS_TO_TICK(bs_period_ms_tbl[bs_lev]);
+    k      = (now - bs_start) / period;
+
+    // 运行中改速度档：保持当前帧，从此刻起按新周期计时
+    if(bs_lev != led_speed_index())
+    {
+        bs_base  = (bs_base + k) % iBS_FRAME_NUM;
+        bs_start = now;
+        bs_lev   = led_speed_index();
+        k        = 0;
+    }
+
+    // 每满一轮把基准时刻前移，保证差值不会溢出
+    if(iBS_FRAME_NUM <= k)
+    {
+        bs_start += (k / iBS_FRAME_NUM) * iBS_FRAME_NUM * period;
+        k        %= iBS_FRAME_NUM;
+    }
+
+    frame = (bs_base + k) % iBS_FRAME_NUM;
+    sub   = frame % iBS_SUB_NUM;
+
+    en = rgb_en_tbl[frame / iBS_SUB_NUM];
+    if(2 <= sub)
+    {
+        en = ~en;                               // 后两帧为反色
+        if(0 == (en & iPWM_RGB))
+            en = iPWM_R;
+    }
 
     clr_rgb();
-
-	if(0 == led_process_index)
-	{
-//	    if(iRGB_QICAI != led_rgb_index)
-//            rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-//        else
-            rgb_enable = rgb_en_tbl[rgb_index&0x0F];
-	    gtemp_j = 0;
-	    rgb_w_max();
-	    gtemp_j = 2;
-	    rgb_w_max();
-	    gtemp_j = 4;
-	    rgb_w_max();
-	    gtemp_j = 6;
-	    rgb_w_max();
-
-        led_process_index++;
-    }
-    else if(1 == led_process_index)
-	{
-//	    if(iRGB_QICAI != led_rgb_index)
-//            rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-//        else
-            rgb_enable = rgb_en_tbl[rgb_index&0x0F];
-	    gtemp_j = 1;
-	    rgb_w_max();
-	    gtemp_j = 3;
-	    rgb_w_max();
-	    gtemp_j = 5;
-	    rgb_w_max();
-	    gtemp_j = 7;
-	    rgb_w_max();
-
-        led_process_index++;
-    }
-	else if(2 == led_process_index)
-	{
-	    //if(iRGB_QICAI != led_rgb_index)
-        //    rgb_enable = ~rgb_en_tbl[led_rgb_index&0x0F];
-        //else
-            rgb_enable = ~rgb_en_tbl[rgb_index&0x0F];
-        if(0==(rgb_enable&0x07))
-            rgb_enable = 0x01;
-
-	    gtemp_j = 0;
-	    rgb_w_max();
-	    gtemp_j = 2;
-	    rgb_w_max();
-	    gtemp_j = 4;
-	    rgb_w_max();
-	    gtemp_j = 6;
-	    rgb_w_max();
-
-        led_process_index++;
-    }
-    else //if(3 == led_process_index)
-	{
-//	    if(iRGB_QICAI != led_rgb_index)
-//            rgb_enable = ~rgb_en_tbl[led_rgb_index&0x0F];
-//        else
-            rgb_enable = ~rgb_en_tbl[rgb_index&0x0F];
-        if(0==(rgb_enable&0x07))
-            rgb_enable = 0x01;
-	    gtemp_j = 1;
-	    rgb_w_max();
-	    gtemp_j = 3;
-	    rgb_w_max();
-	    gtemp_j = 5;
-	    rgb_w_max();
-	    gtemp_j = 7;
-	    rgb_w_max();
-
-        led_process_index=0;
-        rgb_index++;
-        if(7<=rgb_index)
-            rgb_index = 0;
+    rgb_enable = en;
+    for(j = (sub & 0x01); j < iLED_MAX; j += 2) // 偶数帧点亮偶数灯，奇数帧点亮奇数灯
+    {
+        gtemp_j = j;
+        rgb_w_max();
     }
 }
 
@@ -669,7 +654,9 @@ unsigned char       const   lhtw_en_tbl[]={
 #define iQCNH_COLOR_NUM     7                                   // 赤橙黄绿青蓝紫
 #define iQCNH_COLOR_SPAN    256                                 // 相邻两色之间的插值细分
 #define iQCNH_RING_LEN      (iQCNH_COLOR_NUM * iQCNH_COLOR_SPAN)// 色环总长 1792
-#define iQCNH_LED_SPACING   (iQCNH_RING_LEN / iLED_MAX)         // 相邻灯相位差：整条灯带正好铺满一圈七彩
+#define iQCNH_LED_SPACING   (iQCNH_RING_LEN / 12)               // 相邻灯相位差约 30°：8 颗灯覆盖约 2/3 色环，
+                                                                // 整体颜色随时间明显变换（不再整条铺满一圈）
+#define iQCNH_HOLD          96                                  // 每色纯色停留占比 96/256，其余为过渡 → 色带分明
 
 // 七彩色环（R,G,B，满量程 iPWM_MAX），首尾相接循环插值
 static const unsigned char qcnh_color_tbl[iQCNH_COLOR_NUM][3] = {
@@ -690,6 +677,19 @@ static const unsigned char qcnh_step_tbl[] = { 4, 3, 2, 1, 1 };
 // 固定亮度轮廓：中间亮、两端稍暗，提供稳定的空间层次
 static const unsigned char qcnh_layer_tbl[iLED_MAX] = { 36, 48, 58, 64, 64, 58, 48, 36 };
 
+// 色带整形：前 iQCNH_HOLD 保持纯色，其后 smoothstep 平滑过渡到下一色
+// 输入/输出 0~255
+static unsigned char qcnh_band(unsigned char f)
+{
+    uint32_t t;
+
+    if(f < iQCNH_HOLD)
+        return 0;
+
+    t = ((uint32_t)(f - iQCNH_HOLD) * 256) / (256 - iQCNH_HOLD);   // 0~255
+    return (unsigned char)((t * t * (768 - 2 * t)) >> 16);          // 3t²-2t³
+}
+
 /******************************************************************************
 * 函数名称: led_mode_qcnh_init
 * 功能描述: 七彩霓虹进入初始化（切换灯效时调用）
@@ -703,7 +703,7 @@ void led_mode_qcnh_init(void)
 
 /******************************************************************************
 * 函数名称: led_mode_qcnh
-* 功能描述: 七彩霓虹：赤橙黄绿青蓝紫色环在灯带上连续平滑流动
+* 功能描述: 七彩霓虹：赤橙黄绿青蓝紫色带在灯带上平滑流动，整体颜色持续变换
 * 输入参数: 无
 * 输出参数: 无
 * 说    明: 按 RTC 时间每 15ms 推进相位；相位 8.8 定点，相邻两色线性插值，无跳变
@@ -730,7 +730,7 @@ void led_mode_qcnh(void)
             pos -= iQCNH_RING_LEN;
 
         c    = pos / iQCNH_COLOR_SPAN;
-        frac = pos % iQCNH_COLOR_SPAN;
+        frac = qcnh_band(pos % iQCNH_COLOR_SPAN);
         n    = (iQCNH_COLOR_NUM-1 <= c) ? 0 : (c + 1);
         a    = qcnh_color_tbl[c];
         b    = qcnh_color_tbl[n];

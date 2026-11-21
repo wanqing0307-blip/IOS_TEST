@@ -195,6 +195,7 @@ extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
 extern void led_mode_sbzl(void);
 
+extern void led_mode_baoshan_init(void);
 extern void led_mode_baoshan(void);
 extern void led_timer_reset(void);
 extern void led_mode_breath_init(void);

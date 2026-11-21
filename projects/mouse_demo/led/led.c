@@ -546,6 +546,8 @@ void logo_process(void)
         {
             led_fade = iPWM_MAX;
             led_fade_dir = 1;
+            if(iMODE_LED_BS == led_cur_mode)
+                led_fade = iLED_FADE_STEP;          // 进入爆闪不淡出，立即切换
         }
     }
 
@@ -613,6 +615,9 @@ void logo_process(void)
                 }
                 break;
             case iMODE_LED_BS:
+                led_mode_baoshan_init();
+                led_fade = iPWM_MAX;                // 进入爆闪不淡入，首帧即全亮
+                led_fade_dir = 0;
                 break;
             case iMODE_LED_QCNH:
                 led_mode_qcnh_init();
