@@ -485,9 +485,13 @@ void logo_process(void)
         bsave_cfg_dpi = false;
         flash_save_cfg_dpi();
     }
-    if(iDEVICE_TYPE_24G == device_type)
+    // 刚写过 flash：2.4G 下 logo_process 在 RF 回调里执行，本次跳过灯效让出时间给 RF。
+    // 只跳过这一次，必须清标志；原来从不清零，2.4G 下改过灯效/速度/颜色后灯效会一直定格到复位。
+    // 灯效按 RTC 时间推进，跳过一次不影响速度。
+    if(true==bflash_ctrl)
     {
-        if(true==bflash_ctrl)
+        bflash_ctrl = false;
+        if(iDEVICE_TYPE_24G == device_type)
             return;
     }
 
@@ -546,6 +550,8 @@ void logo_process(void)
         {
             led_fade = iPWM_MAX;
             led_fade_dir = 1;
+            if(iMODE_LED_BS == led_cur_mode)
+                led_fade = iLED_FADE_STEP;          // 进入爆闪不淡出，立即切换
         }
     }
 
@@ -580,8 +586,7 @@ void logo_process(void)
 
                 break;
             case iMODE_LED_BREATH:
-                pwm_time_count = 0;
-                rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
+                led_mode_breath_init();
 
                 break;
             case iMODE_LED_NHJB:
@@ -614,6 +619,9 @@ void logo_process(void)
                 }
                 break;
             case iMODE_LED_BS:
+                led_mode_baoshan_init();
+                led_fade = iPWM_MAX;                // 进入爆闪不淡入，首帧即全亮
+                led_fade_dir = 0;
                 break;
             case iMODE_LED_QCNH:
                 led_mode_qcnh_init();
