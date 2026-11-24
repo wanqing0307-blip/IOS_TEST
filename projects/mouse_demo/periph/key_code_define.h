@@ -146,9 +146,6 @@
 // 系统控制键用法（Generic Desktop 页，经 System Control 报告发送）
 //
 #define iSYS_GD_DO_NOT_DISTURB          0x9B    // System Do Not Disturb：MAC F6 勿扰模式
-// 2.4G 接收器没有 System Control 报告，F6 改发这个标准键（macOS 识别为 F13），
-// 需在 macOS「键盘快捷键 → 调度中心 → 打开/关闭勿扰模式」里设为 F13
-#define iSTD_MAC_DND_24G                iSTD_SNAPSHOT
 
 //-----------------------------------------------------------------------------;
 // 标准键键值

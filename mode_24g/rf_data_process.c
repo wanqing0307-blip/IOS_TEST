@@ -231,6 +231,17 @@ __RAM_CODE void rf_tx_data_process(void)
         pkt_press_count = 0;
         rtc_init_value = drv_rtc_read(OM_RTC);
     }
+    else if(sys_tx_count)
+    {                                           // 系统键包（MAC F6 勿扰），格式同多媒体键包
+        sys_tx_count--;
+        rf_data_fifo[0] = iRF_K_TYPE_KB;
+        rf_data_fifo[1] = iRF_K_OTHER_SYS;
+        rf_data_fifo[2] = sys_rf_data;
+        rf_data_length = iRF_K_LENGTH_OTHER;
+        rf_ctrl_reg |= brf_data_tx;
+        pkt_press_count = 0;
+        rtc_init_value = drv_rtc_read(OM_RTC);
+    }
     else if(key_tx_count)
     {
         key_tx_count--;
@@ -290,6 +301,8 @@ __RAM_CODE void rf_tx_data_process(void)
     pkt_press_count++;
     if(64 <= pkt_press_count)
     {
+        if(sys_rf_data)
+            sys_tx_count = 2;                   // 按住勿扰键期间保活
         if(mmk_data_l)
         {
             mmk_tx_count = 2;

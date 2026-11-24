@@ -290,6 +290,8 @@ extern uint8_t                  key_tx_count;
 extern uint8_t                  key_ex_tx_count;
 extern uint8_t                  mmk_tx_count;
 extern uint8_t                  def_tx_count;
+extern uint8_t                  sys_tx_count;
+extern uint8_t                  sys_rf_data;
 
 //----------------------------------------------
 // 鼠标键盘数据寄存器

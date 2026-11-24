@@ -83,6 +83,8 @@ uint8_t                     key_tx_count;
 uint8_t                     key_ex_tx_count;
 uint8_t                     mmk_tx_count;
 uint8_t                     def_tx_count;
+uint8_t                     sys_tx_count;       // 2.4G 系统键包剩余发送次数
+uint8_t                     sys_rf_data;        // 2.4G 系统键包：Generic Desktop 用法值（同 USB 的 sys_data，0 = 释放）
 
 uint8_t                     mouse_data_key;
 uint16_t                    mouse_x;
