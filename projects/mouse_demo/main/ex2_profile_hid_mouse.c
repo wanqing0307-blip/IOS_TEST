@@ -78,7 +78,7 @@ typedef enum {
     HID_REPORT_ID_CONSUMER_CONTROL_INPUT  = 2,   /* Consumer Control input report ID */
     HID_REPORT_ID_KEYBOARD_INPUT          = 3,   /* Keyboard input report ID */
     HID_REPORT_ID_BITMAP_KB_INPUT         = 4,   /* BITMAP Keyboard input report ID */
-    HID_REPORT_ID_SYSTEM_CONTROL_INPUT    = 5,   /* System Control input report ID (MAC 勿扰) */
+    HID_REPORT_ID_SYSTEM_CONTROL_INPUT    = 5,   /* System Control input report ID */
 } hid_report_id_t;
 
 // Protocol Mode values
@@ -181,7 +181,7 @@ static const uint8_t _hid_report_map_value[] = {
     0x26, 0xB7, 0x00,                 /*     Logical Maximum (0xB7) */
     0x95, 0x01,                       /*     Report Count (1) */
     0x75, 0x10,                       /*     Report Size (16)  与 QMK 一致 */
-    0x81, 0x00,                       /*     Input (Data,Array,Abs) 0x9B = Do Not Disturb */
+    0x81, 0x00,                       /*     Input (Data,Array,Abs) */
     0xC0,                             /* End Collection */
 #endif
 
@@ -398,7 +398,7 @@ const exe_att_ent_t ex2_tbl_gatt_database[] = {
     #endif
 
     #if (PROFILE_HID_SYSTEM_CONTROL)
-    /* System Control's CD,CV,CCCD,RRD (MAC 勿扰) */
+    /* System Control's CD,CV,CCCD,RRD */
     EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_CHARACTERISTIC,                EX2_ATT_VALUE_TYPE_DATA, 1,                                         BLE_CHAR_PROP_READ | BLE_CHAR_PROP_NOTIFY,                                          EX2_ATT_PER_READ),
     EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_REPORT_CHAR,                   EX2_ATT_VALUE_TYPE_PTR,  sizeof(hid_system_control_report_value),   &hid_system_control_report_value[0],                                                EX2_ATT_PER_READ),
     EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_DESCRIPTOR_CLIENT_CHAR_CONFIG, EX2_ATT_VALUE_TYPE_PTR,  2,                                         &_hid_cccd_value,                                                                   EX2_ATT_PER_READ | EX2_ATT_PER_WRITE | EX2_ATT_PER_ENCRYPT),

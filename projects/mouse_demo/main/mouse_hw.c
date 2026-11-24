@@ -54,6 +54,7 @@
 #include "lvd.h"
 
 #include "matrix_key.h"
+#include "mac_fkey.h"
 #include "flash_process.h"
 #include "userdefined_key.h"
 #include "time_delay.h"
@@ -211,8 +212,8 @@ __RAM_CODE uint8_t ex2_app_mouse_scan(void)
         return 1;
     }
     else if(0!=(m_data_flag&bsys_data_send))
-    {                                           // 系统控制键（MAC F6 勿扰）
-        temp_buff[0] = sys_data;                // 16 位用法值，低字节
+    {                                           // 系统控制报告
+        temp_buff[0] = mac_fkey_sys_value();    // 16 位用法值，低字节
         temp_buff[1] = 0;                       // 高字节
         if(true == ex2_hid_tx_notification_system_control(temp_buff))
         {

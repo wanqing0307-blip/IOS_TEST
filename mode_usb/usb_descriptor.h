@@ -553,7 +553,7 @@ unsigned char const HID_ReportDescriptor_Define[] = {
       HID_ReportSize(16),
       HID_Input(HID_Data | HID_Array),
     HID_EndCollection,
-//SYSTEM CONTROL REPORT（MAC F6 勿扰：Generic Desktop 0x9B）
+//SYSTEM CONTROL REPORT（系统控制报告）
     HID_UsagePage(HID_USAGE_PAGE_GENERIC),
     HID_Usage(HID_USAGE_GENERIC_SYSTEM_CTL),
     HID_Collection(HID_Application),

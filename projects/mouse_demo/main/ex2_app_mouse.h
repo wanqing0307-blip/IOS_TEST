@@ -21,7 +21,7 @@ extern "C"
 #define PROFILE_HID_MOUSE              1
 #define PROFILE_HID_CONSUMER_CONTROL   1
 #define PROFILE_HID_KEYBOARD           1
-#define PROFILE_HID_SYSTEM_CONTROL     1 /* 系统控制：MAC F6 勿扰 */
+#define PROFILE_HID_SYSTEM_CONTROL     1 /* 系统控制报告 */
 #define PROFILE_HID_BITMAP_KEYBOARD    1 /* 全无冲键盘 */ 
 
 /*===========================================================================*/

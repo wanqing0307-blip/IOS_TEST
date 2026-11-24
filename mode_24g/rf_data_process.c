@@ -16,6 +16,7 @@
 #include "usb_cfg_info.h"
 #include "hid_process.h"
 #include "rf_encryption.h"
+#include "mac_fkey.h"
 
 //-----------------------------------------------------------------------------;
 //常量定义区
@@ -231,13 +232,9 @@ __RAM_CODE void rf_tx_data_process(void)
         pkt_press_count = 0;
         rtc_init_value = drv_rtc_read(OM_RTC);
     }
-    else if(sys_tx_count)
-    {                                           // 系统键包（MAC F6 勿扰），格式同多媒体键包
-        sys_tx_count--;
-        rf_data_fifo[0] = iRF_K_TYPE_KB;
-        rf_data_fifo[1] = iRF_K_OTHER_SYS;
-        rf_data_fifo[2] = sys_rf_data;
-        rf_data_length = iRF_K_LENGTH_OTHER;
+    else if(mac_fkey_rf_pending())
+    {                                           // 系统键包（由 mac_fkey 模块组包）
+        rf_data_length = mac_fkey_rf_fill(rf_data_fifo);
         rf_ctrl_reg |= brf_data_tx;
         pkt_press_count = 0;
         rtc_init_value = drv_rtc_read(OM_RTC);
@@ -301,8 +298,7 @@ __RAM_CODE void rf_tx_data_process(void)
     pkt_press_count++;
     if(64 <= pkt_press_count)
     {
-        if(sys_rf_data)
-            sys_tx_count = 2;                   // 按住勿扰键期间保活
+        mac_fkey_rf_keepalive();                // 系统键按住期间保活
         if(mmk_data_l)
         {
             mmk_tx_count = 2;
