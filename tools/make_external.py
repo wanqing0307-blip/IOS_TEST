@@ -69,6 +69,8 @@ BASE_FLAGS = [
 EXPECT_CADS = {"Optim": "7", "v6Lang": "3", "vShortEn": "1", "vShortWch": "1"}
 EXPECT_CPU = 'CPUTYPE("Cortex-M0")'
 
+_PARTIAL = None                                 # 本次新建、还没生成完的输出目录
+
 LICENSE_HINT = """在 Keil 外面单独调用 armclang 需要许可证，可以改用 Keil 编出来的 mac_fkey.o：
   1. Keil 里右键 mac_fkey.c → Options for File 'mac_fkey.c' → C/C++ (AC6) 页，
      Misc Controls 填 -fno-lto -g0，点 OK
@@ -286,7 +288,12 @@ def main():
     today = datetime.date.today().strftime("%Y%m%d")
     out = Path(a.out) if a.out else ROOT.parent / ("R12_对外版_%s_%s" % (today, head))
     if out.exists() and any(out.iterdir()):
+        if (out / SRC).exists() and not (out / "对外版说明.txt").exists():
+            fail("输出目录是上次没生成完的，里面还有 mac_fkey.c 源码，请先删除再运行：%s" % out)
         fail("输出目录已存在且不为空：%s" % out)
+    global _PARTIAL
+    if not out.exists():
+        _PARTIAL = out                          # 本次新建的目录：没生成完就出错时整个删掉，避免留下带源码的“对外版”
     out.mkdir(parents=True, exist_ok=True)
 
     # 1. 导出 HEAD
@@ -328,8 +335,10 @@ def main():
     secs, syms, comment = elf_info(obj)
     if ".llvmbc" in secs:
         fail("mac_fkey.o 里有 LLVM 中间代码（.llvmbc），没有关掉 LTO；" + hint)
-    if any(s.startswith(".debug") for s in secs):
-        fail("mac_fkey.o 里有调试信息，没有加 -g0；" + hint)
+    # .debug_frame 只记录各函数的栈帧（armclang 默认生成，供链接器统计栈深度），不含源码、行号、变量名，允许保留
+    dbg = sorted(set(s for s in secs if s.startswith(".debug") and s != ".debug_frame"))
+    if dbg:
+        fail("mac_fkey.o 里有调试信息（%s），没有加 -g0；%s" % ("、".join(dbg), hint))
     if "RAM_CODE" not in secs:
         fail("mac_fkey.o 里没有 RAM_CODE 段；" + hint)
     compiler = comment or compiler or "未知"
@@ -425,6 +434,7 @@ mac_fkey.o SHA-256：{sha}
     for p in EXCLUDE:
         if (out / p).exists():
             fail("内部资料没有删掉：" + p)
+    _PARTIAL = None                             # 对外版已生成并检查通过
 
     if a.zip:
         z = shutil.make_archive(str(out), "zip", root_dir=str(out.parent), base_dir=out.name)
@@ -437,4 +447,10 @@ mac_fkey.o SHA-256：{sha}
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except BaseException:
+        if _PARTIAL is not None and _PARTIAL.exists():
+            shutil.rmtree(_PARTIAL, ignore_errors=True)
+            print("已删除没生成完的目录：%s" % _PARTIAL)
+        raise
