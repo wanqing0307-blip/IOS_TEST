@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 """生成 R12 固件“对外版”工程：Mac F5 / F6 功能键模块以预编译 mac_fkey.o 提供，不含源码。
 
-在仓库根目录运行（Windows 命令行）：
-    python tools\\make_external.py --armclang "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\armclang.exe"
+在仓库根目录、内部版分支（main）上运行（Windows 命令行）：
+    python tools\\make_external.py --armclang "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\armclang.exe" --branch external
+单独调用 armclang 报许可证错误时，改用 Keil 编译好的 .o（做法见 LICENSE_HINT）：
+    python tools\\make_external.py --obj projects\\mouse_demo\\keil5\\out\\mac_fkey.o --branch external
 
 可选参数：
     --out <目录>     输出目录，默认在仓库旁边新建 R12_对外版_<日期>_<提交号>
@@ -67,6 +69,12 @@ BASE_FLAGS = [
 EXPECT_CADS = {"Optim": "7", "v6Lang": "3", "vShortEn": "1", "vShortWch": "1"}
 EXPECT_CPU = 'CPUTYPE("Cortex-M0")'
 
+LICENSE_HINT = """在 Keil 外面单独调用 armclang 需要许可证，可以改用 Keil 编出来的 mac_fkey.o：
+  1. Keil 里右键 mac_fkey.c → Options for File 'mac_fkey.c' → C/C++ (AC6) 页，
+     Misc Controls 填 -fno-lto -g0，点 OK
+  2. Rebuild，得到 projects\\mouse_demo\\keil5\\out\\mac_fkey.o
+  3. python tools\\make_external.py --obj projects\\mouse_demo\\keil5\\out\\mac_fkey.o --branch external"""
+
 
 def fail(msg):
     print("错误：" + msg)
@@ -93,15 +101,37 @@ def gitw(wt, *args):
 
 def commit_to_branch(src, branch, head, ver, trailer=""):
     """把对外版目录 src 的内容提交到 branch；分支不存在时新建没有历史的独立分支"""
+    def has(ref):
+        return subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", "--quiet", ref],
+                              capture_output=True).returncode == 0
+
+    def is_ancestor(a, b):
+        return subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", a, b],
+                              capture_output=True).returncode == 0
+
+    # 先取 GitHub 上的同名分支，新提交接在它后面，推送时才不会被拒（离线或 GitHub 上没有时跳过）
+    subprocess.run(["git", "-C", str(ROOT), "fetch", "-q", "origin",
+                    "+refs/heads/%s:refs/remotes/origin/%s" % (branch, branch)], capture_output=True)
+    lref, rref = "refs/heads/" + branch, "refs/remotes/origin/" + branch
+    local, remote = has(lref), has(rref)
+    if local and remote and not is_ancestor(rref, lref):
+        if is_ancestor(lref, rref):
+            git("update-ref", lref, rref)       # 本地分支落后：快进到 GitHub 上的版本
+        else:
+            fail("本地 %s 分支和 GitHub 上的已经分叉，请先处理好再运行" % branch)
+
     wt = Path(tempfile.mkdtemp(prefix="r12_external_"))
     wt.rmdir()
-    exists = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", "--quiet",
-                             "refs/heads/" + branch], capture_output=True).returncode == 0
-    if exists:
+    if local:
         git("worktree", "add", str(wt), branch)
+        how = "在原分支上追加"
+    elif remote:
+        git("worktree", "add", "-b", branch, str(wt), "origin/" + branch)
+        how = "接在 GitHub 上的 %s 分支后面" % branch
     else:
         git("worktree", "add", "--detach", str(wt), "HEAD")
         gitw(wt, "checkout", "-q", "--orphan", branch)
+        how = "新建的独立分支"
     try:
         gitw(wt, "rm", "-r", "-q", "-f", "--ignore-unmatch", ".")
         for p in wt.iterdir():
@@ -116,7 +146,7 @@ def commit_to_branch(src, branch, head, ver, trailer=""):
             msg += "\n\n" + trailer
         gitw(wt, "commit", "-q", "-m", msg)
         new = gitw(wt, "rev-parse", "--short", "HEAD").decode().strip()
-        print("已提交到分支 %s（%s，%s）" % (branch, new, "新建的独立分支" if not exists else "在原分支上追加"))
+        print("已提交到分支 %s（%s，%s）" % (branch, new, how))
         print("推送：git push origin %s" % branch)
     finally:
         git("worktree", "remove", "--force", str(wt))
@@ -187,6 +217,12 @@ def elf_info(data):
         return data[base + off:end].decode("utf-8", "replace")
 
     names = [cstr(secs[shstrndx]["offset"], s["name"]) for s in secs]
+    comment = ""                                # .comment 节里的编译器标识
+    for s, n in zip(secs, names):
+        if n == ".comment":
+            parts = [p for p in data[s["offset"]:s["offset"] + s["size"]].split(b"\0") if p.strip()]
+            if parts:
+                comment = parts[0].decode("utf-8", "replace").strip()
     syms = set()
     for s in secs:
         if s["type"] == 2:                      # SHT_SYMTAB
@@ -195,12 +231,14 @@ def elf_info(data):
                 st_name, _, _, st_info, _, st_shndx = struct.unpack_from("<IIIBBH", data, s["offset"] + j * 16)
                 if (st_info >> 4) == 1 and st_shndx != 0:       # 全局、已定义
                     syms.add(cstr(strbase, st_name))
-    return names, syms
+    return names, syms, comment
 
 
 def main():
     ap = argparse.ArgumentParser(description="生成 R12 固件对外版工程（F5 / F6 模块以 mac_fkey.o 提供）")
-    ap.add_argument("--armclang", required=True, help="Keil 的 armclang.exe 路径，如 D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\armclang.exe")
+    ap.add_argument("--armclang", help="Keil 的 armclang.exe 路径，如 D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\armclang.exe")
+    ap.add_argument("--obj", help="改用 Keil 编译好的 mac_fkey.o（mac_fkey.c 的单文件选项加了 -fno-lto -g0），"
+                                  "如 projects\\mouse_demo\\keil5\\out\\mac_fkey.o")
     ap.add_argument("--out", help="输出目录，默认在仓库旁边新建 R12_对外版_<日期>_<提交号>")
     ap.add_argument("--zip", action="store_true", help="另外打包成 zip")
     ap.add_argument("--branch", help="把对外版提交到这个分支（如 external），不存在时新建没有历史的独立分支")
@@ -208,14 +246,34 @@ def main():
     ap.add_argument("--commit-trailer", default="", help=argparse.SUPPRESS)
     a = ap.parse_args()
 
-    armclang = Path(a.armclang)
-    if not armclang.is_file():
-        fail("找不到 armclang：%s" % armclang)
-    vr = subprocess.run([str(armclang), "--version"], capture_output=True)
-    vlines = [l.strip() for l in (vr.stdout + vr.stderr).decode("utf-8", "replace").splitlines() if l.strip()]
-    compiler = next((l for l in vlines if "Compiler" in l or "clang version" in l), vlines[0] if vlines else "未知")
-    if "ARM Compiler" not in compiler and "Arm Compiler" not in compiler:
-        print("提示：用的不是 Keil 的 armclang（%s），生成后请用 Keil 编译对外版工程确认能正常链接。" % compiler)
+    if bool(a.armclang) == bool(a.obj):
+        fail("--armclang 和 --obj 要指定一个，而且只能指定一个")
+    cur = subprocess.run(["git", "-C", str(ROOT), "symbolic-ref", "-q", "--short", "HEAD"],
+                         capture_output=True).stdout.decode("utf-8", "replace").strip()
+    if a.branch and cur == a.branch:
+        fail("当前在 %s 分支上，请先切换到内部版分支（如 main）再运行" % a.branch)
+    if not (ROOT / SRC).is_file():
+        fail("当前分支（%s）里没有 %s，请先切换到内部版分支（如 main）" % (cur or "未知", SRC))
+
+    compiler = ""
+    if a.armclang:
+        armclang = Path(a.armclang)
+        if not armclang.is_file():
+            fail("找不到 armclang：%s" % armclang)
+        vr = subprocess.run([str(armclang), "--version"], capture_output=True)
+        vlines = [l.strip() for l in (vr.stdout + vr.stderr).decode("utf-8", "replace").splitlines() if l.strip()]
+        compiler = next((l for l in vlines if "Compiler" in l or "clang version" in l), vlines[0] if vlines else "")
+        if "ARM Compiler" not in compiler and "Arm Compiler" not in compiler:
+            print("提示：用的不是 Keil 的 armclang（%s），生成后请用 Keil 编译对外版工程确认能正常链接。" % compiler)
+    else:
+        obj_src = Path(a.obj)
+        if not obj_src.is_file():
+            fail("找不到 %s，请先在 Keil 里编译" % obj_src)
+        # .o 必须是由最近一次提交的 mac_fkey.c 编出来的
+        if (ROOT / SRC).read_bytes().replace(b"\r\n", b"\n") != git("show", "HEAD:" + SRC).replace(b"\r\n", b"\n"):
+            fail("工作区的 mac_fkey.c 和最近一次提交不一样：请先提交，再用 Keil 重新编译")
+        if obj_src.stat().st_mtime < (ROOT / SRC).stat().st_mtime:
+            fail("%s 比 mac_fkey.c 旧，请先在 Keil 里重新编译" % obj_src)
 
     head = git("rev-parse", "--short", "HEAD").decode().strip()
     head_date = git("log", "-1", "--format=%cd", "--date=format:%Y-%m-%d %H:%M").decode().strip()
@@ -235,33 +293,43 @@ def main():
         if not (out / need).is_file():
             fail("提交里缺少 %s" % need)
 
-    # 2. 编译 mac_fkey.o
+    # 2. 生成 mac_fkey.o
     uvprojx = read_keep(out / UVPROJX)
     incs, defs, misc = keil_settings(uvprojx)
-    pack = armclang.resolve().parents[2] / "Packs/Onmicro/OM6239/1.0.0/Device/Onmicro/OM6239"
-    cmd = [str(armclang)] + BASE_FLAGS + misc
-    for p in incs:
-        cmd += ["-I", p]
-    if pack.is_dir():
-        cmd += ["-I", str(pack)]
-    cmd += ["-D" + d for d in defs] + a.extra_cflags.split()
-    cmd += ["-o", "../periph/mac_fkey.o", "../periph/mac_fkey.c"]
-    print("2/5 编译 mac_fkey.o（关闭 LTO，不带调试信息）")
-    r = subprocess.run(cmd, cwd=str(out / KEIL_DIR), capture_output=True)
-    msg = (r.stdout + r.stderr).decode("utf-8", "replace").strip()
-    if r.returncode != 0:
-        fail("编译失败：\n" + msg)
-    if msg:
-        print(msg)
+    if a.armclang:
+        pack = armclang.resolve().parents[2] / "Packs/Onmicro/OM6239/1.0.0/Device/Onmicro/OM6239"
+        cmd = [str(armclang)] + BASE_FLAGS + misc
+        for p in incs:
+            cmd += ["-I", p]
+        if pack.is_dir():
+            cmd += ["-I", str(pack)]
+        cmd += ["-D" + d for d in defs] + a.extra_cflags.split()
+        cmd += ["-o", "../periph/mac_fkey.o", "../periph/mac_fkey.c"]
+        print("2/5 编译 mac_fkey.o（关闭 LTO，不带调试信息）")
+        r = subprocess.run(cmd, cwd=str(out / KEIL_DIR), capture_output=True)
+        msg = (r.stdout + r.stderr).decode("utf-8", "replace").strip()
+        if r.returncode != 0:
+            low = msg.lower()
+            if "licen" in low or "arm_product_path" in low or "arm_tool_variant" in low:
+                msg += "\n\n" + LICENSE_HINT
+            fail("编译失败：\n" + msg)
+        if msg:
+            print(msg)
+        hint = "请确认用的是 Keil 的 armclang"
+    else:
+        print("2/5 使用 Keil 编译好的 %s" % obj_src)
+        shutil.copy2(obj_src, out / OBJ)
+        hint = "请确认 Keil 里 mac_fkey.c 的 Misc Controls 填了 -fno-lto -g0，并且重新编译过"
 
     obj = (out / OBJ).read_bytes()
-    secs, syms = elf_info(obj)
+    secs, syms, comment = elf_info(obj)
     if ".llvmbc" in secs:
-        fail("mac_fkey.o 里有 LLVM 中间代码（.llvmbc），-fno-lto 没生效")
+        fail("mac_fkey.o 里有 LLVM 中间代码（.llvmbc），没有关掉 LTO；" + hint)
     if any(s.startswith(".debug") for s in secs):
-        fail("mac_fkey.o 里有调试信息，-g0 没生效")
+        fail("mac_fkey.o 里有调试信息，没有加 -g0；" + hint)
     if "RAM_CODE" not in secs:
-        fail("mac_fkey.o 里没有 RAM_CODE 段，请确认用的是 Keil 的 armclang")
+        fail("mac_fkey.o 里没有 RAM_CODE 段；" + hint)
+    compiler = comment or compiler or "未知"
     api = re.findall(r"\b(mac_fkey_\w+)\s*\(", (out / HDR).read_text(encoding="utf-8"))
     missing = sorted(set(api) - syms)
     if missing:
@@ -285,11 +353,19 @@ def main():
 
     # 4. Keil 工程改为链接 mac_fkey.o
     print("4/5 Keil 工程改为链接 mac_fkey.o")
-    uvprojx, n = re.subn(
-        r"(<File>\s*<FileName>)mac_fkey\.c(</FileName>\s*<FileType>)1(</FileType>\s*<FilePath>[^<]*?)mac_fkey\.c(</FilePath>)",
-        r"\g<1>mac_fkey.o\g<2>3\g<3>mac_fkey.o\g<4>", uvprojx)
-    if n != 1:
+    # 整个 <File> 条目换掉：mac_fkey.c 加过单文件选项时，条目里还有 <FileOption>，对 .o 没用
+    hits = [m for m in re.finditer(r"([ \t]*)<File>(?:(?!</File>).)*?</File>", uvprojx, re.S)
+            if re.search(r"<FileName>\s*mac_fkey\.c\s*</FileName>", m.group(0))]
+    if len(hits) != 1:
         fail("Keil 工程里找不到 mac_fkey.c，无法替换为 mac_fkey.o")
+    m = hits[0]
+    nl = "\r\n" if "\r\n" in m.group(0) else "\n"
+    ind = m.group(1)
+    fpath = re.search(r"<FilePath>([^<]*)</FilePath>", m.group(0)).group(1).replace("mac_fkey.c", "mac_fkey.o")
+    new_entry = (ind + "<File>" + nl + ind + "  <FileName>mac_fkey.o</FileName>" + nl
+                 + ind + "  <FileType>3</FileType>" + nl + ind + "  <FilePath>" + fpath + "</FilePath>" + nl
+                 + ind + "</File>")
+    uvprojx = uvprojx[:m.start()] + new_entry + uvprojx[m.end():]
     write_keep(out / UVPROJX, uvprojx)
     uvoptx_path = out / UVOPTX
     if uvoptx_path.is_file():
