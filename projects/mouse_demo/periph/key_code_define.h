@@ -356,6 +356,8 @@
 #define iMMK_MAC_MCONTROL_L     0x9F
 #define iMMK_MAC_LAUNCHPAD_H    0x02            // MAC 控制台(Launchpad)
 #define iMMK_MAC_LAUNCHPAD_L    0xA0
+#define iMMK_MAC_SPOTLIGHT_H    0x02            // MAC 聚焦搜索(Spotlight)：Consumer AC Search 0x0221
+#define iMMK_MAC_SPOTLIGHT_L    0x21            // （新款苹果键盘 F4）
 
 #define iMMK_NEXT_TRACK_H       0x00
 #define iMMK_NEXT_TRACK_L       0xB5

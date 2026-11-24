@@ -5,7 +5,8 @@
 * 文件名称: _MATRIX_KEY_TBL_
 *
 * 功能说明: MAC 正常矩阵表
-* 修改说明: 由 WIN 表生成；MAC 下 F1~F12 与多媒体对调
+* 修改说明: 由 WIN 表生成；MAC 下 F1~F12 与多媒体对调，按新款苹果键盘排布：
+*           F3 = 调度中心（Consumer 0x029F），F4 = 聚焦搜索（Consumer 0x0221）
 *           F5 = 听写（Consumer 0x00CF），F6 = 勿扰模式（Generic Desktop 0x9B）
 *******************************************************************************/
 #ifndef _MATRIX_KEY_MAC_TBL_
@@ -43,7 +44,7 @@ unsigned char           const   matrixkey_mac_tbl[] =
     iSTD_Z,                iKEY_TYPE_STD|iKEY_PRESS,                // C5 R7
 // C6
     iSTD_A,                iKEY_TYPE_STD|iKEY_PRESS,                // C6 R0
-    iMMK_MAC_LAUNCHPAD_L,  iKEY_TYPE_MMK | iMMK_MAC_LAUNCHPAD_H,    // C6 R1
+    iMMK_MAC_SPOTLIGHT_L,  iKEY_TYPE_MMK | iMMK_MAC_SPOTLIGHT_H,    // C6 R1  F4 聚焦搜索
     iSTD_O,                iKEY_TYPE_STD|iKEY_PRESS,                // C6 R2
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C6 R3
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C6 R4
@@ -133,7 +134,7 @@ unsigned char           const   matrixkey_mac_tbl[] =
     iSTD_NUMPAD_FULLSTOP,  iKEY_TYPE_STD|iKEY_PRESS,                // C15 R7
 // C16
     iSTD_T,                iKEY_TYPE_STD|iKEY_PRESS,                // C16 R0
-    iMMK_MAC_MCONTROL_L,   iKEY_TYPE_MMK | iMMK_MAC_MCONTROL_H,     // C16 R1
+    iMMK_MAC_MCONTROL_L,   iKEY_TYPE_MMK | iMMK_MAC_MCONTROL_H,     // C16 R1 F3 调度中心
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C16 R2
     iSTD_NUMPAD_SUBTRACT,  iKEY_TYPE_STD|iKEY_PRESS,                // C16 R3
     iSTD_NUMPAD_ADD,       iKEY_TYPE_STD|iKEY_PRESS,                // C16 R4
