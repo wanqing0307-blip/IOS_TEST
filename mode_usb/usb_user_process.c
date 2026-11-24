@@ -93,7 +93,10 @@ void usb_data_process(void)
         return;
     }
 
-    if(0==(m_data_flag&0x1F))
+    // 有任一待发数据才继续（原来写死 0x1F，会漏掉第 5 位 bsys_data_send，
+    // 导致单独按 F6 勿扰时 System Control 报告永远发不出去）
+    if(0==(m_data_flag&(bmouse_data_send|bstd_kb_data_send|bmmk_data_send
+                       |bstd_ex_data_send|bhid_data_send|bsys_data_send)))
         return;
 
 __disable_irq();
