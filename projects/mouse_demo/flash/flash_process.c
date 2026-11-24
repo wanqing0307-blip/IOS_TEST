@@ -214,9 +214,9 @@ void laod_mouse_status(void)
             //device_type = ((flash_fifo[i+6]>>4)&0x07);  // 按键切换模式情况下才能打开 ！！！！！！！！
             bat_status &= 0xE0;
             bat_status |= (flash_fifo[i+7]&0x1F);
-            key_ctrl &= ~bwin_lock_status;
-            if(0!=(flash_fifo[i+7]&(1<<5)))
-                key_ctrl |= bwin_lock_status;
+            // Win 键锁定掉电不保存：不从 flash 读取，只保存在内存里，开机为解锁状态；
+            // 运行中保存其他设置后重新加载状态，也不会改动当前的锁定状态。
+            // （旧固件可能在第 7 字节第 5 位写过锁定状态，这里忽略）
 
             report_dpi[0] = flash_fifo[i+1];
             //report_dpi[1] = flash_fifo[i+2];
@@ -484,9 +484,7 @@ __attribute__((noinline)) void flash_save_status(void)
     dat_temp[6] = (key_mode&0x03);
     dat_temp[6] |= ((bt_index<<2)&0x0C);
     dat_temp[6] |= ((device_type<<4)&0x70);
-    dat_temp[7] = (bat_status&0x1F);
-    if(key_ctrl&bwin_lock_status)
-        dat_temp[7] |= (1<<5);
+    dat_temp[7] = (bat_status&0x1F);           // 第 5 位原为 Win 键锁定，掉电不保存，不再写入
 
     flash_read(iSTATUS_BANK_ADDR, 256);
     for(i=1; i<8; i++)

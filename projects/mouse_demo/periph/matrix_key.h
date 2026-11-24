@@ -101,7 +101,7 @@ extern uint16_t                 key_ctrl;
     #define bfn_key_status      (1<<4)
 
     #define bfn_save_cfg        (1<<3)  // 保存配置：亮度、速度、颜色
-    #define bfn_save_status     (1<<2)  // 保存状态：系统模式、WIN LOCK、系统、电量、报告率、LED模式、LED开关
+    #define bfn_save_status     (1<<2)  // 保存状态：系统模式、系统、电量、报告率、LED模式、LED开关（WIN LOCK 掉电不保存）
     //  ??? 注意：由于之前数据结构已经确认,保存配置和保存状态一定要注意区分
 //}
 extern uint16_t                 key_ctrl_ex;
