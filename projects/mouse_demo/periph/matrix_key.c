@@ -243,18 +243,16 @@ void __attribute__((noinline)) key_process(void)
         }
     }
 
-    // 2.4G 下 MAC F6 勿扰：发 2.4G 系统键包 [iRF_K_TYPE_KB, iRF_K_OTHER_SYS, 位图]，
-    // 勿扰用位图第 3 位 iSYS_DO_NOT_DISTURB，由接收器转成 Generic Desktop 0x9B 报告；
+    // 2.4G 下 MAC F6 勿扰：发 2.4G 系统键包 [iRF_K_TYPE_KB, iRF_K_OTHER_SYS, 用法值]，
+    // 用法值和 USB / 蓝牙的 System Control 报告完全相同（勿扰 0x9B，释放 0x00），
+    // 由接收器原样放进它的 System Control 报告转发给电脑（见 docs/2.4G接收器_勿扰键对接说明.md）。
+    // 现有接收器不转发这个包：实测按 F6 无反应，也不会误触发电源/睡眠。
     // 状态变化时连发 8 包（同多媒体键），发送见 rf_data_process.c
     if(iDEVICE_TYPE_24G == device_type)
     {
-        uint8_t sys_bits = 0;
-
-        if(iSYS_GD_DO_NOT_DISTURB == sys_data_tmp)
-            sys_bits = iSYS_DO_NOT_DISTURB;
-        if(sys_bits != sys_rf_data)
+        if(sys_data_tmp != sys_rf_data)
         {
-            sys_rf_data = sys_bits;
+            sys_rf_data = sys_data_tmp;
             sys_tx_count = 8;
         }
     }

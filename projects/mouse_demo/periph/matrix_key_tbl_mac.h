@@ -8,7 +8,7 @@
 * 修改说明: 由 WIN 表生成；MAC 下 F1~F12 与多媒体对调，按新款苹果键盘排布：
 *           F3 = 调度中心（Consumer 0x029F），F4 = 聚焦搜索（Consumer 0x0221）
 *           F5 = 听写（Consumer 0x00CF），F6 = 勿扰模式（Generic Desktop 0x9B；
-*           2.4G 下发系统键包 iRF_K_OTHER_SYS 第 3 位，需接收器转成 0x9B）
+*           2.4G 下用系统键包 iRF_K_OTHER_SYS 发同样的 0x9B，需接收器转发）
 *******************************************************************************/
 #ifndef _MATRIX_KEY_MAC_TBL_
 #define _MATRIX_KEY_MAC_TBL_

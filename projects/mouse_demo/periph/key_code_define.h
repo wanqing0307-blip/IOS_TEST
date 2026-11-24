@@ -141,11 +141,6 @@
 #define iSYS_POWER                      0x01
 #define iSYS_SLEEP                      0x02
 #define iSYS_WAKEUP                     0x04
-// 2.4G 系统键包（iRF_K_OTHER_SYS）第 2 字节：勿扰按下时发的值。
-// 当前按“接收器把这个字节直接当 Generic Desktop 用法值转发”试验，发 0x9B（System Do Not Disturb）。
-// 注意：若接收器按位解析（电源0x01/睡眠0x02/唤醒0x04），0x9B 会被当成电源+睡眠，
-// 这种情况请改回 0x08（沿用按位定义的第 3 位），并按 docs/2.4G接收器_勿扰键对接说明.md 升级接收器
-#define iSYS_DO_NOT_DISTURB             0x9B
 
 //-----------------------------------------------------------------------------;
 // 系统控制键用法（Generic Desktop 页，经 System Control 报告发送）
