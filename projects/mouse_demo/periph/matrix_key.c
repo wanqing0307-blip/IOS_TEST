@@ -109,7 +109,9 @@ void __attribute__((noinline)) key_process(void)
 {
     uint8_t i, temp_bit;
 
-    if(0 != (key_ctrl&bkey_lock_status))
+    // 全键盘锁定只在 Win 布局下生效（说明书：仅 Windows 布局可用）；
+    // Mac 下不清除锁定标志，切回 Win 后恢复原来的锁定状态
+    if((0 != (key_ctrl&bkey_lock_status)) && (0 != (key_ctrl&bwin_mac_sataus)))
     {
         multi_data_tmp_l = 0;
         multi_data_tmp_l = 0;
