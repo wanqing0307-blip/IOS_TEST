@@ -199,6 +199,7 @@ extern unsigned char            decode_index;
 
 extern unsigned char            multi_data_tmp_l;
 extern unsigned char            multi_data_tmp_h;
+extern unsigned char            sys_data_tmp;
 extern unsigned char            tmp_std_key[22];
 
 #define key_data_tmp            tmp_std_key

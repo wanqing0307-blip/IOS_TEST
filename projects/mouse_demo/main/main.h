@@ -296,6 +296,7 @@ extern uint8_t                  def_tx_count;
 //
 extern uint8_t                  m_data_flag;
 //{
+    #define bsys_data_send      (1<<5)  // 系统控制键（MAC 勿扰）
     #define bhid_data_send      (1<<4)
     #define bstd_ex_data_send   (1<<3)
     #define bmmk_data_send      (1<<2)
@@ -338,6 +339,8 @@ extern unsigned char            std_key[];
 // 多媒体寄存器
 extern uint8_t                  mmk_data_l;
 extern uint8_t                  mmk_data_h;
+// 系统控制寄存器（Generic Desktop 页，0 = 释放）
+extern uint8_t                  sys_data;
 extern uint8_t                  kb_bd_addr[];
 
 extern uint32_t const           ble_sleep_1_time_tbl[];

@@ -154,6 +154,17 @@ __disable_irq();
             OM_USB->TXCSR1 |= USB_TXCSR_P_TXPKTRDY;
             g_USB_Ep_Status[3] = EP_TX;
         }
+        else if(m_data_flag & bsys_data_send)
+        {                                       // 系统控制键（MAC 勿扰）
+            m_data_flag &= ~bsys_data_send;
+
+            fifo_epn = (volatile uint8_t *)&OM_USB->EPnFIFO[3];
+            *fifo_epn = iREPORT_ID_SYS_KEY;
+            *fifo_epn = sys_data;
+
+            OM_USB->TXCSR1 |= USB_TXCSR_P_TXPKTRDY;
+            g_USB_Ep_Status[3] = EP_TX;
+        }
         else if(m_data_flag & bhid_data_send)
         {
             m_data_flag &= ~bhid_data_send;

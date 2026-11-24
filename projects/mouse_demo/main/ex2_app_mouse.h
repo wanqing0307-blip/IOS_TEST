@@ -21,6 +21,7 @@ extern "C"
 #define PROFILE_HID_MOUSE              1
 #define PROFILE_HID_CONSUMER_CONTROL   1
 #define PROFILE_HID_KEYBOARD           1
+#define PROFILE_HID_SYSTEM_CONTROL     1 /* 系统控制：MAC F6 勿扰 */
 #define PROFILE_HID_BITMAP_KEYBOARD    1 /* 全无冲键盘 */ 
 
 /*===========================================================================*/
@@ -93,6 +94,13 @@ typedef enum {
     ATT_HANDLE_HID_CONSUMER_CONTROL_REPORT_CV,
     ATT_HANDLE_HID_CONSUMER_CONTROL_REPORT_CCD,    //2902: CCC
     ATT_HANDLE_HID_CONSUMER_CONTROL_REPORT_RRD,    //2908: ReportID + ReportType=in
+    #endif
+
+    #if (PROFILE_HID_SYSTEM_CONTROL)
+    ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_CD,       //2A4D: Read | Notify
+    ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_CV,
+    ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_CCD,      //2902: CCC
+    ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_RRD,      //2908: ReportID + ReportType=in
     #endif
 
     #if (PROFILE_HID_KEYBOARD)

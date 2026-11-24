@@ -148,6 +148,7 @@ extern bool ex2_hid_tx_notification_mouse(uint8_t *buf);
 extern bool ex2_hid_tx_notification_keyboard(uint8_t *buf);
 extern bool ex2_hid_tx_notification_bitmap_kb(uint8_t *buf);
 extern bool ex2_hid_tx_notification_consumer_control(uint8_t *buf);
+extern bool ex2_hid_tx_notification_system_control(uint8_t *buf);
 extern bool profile_bas_tx_notification(uint8_t level);
 extern  uint8_t hid_keyboard_out_report_value;
 
@@ -206,6 +207,16 @@ __RAM_CODE uint8_t ex2_app_mouse_scan(void)
             rtc_init_value = drv_rtc_read(OM_RTC);  // 多媒体键有数据，重置休眠计时
             m_data_flag &= ~bmmk_data_send;
             mmk_tx_count = 0;
+        }
+        return 1;
+    }
+    else if(0!=(m_data_flag&bsys_data_send))
+    {                                           // 系统控制键（MAC F6 勿扰）
+        temp_buff[0] = sys_data;
+        if(true == ex2_hid_tx_notification_system_control(temp_buff))
+        {
+            rtc_init_value = drv_rtc_read(OM_RTC);  // 有数据，重置休眠计时
+            m_data_flag &= ~bsys_data_send;
         }
         return 1;
     }

@@ -701,5 +701,11 @@ void __attribute__((noinline)) key_decode_cmd_0x40(void)
             define_key_ctrl |= bdefine_key_send;
 
             break;
+        case iKEY_MAC_DND&0x0F:                         // MAC F6：勿扰模式
+            if(0 == (define_key_flag & bkey_decode_end))
+            {                                           // 按住期间保持 0x9B，松开后扫描清 0 即发送释放
+                sys_data_tmp = iSYS_GD_DO_NOT_DISTURB;
+            }
+            break;
     }
 }

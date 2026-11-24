@@ -6,6 +6,7 @@
 *
 * 功能说明: MAC 正常矩阵表
 * 修改说明: 由 WIN 表生成；MAC 下 F1~F12 与多媒体对调
+*           F5 = 听写（Consumer 0x00CF），F6 = 勿扰模式（Generic Desktop 0x9B）
 *******************************************************************************/
 #ifndef _MATRIX_KEY_MAC_TBL_
 #define _MATRIX_KEY_MAC_TBL_
@@ -16,7 +17,7 @@ unsigned char           const   matrixkey_mac_tbl[] =
 // C3
     iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iLEFT_SHIFT,    // C3 R0
     iSTD_U,                iKEY_TYPE_STD|iKEY_PRESS,                // C3 R1
-    iKEY_MAC_SHOT,         iKEY_TYPE_SPECIAL,                       // C3 R2
+    iKEY_MAC_DND,          iKEY_TYPE_SPECIAL,                       // C3 R2  F6 勿扰模式
     iMMK_BRIGHT_ADD_L,     iKEY_TYPE_MMK | iMMK_BRIGHT_ADD_H,       // C3 R3
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C3 R4
     iSTD_RETURN,           iKEY_TYPE_STD|iKEY_PRESS,                // C3 R5
@@ -144,7 +145,7 @@ unsigned char           const   matrixkey_mac_tbl[] =
     iSTD_CAPITAL,          iKEY_TYPE_STD|iKEY_PRESS,                // C17 R1
     iSTD_F,                iKEY_TYPE_STD|iKEY_PRESS,                // C17 R2
     iMMK_BRIGHT_SUM_L,     iKEY_TYPE_MMK | iMMK_BRIGHT_SUM_H,       // C17 R3
-    iKEY_MAC_SEARCH_SIRI,  iKEY_TYPE_SPECIAL,                       // C17 R4
+    iMMK_MAC_DICTATION_L,  iKEY_TYPE_MMK | iMMK_MAC_DICTATION_H,    // C17 R4 F5 听写
     iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iRIGHT_SHIFT,   // C17 R5
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C17 R6
     iSTD_2,                iKEY_TYPE_STD|iKEY_PRESS,                // C17 R7
