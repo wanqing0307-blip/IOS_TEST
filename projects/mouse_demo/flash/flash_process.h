@@ -211,6 +211,7 @@ extern uint8_t                  sys_cfg_base;
 //
 extern void laod_defaut_status(void);
 extern void laod_mouse_status(void);
+extern void laod_win_mac_status(void);
 extern void laod_cfg_dpi(void);
 
 extern void laod_key_cfg(void);

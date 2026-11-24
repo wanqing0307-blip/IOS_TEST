@@ -7,7 +7,8 @@
 * 功能说明: MAC 正常矩阵表
 * 修改说明: 由 WIN 表生成；MAC 下 F1~F12 与多媒体对调，按新款苹果键盘排布：
 *           F3 = 调度中心（Consumer 0x029F），F4 = 聚焦搜索（Consumer 0x0221）
-*           F5 = 听写（Consumer 0x00CF），F6 = 勿扰模式（Generic Desktop 0x9B）
+*           F5 = 听写（Consumer 0x00CF），F6 = 勿扰模式（Generic Desktop 0x9B；
+*           2.4G 下改发 PrintScreen，macOS 识别为 F13，需在系统里绑定勿扰）
 *******************************************************************************/
 #ifndef _MATRIX_KEY_MAC_TBL_
 #define _MATRIX_KEY_MAC_TBL_

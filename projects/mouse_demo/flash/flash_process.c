@@ -165,6 +165,29 @@ void laod_defaut_status(void)
 }
 
 /*******************************************************************************
+* 函数名称: laod_win_mac_status()
+* 功能描述: 按当前通道取回保存的 Win/Mac 系统状态
+* 输入参数:无
+* 输出参数:无
+* 说    明: sys_mode 每一位对应一个 device_type（BT0~BT2、2.4G、USB），
+*           1 = Win，0 = Mac；flash_save_status() 也按 device_type 保存，
+*           两边一致，每个通道各自记住自己的系统。
+*           开机读 flash 时三段开关还没扫描、device_type 无效，先按第 0 位取；
+*           确定通道后主循环入口会再调用一次，并重新装载键表。
+*******************************************************************************/
+void laod_win_mac_status(void)
+{
+    uint8_t mode_bit = 0;
+
+    if(iDEVICE_TYPE_USB >= device_type)
+        mode_bit = (device_type&0x07);
+
+    key_ctrl &= ~bwin_mac_sataus;
+    if(sys_mode&(1<<mode_bit))
+        key_ctrl |= bwin_mac_sataus;
+}
+
+/*******************************************************************************
 * 函数名称: laod_mouse_status()
 * 功能描述:
 * 输入参数:无
@@ -200,9 +223,7 @@ void laod_mouse_status(void)
             //report_dpi[2] = flash_fifo[i+3];
             sys_mode = flash_fifo[i+4];
 
-            key_ctrl &= ~bwin_mac_sataus;
-            if(sys_mode&(1<<(0&0x07)))
-                key_ctrl |= bwin_mac_sataus;
+            laod_win_mac_status();          // 按当前通道取 Win/Mac（原来固定读第 0 位，非蓝牙1通道保存不住）
 
             led_cur_mode = (flash_fifo[i+5]&0x1F);
             if(iMODE_LED_MAX < led_cur_mode)

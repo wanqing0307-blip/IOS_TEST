@@ -98,6 +98,11 @@ uint8_t const mac_shot[] = {
 };
 uint8_t mac_shot_index;
 
+// 2.4G 下 MAC F6 勿扰改发的标准键占用的按键位：库函数按 1→5 的顺序找空位，
+// 只有同时按住 4 个以上普通键才会用到第 5 位（再多的键走全无冲位图）
+#define iMAC_DND_24G_SLOT   5
+static uint8_t mac_dnd_24g_on;                  // 上一次扫描是否放了该键，用于松开时清除
+
 /******************************************************************************
 * 函数名称: void key_process(void)
 * 功能描述:
@@ -109,7 +114,9 @@ void __attribute__((noinline)) key_process(void)
 {
     uint8_t i, temp_bit;
 
-    if(0 != (key_ctrl&bkey_lock_status))
+    // 全键盘锁定只在 Win 布局下生效（说明书：仅 Windows 布局可用）；
+    // Mac 下不清除锁定标志，切回 Win 后恢复原来的锁定状态
+    if((0 != (key_ctrl&bkey_lock_status)) && (0 != (key_ctrl&bwin_mac_sataus)))
     {
         multi_data_tmp_l = 0;
         multi_data_tmp_l = 0;
@@ -195,6 +202,29 @@ void __attribute__((noinline)) key_process(void)
         mac_shot_index++;
         if(sizeof(mac_shot) <= mac_shot_index)
             key_ctrl_ex &= ~bshot_mac;
+    }
+
+    // 2.4G 下 MAC F6 勿扰：接收器固件没有 System Control 报告，发不出 0x9B，
+    // 按住 F6 期间改为发标准键 iSTD_MAC_DND_24G（PrintScreen，macOS 识别为 F13）。
+    // tmp_std_key 的按键位由库函数按按下/松开事件维护、不会每次扫描清零，
+    // 所以这里只占固定的一位，按住时保持，松开时只清掉自己放进去的键
+    if(iDEVICE_TYPE_24G == device_type)
+    {
+        if(iSYS_GD_DO_NOT_DISTURB == sys_data_tmp)
+        {
+            if((iSTD_NULL == tmp_std_key[iMAC_DND_24G_SLOT])
+               || (iSTD_MAC_DND_24G == tmp_std_key[iMAC_DND_24G_SLOT]))
+            {                                   // 该位被其他按键占用时不覆盖
+                tmp_std_key[iMAC_DND_24G_SLOT] = iSTD_MAC_DND_24G;
+                mac_dnd_24g_on = 1;
+            }
+        }
+        else if(mac_dnd_24g_on)
+        {
+            mac_dnd_24g_on = 0;
+            if(iSTD_MAC_DND_24G == tmp_std_key[iMAC_DND_24G_SLOT])
+                tmp_std_key[iMAC_DND_24G_SLOT] = iSTD_NULL;
+        }
     }
 
     for(i=0; i<6; i++)

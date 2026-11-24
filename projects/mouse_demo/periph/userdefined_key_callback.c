@@ -501,11 +501,14 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             break;
         case iKEY_LOCK&0x0F:
             special_key |= bkey_lock;
-            if(0==(special_key_bak&bkey_lock_bak))
+            if(0!=(key_ctrl&bwin_mac_sataus))       // 全键盘锁定仅 Win 布局可切换
             {
-                special_key_bak |= bkey_lock_bak;
+                if(0==(special_key_bak&bkey_lock_bak))
+                {
+                    special_key_bak |= bkey_lock_bak;
 
-                key_ctrl ^= bkey_lock_status;
+                    key_ctrl ^= bkey_lock_status;
+                }
             }
 
             break;
