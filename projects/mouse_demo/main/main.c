@@ -315,14 +315,16 @@ soft_reset_process:
         bmode_swtich_valid = false;
         rtc_init();
         b24g_nromal = false;
+
+        // 三段开关已确定当前通道：按通道取回保存的 Win/Mac 状态，并装载对应键表
+        // （开机读 flash 时通道还未确定，那时装载的键表不一定对应当前通道）
+        laod_win_mac_status();
+        laod_key_cfg();
+
         flash_load_ble_addr();
         hint_led_status = 0;
         kb_led_status = 0;
         device_led_on();
-
-        key_ctrl &= ~bwin_mac_sataus;
-        if(sys_mode&(1<<(0&0x07)))
-            key_ctrl |= bwin_mac_sataus;
 
         if(iDEVICE_TYPE_USB == device_type)
         {
