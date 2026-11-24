@@ -1,0 +1,28 @@
+# ============================================================
+# Keil MDK 编译产物：每次编译都会重新生成，不要提交到 git。
+# 提交旧产物会让 Keil 误以为“已是最新”而跳过编译，烧进旧固件。
+# 保留 .gitkeep 是为了让目录在新克隆里也存在
+# （fromelf 编译后命令会往 _build/ 里写 SE73K.dis，目录不存在会报错）。
+# ============================================================
+projects/mouse_demo/keil5/out/*
+!projects/mouse_demo/keil5/out/.gitkeep
+projects/mouse_demo/keil5/out_boot/*
+!projects/mouse_demo/keil5/out_boot/.gitkeep
+projects/mouse_demo/keil5/_build/*
+!projects/mouse_demo/keil5/_build/.gitkeep
+
+# fromelf 编译后命令生成的固件
+projects/mouse_demo/keil5/SE73K.bin
+
+# 编译 / 调试日志
+projects/mouse_demo/keil5/*.log
+projects/mouse_demo/keil5/JLinkLog.txt
+
+# ------------------------------------------------------------
+# 注意：下面这些是没有源码的预编译库 / 固件，必须保留在 git 中，
+# 不要加 *.o、*.lib、*.bin 之类的通配规则把它们忽略掉：
+#   projects/mouse_demo/periph/userdefined_key.o
+#   mode_24g/rf_encryption.o、mode_24g/rf_protocol.o
+#   components/exble2/stack/*.lib
+#   SE73_BootLoader_DLS853_20260330.bin（boot_img.s 用 .incbin 引用）
+# ------------------------------------------------------------
