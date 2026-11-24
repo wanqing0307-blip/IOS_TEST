@@ -2,10 +2,9 @@
 * 文件名称: mac_fkey.c
 * 文件描述: Mac 布局 F5 / F6 功能键（F5 听写，F6 勿扰模式）
 *
-* 保密说明: 本文件只放在内部版工程里。对外版工程用编译好的 mac_fkey.o 代替本文件
-*           （关闭 LTO、不带调试信息，里面只有机器码），生成方法见
-*           docs/对外版生成说明.md 和 tools/make_external.py。
-*           对外可见的只有 mac_fkey.h 里的接口，实现细节只写在本文件里。
+* 说    明: LIB 版工程不含本文件，用编译好的 mac_fkey.o 代替（关闭 LTO、
+*           不带调试信息，里面只有机器码），生成方法见 docs/LIB版生成说明.md
+*           和 tools/make_lib.py。mac_fkey.h 里只有接口，实现细节只写在本文件里。
 *
 * 实现说明: 和苹果键盘一致，只在 Mac 布局下生效（Mac 正常表 C17 R4 = F5，C3 R2 = F6）。
 *   F5 听写：Consumer 页 0x00CF（Voice Command）。放进多媒体值 multi_data_tmp_l / h，

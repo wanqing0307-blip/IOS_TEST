@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""生成 R12 固件“对外版”工程：Mac F5 / F6 功能键模块以预编译 mac_fkey.o 提供，不含源码。
+"""生成 R12 固件 LIB 版工程：Mac F5 / F6 功能键模块以预编译 mac_fkey.o 提供，不含源码。
 
-在仓库根目录、内部版分支（main）上运行（Windows 命令行）：
-    python tools\\make_external.py --armclang "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\armclang.exe" --branch external
+在仓库根目录、源码版分支（main）上运行（Windows 命令行）：
+    python tools\\make_lib.py --armclang "D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\armclang.exe" --branch lib
 单独调用 armclang 报许可证错误时，改用 Keil 编译好的 .o（做法见 LICENSE_HINT）：
-    python tools\\make_external.py --obj projects\\mouse_demo\\keil5\\out\\mac_fkey.o --branch external
+    python tools\\make_lib.py --obj projects\\mouse_demo\\keil5\\out\\mac_fkey.o --branch lib
 
 可选参数：
-    --out <目录>     输出目录，默认在仓库旁边新建 R12_对外版_<日期>_<提交号>
+    --out <目录>     输出目录，默认在仓库旁边新建 R12_LIB_<日期>_<提交号>
     --zip            另外打包成同名 zip
-    --branch <分支>  把对外版提交到这个分支（如 external）；分支不存在时新建一个
+    --branch <分支>  把LIB 版提交到这个分支（如 lib）；分支不存在时新建一个
                      没有任何历史的独立分支。提交后自行 git push origin <分支>
 
 脚本做的事：
@@ -19,10 +19,10 @@
      包含路径、宏定义从 Keil 工程 SE73K.uvprojx 读取，其他选项和 Keil 编译时相同，
      只多加 -fno-lto 和 -g0：工程开了链接时优化（LTO），Keil 编出来的 .o 里是 LLVM
      中间代码，可以还原出逻辑；关掉 LTO、不带调试信息，.o 里就只有机器码。
-  3. 去掉内部资料：mac_fkey.c（F5 / F6 源码）、docs/改动对比/、
-     docs/2.4G接收器_勿扰键对接说明.md、docs/对外版生成说明.md、本脚本。
+  3. 去掉只放在源码版里的文件：mac_fkey.c（F5 / F6 源码）、docs/改动对比/、
+     docs/2.4G接收器_勿扰键对接说明.md、docs/LIB版生成说明.md、本脚本。
   4. Keil 工程里把 mac_fkey.c 换成 mac_fkey.o，按目标文件链接（和 userdefined_key.o 一样）。
-  5. 写入“对外版说明.txt”，并检查结果。
+  5. 写入“说明.txt”，并检查结果。
 """
 import argparse
 import datetime
@@ -45,13 +45,13 @@ SRC = "projects/mouse_demo/periph/mac_fkey.c"
 HDR = "projects/mouse_demo/periph/mac_fkey.h"
 OBJ = "projects/mouse_demo/periph/mac_fkey.o"
 
-# 对外版里去掉的内部资料
+# LIB 版里去掉的文件（只放在源码版里）
 EXCLUDE = [
     SRC,
     "docs/改动对比",
     "docs/2.4G接收器_勿扰键对接说明.md",
-    "docs/对外版生成说明.md",
-    "tools/make_external.py",
+    "docs/LIB版生成说明.md",
+    "tools/make_lib.py",
 ]
 
 # 和 Keil 编译时相同的选项（取自 Keil 生成的 SE73K_SE73K.dep），只把 -flto 换成 -fno-lto、-gdwarf-4 换成 -g0
@@ -75,7 +75,7 @@ LICENSE_HINT = """在 Keil 外面单独调用 armclang 需要许可证，可以�
   1. Keil 里右键 mac_fkey.c → Options for File 'mac_fkey.c' → C/C++ (AC6) 页，
      Misc Controls 填 -fno-lto -g0，点 OK
   2. Rebuild，得到 projects\\mouse_demo\\keil5\\out\\mac_fkey.o
-  3. python tools\\make_external.py --obj projects\\mouse_demo\\keil5\\out\\mac_fkey.o --branch external"""
+  3. python tools\\make_lib.py --obj projects\\mouse_demo\\keil5\\out\\mac_fkey.o --branch lib"""
 
 
 def fail(msg):
@@ -102,7 +102,7 @@ def gitw(wt, *args):
 
 
 def commit_to_branch(src, branch, head, ver, trailer=""):
-    """把对外版目录 src 的内容提交到 branch；分支不存在时新建没有历史的独立分支"""
+    """把LIB 版目录 src 的内容提交到 branch；分支不存在时新建没有历史的独立分支"""
     def has(ref):
         return subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", "--quiet", ref],
                               capture_output=True).returncode == 0
@@ -122,7 +122,7 @@ def commit_to_branch(src, branch, head, ver, trailer=""):
         else:
             fail("本地 %s 分支和 GitHub 上的已经分叉，请先处理好再运行" % branch)
 
-    wt = Path(tempfile.mkdtemp(prefix="r12_external_"))
+    wt = Path(tempfile.mkdtemp(prefix="r12_lib_"))
     wt.rmdir()
     if local:
         git("worktree", "add", str(wt), branch)
@@ -144,9 +144,9 @@ def commit_to_branch(src, branch, head, ver, trailer=""):
         gitw(wt, "add", "-A")
         gitw(wt, "add", "-f", OBJ)              # 防止 .o 被 .gitignore 忽略
         if not gitw(wt, "status", "--porcelain").strip():
-            print("分支 %s 上的对外版已经是这个内容，不需要提交" % branch)
+            print("分支 %s 上的LIB 版已经是这个内容，不需要提交" % branch)
             return
-        msg = "对外版：来源提交 %s，mac_fkey V%s" % (head, ver)
+        msg = "R12 LIB：%s，mac_fkey V%s" % (head, ver)
         if trailer:
             msg += "\n\n" + trailer
         gitw(wt, "commit", "-q", "-m", msg)
@@ -240,13 +240,13 @@ def elf_info(data):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="生成 R12 固件对外版工程（F5 / F6 模块以 mac_fkey.o 提供）")
+    ap = argparse.ArgumentParser(description="生成 R12 固件LIB 版工程（F5 / F6 模块以 mac_fkey.o 提供）")
     ap.add_argument("--armclang", help="Keil 的 armclang.exe 路径，如 D:\\Keil_v5\\ARM\\ARMCompiler6.16\\Bin\\armclang.exe")
     ap.add_argument("--obj", help="改用 Keil 编译好的 mac_fkey.o（mac_fkey.c 的单文件选项加了 -fno-lto -g0），"
                                   "如 projects\\mouse_demo\\keil5\\out\\mac_fkey.o")
-    ap.add_argument("--out", help="输出目录，默认在仓库旁边新建 R12_对外版_<日期>_<提交号>")
+    ap.add_argument("--out", help="输出目录，默认在仓库旁边新建 R12_LIB_<日期>_<提交号>")
     ap.add_argument("--zip", action="store_true", help="另外打包成 zip")
-    ap.add_argument("--branch", help="把对外版提交到这个分支（如 external），不存在时新建没有历史的独立分支")
+    ap.add_argument("--branch", help="把LIB 版提交到这个分支（如 lib），不存在时新建没有历史的独立分支")
     ap.add_argument("--extra-cflags", default="", help=argparse.SUPPRESS)   # 仅供脚本自测
     ap.add_argument("--commit-trailer", default="", help=argparse.SUPPRESS)
     a = ap.parse_args()
@@ -256,9 +256,9 @@ def main():
     cur = subprocess.run(["git", "-C", str(ROOT), "symbolic-ref", "-q", "--short", "HEAD"],
                          capture_output=True).stdout.decode("utf-8", "replace").strip()
     if a.branch and cur == a.branch:
-        fail("当前在 %s 分支上，请先切换到内部版分支（如 main）再运行" % a.branch)
+        fail("当前在 %s 分支上，请先切换到源码版分支（如 main）再运行" % a.branch)
     if not (ROOT / SRC).is_file():
-        fail("当前分支（%s）里没有 %s，请先切换到内部版分支（如 main）" % (cur or "未知", SRC))
+        fail("当前分支（%s）里没有 %s，请先切换到源码版分支（如 main）" % (cur or "未知", SRC))
 
     compiler = ""
     if a.armclang:
@@ -269,7 +269,7 @@ def main():
         vlines = [l.strip() for l in (vr.stdout + vr.stderr).decode("utf-8", "replace").splitlines() if l.strip()]
         compiler = next((l for l in vlines if "Compiler" in l or "clang version" in l), vlines[0] if vlines else "")
         if "ARM Compiler" not in compiler and "Arm Compiler" not in compiler:
-            print("提示：用的不是 Keil 的 armclang（%s），生成后请用 Keil 编译对外版工程确认能正常链接。" % compiler)
+            print("提示：用的不是 Keil 的 armclang（%s），生成后请用 Keil 编译LIB 版工程确认能正常链接。" % compiler)
     else:
         obj_src = Path(a.obj)
         if not obj_src.is_file():
@@ -283,17 +283,17 @@ def main():
     head = git("rev-parse", "--short", "HEAD").decode().strip()
     head_date = git("log", "-1", "--format=%cd", "--date=format:%Y-%m-%d %H:%M").decode().strip()
     if git("status", "--porcelain", "--untracked-files=no").strip():
-        print("提示：工作区有未提交的改动，对外版只包含最近一次提交 %s 的内容。" % head)
+        print("提示：工作区有未提交的改动，LIB 版只包含最近一次提交 %s 的内容。" % head)
 
     today = datetime.date.today().strftime("%Y%m%d")
-    out = Path(a.out) if a.out else ROOT.parent / ("R12_对外版_%s_%s" % (today, head))
+    out = Path(a.out) if a.out else ROOT.parent / ("R12_LIB_%s_%s" % (today, head))
     if out.exists() and any(out.iterdir()):
-        if (out / SRC).exists() and not (out / "对外版说明.txt").exists():
+        if (out / SRC).exists() and not (out / "说明.txt").exists():
             fail("输出目录是上次没生成完的，里面还有 mac_fkey.c 源码，请先删除再运行：%s" % out)
         fail("输出目录已存在且不为空：%s" % out)
     global _PARTIAL
     if not out.exists():
-        _PARTIAL = out                          # 本次新建的目录：没生成完就出错时整个删掉，避免留下带源码的“对外版”
+        _PARTIAL = out                          # 本次新建的目录：没生成完就出错时整个删掉，避免留下带源码的 LIB 版目录
     out.mkdir(parents=True, exist_ok=True)
 
     # 1. 导出 HEAD
@@ -350,8 +350,8 @@ def main():
     ver = "%d.%02d" % (int(ver.group(1), 16), int(ver.group(2), 16)) if ver else "未知"
     sha = hashlib.sha256(obj).hexdigest()
 
-    # 3. 去掉内部资料
-    print("3/5 去掉 F5 / F6 源码和内部资料")
+    # 3. 去掉只放在源码版里的文件
+    print("3/5 去掉 F5 / F6 源码和只放在源码版里的文档")
     for p in EXCLUDE:
         t = out / p
         if t.is_dir():
@@ -391,21 +391,20 @@ def main():
 
     # 5. 说明文件
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    readme = """R12 三模键盘固件 · 对外版
+    readme = """R12 三模键盘固件
 ================================
+版本：{head}（{head_date}）
 生成时间：{now}
-来源提交：{head}（{head_date}）
 F5 / F6 模块：mac_fkey V{ver}
 mac_fkey.o 编译器：{compiler}
 mac_fkey.o SHA-256：{sha}
 
-和内部版的区别
---------------
-1. Mac 布局 F5（听写）、F6（勿扰模式）功能键模块不提供源码，只提供：
+F5 / F6 功能键模块
+------------------
+Mac 布局 F5（听写）、F6（勿扰模式）功能键模块以预编译目标文件提供：
      projects/mouse_demo/periph/mac_fkey.h   接口声明
-     projects/mouse_demo/periph/mac_fkey.o   预编译目标文件（机器码，不含调试信息）
-   Keil 工程已按目标文件链接 mac_fkey.o，用法和 userdefined_key.o 相同。
-2. 不含 git 历史和内部文档。
+     projects/mouse_demo/periph/mac_fkey.o   预编译目标文件
+Keil 工程已按目标文件链接 mac_fkey.o，用法和 userdefined_key.o 相同。
 
 编译
 ----
@@ -421,29 +420,29 @@ mac_fkey.o SHA-256：{sha}
 - 编译设置保持 Cortex-M0、Short enums/wchar。
 - mac_fkey.h 里的函数和各处调用不要删改。
 """.format(now=now, head=head, head_date=head_date, ver=ver, sha=sha, compiler=compiler)
-    (out / "对外版说明.txt").write_text(readme.replace("\n", "\r\n"), encoding="utf-8-sig", newline="")
+    (out / "说明.txt").write_text(readme.replace("\n", "\r\n"), encoding="utf-8-sig", newline="")
 
     # 检查
     print("5/5 检查")
     left = [str(p.relative_to(out)) for p in out.rglob("mac_fkey.c")]
     if left:
-        fail("对外版里还有 mac_fkey.c：" + "、".join(left))
+        fail("LIB 版里还有 mac_fkey.c：" + "、".join(left))
     t = read_keep(out / UVPROJX)
     if "mac_fkey.c" in t or "<FilePath>..\\periph\\mac_fkey.o</FilePath>" not in t:
         fail("Keil 工程没有正确改为链接 mac_fkey.o")
     for p in EXCLUDE:
         if (out / p).exists():
-            fail("内部资料没有删掉：" + p)
-    _PARTIAL = None                             # 对外版已生成并检查通过
+            fail("只放在源码版里的文件没有删掉：" + p)
+    _PARTIAL = None                             # LIB 版已生成并检查通过
 
     if a.zip:
         z = shutil.make_archive(str(out), "zip", root_dir=str(out.parent), base_dir=out.name)
         print("已打包：" + z)
     if a.branch:
         commit_to_branch(out, a.branch, head, ver, a.commit_trailer)
-    print("\n完成。对外版工程：%s" % out)
+    print("\n完成。LIB 版工程：%s" % out)
     print("mac_fkey.o：%d 字节，接口函数 %d 个，SHA-256 %s" % (len(obj), len(api), sha))
-    print("下一步：用 Keil 打开对外版工程编译，烧录后在 USB、蓝牙、2.4G 下各测一次 F5、F6。")
+    print("下一步：用 Keil 打开LIB 版工程编译，烧录后在 USB、蓝牙、2.4G 下各测一次 F5、F6。")
 
 
 if __name__ == "__main__":
