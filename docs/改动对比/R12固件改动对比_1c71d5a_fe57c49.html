@@ -1,0 +1,1162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>R12 固件改动对比</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* 布局：说明书式的技术报告。顶部摘要 + 行为对比，下面每个文件一张“左＝初版 / 右＝修改后”的对照表 */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --fg:#1d2433; --muted:#5d6678; --line:#dde1e8;
+  --accent:#1f4e8c; --accent-soft:#e6eef9;
+  --del-bg:#fdecec; --del-mark:#f4b6b6; --del-fg:#8f1d1d;
+  --add-bg:#e8f6ec; --add-mark:#a9dcb7; --add-fg:#17603a;
+  --empty-bg:#f1f2f5; --hunk-bg:#eef2f8; --code-fg:#1d2433;
+  --font-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --font-display:"Space Grotesk","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --font-code:"JetBrains Mono","Noto Sans SC",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161d; --surface:#1a2029; --fg:#e4e8ef; --muted:#9aa4b5; --line:#2c3441;
+  --accent:#8fb4ec; --accent-soft:#1f2c40;
+  --del-bg:#3a1f23; --del-mark:#7a3238; --del-fg:#ffb4b4;
+  --add-bg:#1b3326; --add-mark:#2f6b45; --add-fg:#9fe0b4;
+  --empty-bg:#161b22; --hunk-bg:#1d2633; --code-fg:#e4e8ef; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161d; --surface:#1a2029; --fg:#e4e8ef; --muted:#9aa4b5; --line:#2c3441;
+  --accent:#8fb4ec; --accent-soft:#1f2c40;
+  --del-bg:#3a1f23; --del-mark:#7a3238; --del-fg:#ffb4b4;
+  --add-bg:#1b3326; --add-mark:#2f6b45; --add-fg:#9fe0b4;
+  --empty-bg:#161b22; --hunk-bg:#1d2633; --code-fg:#e4e8ef; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.65;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:36px}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0;line-height:1.3}
+h1{font-size:clamp(1.6rem,3vw,2.1rem);color:var(--accent)}
+h2{font-size:1.3rem;padding-bottom:8px;border-bottom:2px solid var(--accent)}
+h3{font-size:1rem}
+p{margin:0}
+.muted{color:var(--muted)}
+code,.mono{font-family:var(--font-code);font-size:.86em}
+.head{display:flex;flex-direction:column;gap:12px}
+.versions{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.ver{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 14px;min-width:0;flex:1 1 260px}
+.ver b{font-family:var(--font-display);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block}
+.ver .mono{font-size:.95rem}
+.arrow{align-self:center;color:var(--muted);font-size:1.4rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:3px 12px;font-size:.85rem;font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.88rem;color:var(--muted)}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;border:1px solid var(--line)}
+.sw.del{background:var(--del-bg)} .sw.add{background:var(--add-bg)} .sw.delm{background:var(--del-mark)} .sw.addm{background:var(--add-mark)} .sw.empty{background:var(--empty-bg)}
+.tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+table{border-collapse:collapse;width:100%}
+.behav th,.behav td,.index th,.index td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.behav th,.index th{font-size:.8rem;letter-spacing:.04em;color:var(--muted);background:var(--hunk-bg);white-space:nowrap}
+.behav tr:last-child td,.index tr:last-child td{border-bottom:0}
+.behav td.before{background:var(--del-bg);color:var(--del-fg)}
+.behav td.after{background:var(--add-bg);color:var(--add-fg)}
+.behav{min-width:640px}
+.index{min-width:600px}
+.index a{color:var(--accent);text-decoration:none;font-family:var(--font-code);font-size:.85rem;word-break:break-all}
+.index a:hover,.index a:focus-visible{text-decoration:underline}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.plus{color:var(--add-fg)} .minus{color:var(--del-fg)}
+.tag{display:inline-block;font-size:.75rem;padding:1px 8px;border-radius:4px;background:var(--hunk-bg);color:var(--muted);margin:2px 4px 2px 0;white-space:nowrap}
+section.file{display:flex;flex-direction:column;gap:14px;scroll-margin-top:16px}
+.file-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.path{font-family:var(--font-code);font-size:.95rem;font-weight:600;word-break:break-all;min-width:0}
+.newfile{font-size:.78rem;background:var(--add-bg);color:var(--add-fg);border-radius:4px;padding:1px 8px;margin-left:8px}
+.hunk{display:flex;flex-direction:column;gap:6px}
+.hunk-note{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.88rem}
+.loc{font-family:var(--font-code);font-size:.8rem;color:var(--muted)}
+.what{font-weight:500}
+.sbs{table-layout:fixed;min-width:820px;font-family:var(--font-code);font-size:12.5px;line-height:1.55}
+.sbs col.ln{width:52px} .sbs col.cd{width:auto}
+.sbs th{font-family:var(--font-body);font-size:.78rem;font-weight:500;text-align:left;padding:6px 10px;background:var(--hunk-bg);color:var(--muted);border-bottom:1px solid var(--line)}
+.sbs th.r{border-left:2px solid var(--line)}
+.sbs td{padding:1px 8px;vertical-align:top;color:var(--code-fg)}
+.sbs td.ln{text-align:right;color:var(--muted);user-select:none;font-variant-numeric:tabular-nums;padding-right:10px}
+.sbs td.cd{white-space:pre-wrap;word-break:break-all;tab-size:4}
+.sbs td.r{border-left:2px solid var(--line)}
+.sbs tr td.del{background:var(--del-bg)} .sbs tr td.add{background:var(--add-bg)} .sbs tr td.empty{background:var(--empty-bg)}
+.sbs del{background:var(--del-mark);text-decoration:none;border-radius:2px}
+.sbs ins{background:var(--add-mark);text-decoration:none;border-radius:2px}
+.doc .sbs{font-family:var(--font-body);font-size:13.5px;line-height:1.6}
+.doc .sbs col.sec{width:150px}
+.doc .sbs td{padding:6px 10px;border-bottom:1px solid var(--line)}
+.doc .sbs td.sec{color:var(--muted);font-size:.8rem}
+.removed th,.removed td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left}
+.removed{min-width:520px}
+.removed th{font-size:.8rem;color:var(--muted);background:var(--hunk-bg)}
+.hist{display:flex;flex-direction:column;gap:12px}
+.pr{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 14px}
+.pr b{font-family:var(--font-display)}
+.pr ul{margin:6px 0 0;padding-left:1.2em}
+.note{font-size:.9rem;color:var(--muted)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:560px){ .arrow{display:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="head"><h1>R12 固件改动对比</h1>
+<p class="muted">左边是初版文件，右边是修改后的文件。每个文件都标了完整路径，每处改动上方写了行号和改了什么。</p>
+<div class="versions"><div class="ver"><b>初版（左边）</b><span class="mono">1c71d5a</span> · 2026-11-24 11:47<br><span class="muted">提交当前工程全部改动</span></div>
+<span class="arrow" aria-hidden="true">→</span>
+<div class="ver"><b>修改后（右边，当前 main）</b><span class="mono">fe57c49</span> · 2026-11-24 16:06<br><span class="muted">合并了 7 个 PR、17 个提交</span></div></div>
+<div class="chips"><span class="chip">源码和文本文件 19 个</span><span class="chip">新增 315 行 · 删除 26 行</span><span class="chip">说明书 2 份 V1.0 → V1.1</span><span class="chip">编译产物 211 个移出 git</span></div>
+<div class="legend"><span><i class="sw del"></i>初版里被改掉或删掉的行</span><span><i class="sw add"></i>修改后新增或改成的行</span><span><i class="sw delm"></i><i class="sw addm"></i>同一行里具体改动的文字</span><span><i class="sw empty"></i>对面没有对应的行</span></div>
+</header>
+<section class="head"><h2>功能对比</h2><div class="tbl-scroll"><table class="behav"><thead><tr><th>项目</th><th>初版</th><th>修改后</th></tr></thead><tbody>
+<tr><td><b>Mac 布局 F3</b></td><td class="before">调度中心 Mission Control</td><td class="after">不变：调度中心 Mission Control</td></tr>
+<tr><td><b>Mac 布局 F4</b></td><td class="before">启动台 Launchpad</td><td class="after">聚焦搜索 Spotlight</td></tr>
+<tr><td><b>Mac 布局 F5</b></td><td class="before">短按搜索 / 长按 Siri</td><td class="after">听写</td></tr>
+<tr><td><b>Mac 布局 F6</b></td><td class="before">截屏（Cmd+Shift+3）</td><td class="after">勿扰模式：USB、蓝牙下按下即用；2.4G 下键盘已发送，需接收器升级后才生效</td></tr>
+<tr><td><b>Win / Mac 布局保存</b></td><td class="before">只有蓝牙通道 1 能保存；USB、2.4G、蓝牙 2/3 切换后松开 FN 就退回，重启后也退回</td><td class="after">USB、2.4G、蓝牙 1/2/3 各自保存，断电不丢</td></tr>
+<tr><td><b>全键盘锁定（FN+F11）</b></td><td class="before">Win 下锁定后切到 Mac，键盘仍锁死且无法解锁</td><td class="after">Mac 下不生效，切回 Win 后恢复原来的锁定状态</td></tr>
+<tr><td><b>Win 键锁定（FN+Win）</b></td><td class="before">保存其他设置后会一起写进 flash，断电重启仍锁定</td><td class="after">只保存在内存里，断电重启一定解锁</td></tr>
+<tr><td><b>USB 下勿扰报告</b></td><td class="before">—（初版没有勿扰键）</td><td class="after">修正发送判断，F6 报告能正常发出</td></tr>
+<tr><td><b>编译产物</b></td><td class="before">out/、SE73K.bin 等提交在 git 里，容易误烧旧固件</td><td class="after">移出 git，加 .gitignore，每次都需要重新编译</td></tr>
+<tr><td><b>说明书</b></td><td class="before">使用说明、规格书 V1.0</td><td class="after">两份都更新到 V1.1，并改正 macOS 下 Alt / Win 说明</td></tr>
+</tbody></table></div></section>
+<section class="head"><h2>改动的文件</h2><p class="note">点文件名跳到它的左右对比。</p><div class="tbl-scroll"><table class="index"><thead><tr><th>文件</th><th>行数</th><th>相关功能</th></tr></thead><tbody>
+<tr><td><a href="#f-matrix-key-tbl-mac-h">projects/mouse_demo/periph/matrix_key_tbl_mac.h</a></td><td class="num"><span class="plus">+8</span> <span class="minus">−5</span></td><td><span class="tag">Mac F3～F6</span></td></tr>
+<tr><td><a href="#f-key-code-define-h">projects/mouse_demo/periph/key_code_define.h</a></td><td class="num"><span class="plus">+11</span> <span class="minus">−0</span></td><td><span class="tag">Mac F3～F6</span><span class="tag">F6 勿扰 USB/蓝牙</span></td></tr>
+<tr><td><a href="#f-userdefined-key-callback-c">projects/mouse_demo/periph/userdefined_key_callback.c</a></td><td class="num"><span class="plus">+12</span> <span class="minus">−3</span></td><td><span class="tag">F6 勿扰 USB/蓝牙</span><span class="tag">锁定功能</span></td></tr>
+<tr><td><a href="#f-matrix-key-c">projects/mouse_demo/periph/matrix_key.c</a></td><td class="num"><span class="plus">+33</span> <span class="minus">−1</span></td><td><span class="tag">F6 勿扰 USB/蓝牙</span><span class="tag">F6 勿扰 2.4G</span><span class="tag">锁定功能</span></td></tr>
+<tr><td><a href="#f-matrix-key-h">projects/mouse_demo/periph/matrix_key.h</a></td><td class="num"><span class="plus">+2</span> <span class="minus">−1</span></td><td><span class="tag">F6 勿扰 USB/蓝牙</span><span class="tag">锁定功能</span></td></tr>
+<tr><td><a href="#f-main-c">projects/mouse_demo/main/main.c</a></td><td class="num"><span class="plus">+9</span> <span class="minus">−4</span></td><td><span class="tag">F6 勿扰 USB/蓝牙</span><span class="tag">F6 勿扰 2.4G</span><span class="tag">Win/Mac 按模式保存</span></td></tr>
+<tr><td><a href="#f-main-h">projects/mouse_demo/main/main.h</a></td><td class="num"><span class="plus">+5</span> <span class="minus">−0</span></td><td><span class="tag">F6 勿扰 USB/蓝牙</span><span class="tag">F6 勿扰 2.4G</span></td></tr>
+<tr><td><a href="#f-flash-process-c">projects/mouse_demo/flash/flash_process.c</a></td><td class="num"><span class="plus">+28</span> <span class="minus">−9</span></td><td><span class="tag">Win/Mac 按模式保存</span><span class="tag">锁定功能</span></td></tr>
+<tr><td><a href="#f-flash-process-h">projects/mouse_demo/flash/flash_process.h</a></td><td class="num"><span class="plus">+1</span> <span class="minus">−0</span></td><td><span class="tag">Win/Mac 按模式保存</span></td></tr>
+<tr><td><a href="#f-usb-cfg-info-h">mode_usb/usb_cfg_info.h</a></td><td class="num"><span class="plus">+1</span> <span class="minus">−0</span></td><td><span class="tag">F6 勿扰 USB/蓝牙</span></td></tr>
+<tr><td><a href="#f-usb-descriptor-h">mode_usb/usb_descriptor.h</a></td><td class="num"><span class="plus">+13</span> <span class="minus">−0</span></td><td><span class="tag">F6 勿扰 USB/蓝牙</span></td></tr>
+<tr><td><a href="#f-usb-user-process-c">mode_usb/usb_user_process.c</a></td><td class="num"><span class="plus">+16</span> <span class="minus">−1</span></td><td><span class="tag">F6 勿扰 USB/蓝牙</span></td></tr>
+<tr><td><a href="#f-ex2-app-mouse-h">projects/mouse_demo/main/ex2_app_mouse.h</a></td><td class="num"><span class="plus">+8</span> <span class="minus">−0</span></td><td><span class="tag">F6 勿扰 USB/蓝牙</span></td></tr>
+<tr><td><a href="#f-ex2-profile-hid-mouse-c">projects/mouse_demo/main/ex2_profile_hid_mouse.c</a></td><td class="num"><span class="plus">+42</span> <span class="minus">−0</span></td><td><span class="tag">F6 勿扰 USB/蓝牙</span></td></tr>
+<tr><td><a href="#f-mouse-hw-c">projects/mouse_demo/main/mouse_hw.c</a></td><td class="num"><span class="plus">+12</span> <span class="minus">−0</span></td><td><span class="tag">F6 勿扰 USB/蓝牙</span></td></tr>
+<tr><td><a href="#f-rf-data-process-c">mode_24g/rf_data_process.c</a></td><td class="num"><span class="plus">+13</span> <span class="minus">−0</span></td><td><span class="tag">F6 勿扰 2.4G</span></td></tr>
+<tr><td><a href="#f-sleep-c">mode_24g/sleep.c</a></td><td class="num"><span class="plus">+3</span> <span class="minus">−2</span></td><td><span class="tag">F6 勿扰 2.4G</span></td></tr>
+<tr><td><a href="#f-gitignore">.gitignore</a> <span class="newfile">新文件</span></td><td class="num"><span class="plus">+28</span> <span class="minus">−0</span></td><td><span class="tag">仓库整理</span></td></tr>
+<tr><td><a href="#f-2-4g-md">docs/2.4G接收器_勿扰键对接说明.md</a> <span class="newfile">新文件</span></td><td class="num"><span class="plus">+70</span> <span class="minus">−0</span></td><td><span class="tag">F6 勿扰 2.4G</span></td></tr>
+<tr><td><a href="#docs">docs/…使用说明、规格书（Word / PDF）</a></td><td class="num">V1.0 → V1.1</td><td><span class="tag">说明书</span></td></tr>
+<tr><td><a href="#removed">projects/mouse_demo/keil5/ 编译产物</a></td><td class="num"><span class="minus">211 个文件</span></td><td><span class="tag">仓库整理</span></td></tr>
+</tbody></table></div></section>
+<section class="head"><h2>源代码左右对比</h2><p class="note">左边：初版 <span class="mono">1c71d5a</span>；右边：修改后 <span class="mono">fe57c49</span>。行号分别是各自文件里的行号。</p></section>
+<section class="file" id="f-matrix-key-tbl-mac-h"><div class="file-head"><h3 class="path">projects/mouse_demo/periph/matrix_key_tbl_mac.h</h3><span class="num"><span class="plus">+8</span> <span class="minus">−5</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 4 行 / 修改后第 4 行</span><span class="what">文件头注释：写明 Mac 布局 F3～F6 的新功能</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key_tbl_mac.h</th><th colspan="2" class="r">修改后 · matrix_key_tbl_mac.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">4</td><td class="cd ctx">*</td><td class="ln r ctx">4</td><td class="cd ctx">*</td></tr>
+<tr><td class="ln ctx">5</td><td class="cd ctx">* 文件名称: _MATRIX_KEY_TBL_</td><td class="ln r ctx">5</td><td class="cd ctx">* 文件名称: _MATRIX_KEY_TBL_</td></tr>
+<tr><td class="ln ctx">6</td><td class="cd ctx">*</td><td class="ln r ctx">6</td><td class="cd ctx">*</td></tr>
+<tr><td class="ln ctx">7</td><td class="cd ctx">* 功能说明: MAC 正常矩阵表</td><td class="ln r ctx">7</td><td class="cd ctx">* 功能说明: MAC 正常矩阵表</td></tr>
+<tr><td class="ln del">8</td><td class="cd del">* 修改说明: 由 WIN 表生成；MAC 下 F1~F12 与多媒体对调</td><td class="ln r add">8</td><td class="cd add">* 修改说明: 由 WIN 表生成；MAC 下 F1~F12 与多媒体对调<ins>，按新款苹果键盘排布：</ins></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">9</td><td class="cd add">*           F3 = 调度中心（Consumer 0x029F），F4 = 聚焦搜索（Consumer 0x0221）</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">10</td><td class="cd add">*           F5 = 听写（Consumer 0x00CF），F6 = 勿扰模式（Generic Desktop 0x9B；</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">11</td><td class="cd add">*           2.4G 下用系统键包 iRF_K_OTHER_SYS 发同样的 0x9B，需接收器转发）</td></tr>
+<tr><td class="ln ctx">9</td><td class="cd ctx">*******************************************************************************/</td><td class="ln r ctx">12</td><td class="cd ctx">*******************************************************************************/</td></tr>
+<tr><td class="ln ctx">10</td><td class="cd ctx">#ifndef _MATRIX_KEY_MAC_TBL_</td><td class="ln r ctx">13</td><td class="cd ctx">#ifndef _MATRIX_KEY_MAC_TBL_</td></tr>
+<tr><td class="ln ctx">11</td><td class="cd ctx">#define _MATRIX_KEY_MAC_TBL_</td><td class="ln r ctx">14</td><td class="cd ctx">#define _MATRIX_KEY_MAC_TBL_</td></tr>
+<tr><td class="ln ctx">12</td><td class="cd ctx">#include &quot;key_code_define.h&quot;</td><td class="ln r ctx">15</td><td class="cd ctx">#include &quot;key_code_define.h&quot;</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 15 行 / 修改后第 18 行  ·  附近：unsigned char const matrixkey_mac_tbl[] =</span><span class="what">F6：截屏（Cmd+Shift+3）→ 勿扰模式</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key_tbl_mac.h</th><th colspan="2" class="r">修改后 · matrix_key_tbl_mac.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">15</td><td class="cd ctx">{</td><td class="ln r ctx">18</td><td class="cd ctx">{</td></tr>
+<tr><td class="ln ctx">16</td><td class="cd ctx">// C3</td><td class="ln r ctx">19</td><td class="cd ctx">// C3</td></tr>
+<tr><td class="ln ctx">17</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iLEFT_SHIFT,    // C3 R0</td><td class="ln r ctx">20</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iLEFT_SHIFT,    // C3 R0</td></tr>
+<tr><td class="ln ctx">18</td><td class="cd ctx">    iSTD_U,                iKEY_TYPE_STD|iKEY_PRESS,                // C3 R1</td><td class="ln r ctx">21</td><td class="cd ctx">    iSTD_U,                iKEY_TYPE_STD|iKEY_PRESS,                // C3 R1</td></tr>
+<tr><td class="ln del">19</td><td class="cd del">    iKEY_MAC_<del>SHOT</del>,         iKEY_TYPE_SPECIAL,                       // C3 R2</td><td class="ln r add">22</td><td class="cd add">    iKEY_MAC_<ins>DND</ins>,<ins> </ins>         iKEY_TYPE_SPECIAL,                       // C3 R2<ins>  F6 勿扰模式</ins></td></tr>
+<tr><td class="ln ctx">20</td><td class="cd ctx">    iMMK_BRIGHT_ADD_L,     iKEY_TYPE_MMK | iMMK_BRIGHT_ADD_H,       // C3 R3</td><td class="ln r ctx">23</td><td class="cd ctx">    iMMK_BRIGHT_ADD_L,     iKEY_TYPE_MMK | iMMK_BRIGHT_ADD_H,       // C3 R3</td></tr>
+<tr><td class="ln ctx">21</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C3 R4</td><td class="ln r ctx">24</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C3 R4</td></tr>
+<tr><td class="ln ctx">22</td><td class="cd ctx">    iSTD_RETURN,           iKEY_TYPE_STD|iKEY_PRESS,                // C3 R5</td><td class="ln r ctx">25</td><td class="cd ctx">    iSTD_RETURN,           iKEY_TYPE_STD|iKEY_PRESS,                // C3 R5</td></tr>
+<tr><td class="ln ctx">23</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C3 R6</td><td class="ln r ctx">26</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C3 R6</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 41 行 / 修改后第 44 行  ·  附近：unsigned char const matrixkey_mac_tbl[] =</span><span class="what">F4：启动台 Launchpad → 聚焦搜索 Spotlight</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key_tbl_mac.h</th><th colspan="2" class="r">修改后 · matrix_key_tbl_mac.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">41</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iRIGHT_CTRL,    // C5 R6</td><td class="ln r ctx">44</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iRIGHT_CTRL,    // C5 R6</td></tr>
+<tr><td class="ln ctx">42</td><td class="cd ctx">    iSTD_Z,                iKEY_TYPE_STD|iKEY_PRESS,                // C5 R7</td><td class="ln r ctx">45</td><td class="cd ctx">    iSTD_Z,                iKEY_TYPE_STD|iKEY_PRESS,                // C5 R7</td></tr>
+<tr><td class="ln ctx">43</td><td class="cd ctx">// C6</td><td class="ln r ctx">46</td><td class="cd ctx">// C6</td></tr>
+<tr><td class="ln ctx">44</td><td class="cd ctx">    iSTD_A,                iKEY_TYPE_STD|iKEY_PRESS,                // C6 R0</td><td class="ln r ctx">47</td><td class="cd ctx">    iSTD_A,                iKEY_TYPE_STD|iKEY_PRESS,                // C6 R0</td></tr>
+<tr><td class="ln del">45</td><td class="cd del">    iMMK_MAC_L<del>AUNC</del>H<del>PAD</del>_L,  iKEY_TYPE_MMK | iMMK_MAC_L<del>AUNC</del>H<del>PAD</del>_H,    // C6 R1</td><td class="ln r add">48</td><td class="cd add">    iMMK_MAC_<ins>SPOT</ins>L<ins>IG</ins>H<ins>T</ins>_L,  iKEY_TYPE_MMK | iMMK_MAC_<ins>SPOT</ins>L<ins>IG</ins>H<ins>T</ins>_H,    // C6 R1<ins>  F4 聚焦搜索</ins></td></tr>
+<tr><td class="ln ctx">46</td><td class="cd ctx">    iSTD_O,                iKEY_TYPE_STD|iKEY_PRESS,                // C6 R2</td><td class="ln r ctx">49</td><td class="cd ctx">    iSTD_O,                iKEY_TYPE_STD|iKEY_PRESS,                // C6 R2</td></tr>
+<tr><td class="ln ctx">47</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C6 R3</td><td class="ln r ctx">50</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C6 R3</td></tr>
+<tr><td class="ln ctx">48</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C6 R4</td><td class="ln r ctx">51</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C6 R4</td></tr>
+<tr><td class="ln ctx">49</td><td class="cd ctx">    iSTD_M,                iKEY_TYPE_STD|iKEY_PRESS,                // C6 R5</td><td class="ln r ctx">52</td><td class="cd ctx">    iSTD_M,                iKEY_TYPE_STD|iKEY_PRESS,                // C6 R5</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 131 行 / 修改后第 134 行  ·  附近：unsigned char const matrixkey_mac_tbl[] =</span><span class="what">F3：功能不变（调度中心），只补注释</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key_tbl_mac.h</th><th colspan="2" class="r">修改后 · matrix_key_tbl_mac.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">131</td><td class="cd ctx">    iSTD_NUMPAD3,          iKEY_TYPE_STD|iKEY_PRESS,                // C15 R6</td><td class="ln r ctx">134</td><td class="cd ctx">    iSTD_NUMPAD3,          iKEY_TYPE_STD|iKEY_PRESS,                // C15 R6</td></tr>
+<tr><td class="ln ctx">132</td><td class="cd ctx">    iSTD_NUMPAD_FULLSTOP,  iKEY_TYPE_STD|iKEY_PRESS,                // C15 R7</td><td class="ln r ctx">135</td><td class="cd ctx">    iSTD_NUMPAD_FULLSTOP,  iKEY_TYPE_STD|iKEY_PRESS,                // C15 R7</td></tr>
+<tr><td class="ln ctx">133</td><td class="cd ctx">// C16</td><td class="ln r ctx">136</td><td class="cd ctx">// C16</td></tr>
+<tr><td class="ln ctx">134</td><td class="cd ctx">    iSTD_T,                iKEY_TYPE_STD|iKEY_PRESS,                // C16 R0</td><td class="ln r ctx">137</td><td class="cd ctx">    iSTD_T,                iKEY_TYPE_STD|iKEY_PRESS,                // C16 R0</td></tr>
+<tr><td class="ln del">135</td><td class="cd del">    iMMK_MAC_MCONTROL_L,   iKEY_TYPE_MMK | iMMK_MAC_MCONTROL_H,     // C16 R1</td><td class="ln r add">138</td><td class="cd add">    iMMK_MAC_MCONTROL_L,   iKEY_TYPE_MMK | iMMK_MAC_MCONTROL_H,     // C16 R1<ins> F3 调度中心</ins></td></tr>
+<tr><td class="ln ctx">136</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C16 R2</td><td class="ln r ctx">139</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C16 R2</td></tr>
+<tr><td class="ln ctx">137</td><td class="cd ctx">    iSTD_NUMPAD_SUBTRACT,  iKEY_TYPE_STD|iKEY_PRESS,                // C16 R3</td><td class="ln r ctx">140</td><td class="cd ctx">    iSTD_NUMPAD_SUBTRACT,  iKEY_TYPE_STD|iKEY_PRESS,                // C16 R3</td></tr>
+<tr><td class="ln ctx">138</td><td class="cd ctx">    iSTD_NUMPAD_ADD,       iKEY_TYPE_STD|iKEY_PRESS,                // C16 R4</td><td class="ln r ctx">141</td><td class="cd ctx">    iSTD_NUMPAD_ADD,       iKEY_TYPE_STD|iKEY_PRESS,                // C16 R4</td></tr>
+<tr><td class="ln ctx">139</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C16 R5</td><td class="ln r ctx">142</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C16 R5</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 143 行 / 修改后第 146 行  ·  附近：unsigned char const matrixkey_mac_tbl[] =</span><span class="what">F5：短按搜索 / 长按 Siri → 听写</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key_tbl_mac.h</th><th colspan="2" class="r">修改后 · matrix_key_tbl_mac.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">143</td><td class="cd ctx">    iSTD_X,                iKEY_TYPE_STD|iKEY_PRESS,                // C17 R0</td><td class="ln r ctx">146</td><td class="cd ctx">    iSTD_X,                iKEY_TYPE_STD|iKEY_PRESS,                // C17 R0</td></tr>
+<tr><td class="ln ctx">144</td><td class="cd ctx">    iSTD_CAPITAL,          iKEY_TYPE_STD|iKEY_PRESS,                // C17 R1</td><td class="ln r ctx">147</td><td class="cd ctx">    iSTD_CAPITAL,          iKEY_TYPE_STD|iKEY_PRESS,                // C17 R1</td></tr>
+<tr><td class="ln ctx">145</td><td class="cd ctx">    iSTD_F,                iKEY_TYPE_STD|iKEY_PRESS,                // C17 R2</td><td class="ln r ctx">148</td><td class="cd ctx">    iSTD_F,                iKEY_TYPE_STD|iKEY_PRESS,                // C17 R2</td></tr>
+<tr><td class="ln ctx">146</td><td class="cd ctx">    iMMK_BRIGHT_SUM_L,     iKEY_TYPE_MMK | iMMK_BRIGHT_SUM_H,       // C17 R3</td><td class="ln r ctx">149</td><td class="cd ctx">    iMMK_BRIGHT_SUM_L,     iKEY_TYPE_MMK | iMMK_BRIGHT_SUM_H,       // C17 R3</td></tr>
+<tr><td class="ln del">147</td><td class="cd del">    iK<del>EY</del>_MAC_<del>SE</del>A<del>RCH</del>_<del>SIRI</del>,  iKEY_TYPE_<del>SPE</del>CIA<del>L</del>,<del>                   </del>    // C17 R4</td><td class="ln r add">150</td><td class="cd add">    i<ins>MM</ins>K_MAC_<ins>DICT</ins>A<ins>TION</ins>_<ins>L</ins>,  iKEY_TYPE_<ins>MMK | iMMK_MA</ins>C<ins>_D</ins>I<ins>CT</ins>A<ins>TION_H</ins>,    // C17 R4<ins> F5 听写</ins></td></tr>
+<tr><td class="ln ctx">148</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iRIGHT_SHIFT,   // C17 R5</td><td class="ln r ctx">151</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iRIGHT_SHIFT,   // C17 R5</td></tr>
+<tr><td class="ln ctx">149</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C17 R6</td><td class="ln r ctx">152</td><td class="cd ctx">    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C17 R6</td></tr>
+<tr><td class="ln ctx">150</td><td class="cd ctx">    iSTD_2,                iKEY_TYPE_STD|iKEY_PRESS,                // C17 R7</td><td class="ln r ctx">153</td><td class="cd ctx">    iSTD_2,                iKEY_TYPE_STD|iKEY_PRESS,                // C17 R7</td></tr>
+<tr><td class="ln ctx">151</td><td class="cd ctx">// C18</td><td class="ln r ctx">154</td><td class="cd ctx">// C18</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-key-code-define-h"><div class="file-head"><h3 class="path">projects/mouse_demo/periph/key_code_define.h</h3><span class="num"><span class="plus">+11</span> <span class="minus">−0</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 105 行 / 修改后第 105 行</span><span class="what">新增特殊键码 0x48：Mac 布局 F6 勿扰</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · key_code_define.h</th><th colspan="2" class="r">修改后 · key_code_define.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">105</td><td class="cd ctx">        #define iKEY_CMD_SPACE    0x44</td><td class="ln r ctx">105</td><td class="cd ctx">        #define iKEY_CMD_SPACE    0x44</td></tr>
+<tr><td class="ln ctx">106</td><td class="cd ctx">        #define iKEY_DESK_MAC     0x45</td><td class="ln r ctx">106</td><td class="cd ctx">        #define iKEY_DESK_MAC     0x45</td></tr>
+<tr><td class="ln ctx">107</td><td class="cd ctx">        #define iKEY_MAC_SEARCH_SIRI 0x46   // MAC：短按搜索，长按 Siri</td><td class="ln r ctx">107</td><td class="cd ctx">        #define iKEY_MAC_SEARCH_SIRI 0x46   // MAC：短按搜索，长按 Siri</td></tr>
+<tr><td class="ln ctx">108</td><td class="cd ctx">        #define iKEY_MAC_SHOT     0x47      // MAC：截屏 Cmd+Shift+3</td><td class="ln r ctx">108</td><td class="cd ctx">        #define iKEY_MAC_SHOT     0x47      // MAC：截屏 Cmd+Shift+3</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">109</td><td class="cd add">        #define iKEY_MAC_DND      0x48      // MAC：勿扰模式（System Control 报告，Generic Desktop 0x9B）</td></tr>
+<tr><td class="ln ctx">109</td><td class="cd ctx">      //}</td><td class="ln r ctx">110</td><td class="cd ctx">      //}</td></tr>
+<tr><td class="ln ctx">110</td><td class="cd ctx">    //}</td><td class="ln r ctx">111</td><td class="cd ctx">    //}</td></tr>
+<tr><td class="ln ctx">111</td><td class="cd ctx">//}</td><td class="ln r ctx">112</td><td class="cd ctx">//}</td></tr>
+<tr><td class="ln ctx">112</td><td class="cd ctx">#define iKEY_TYPE_MMK           0x50</td><td class="ln r ctx">113</td><td class="cd ctx">#define iKEY_TYPE_MMK           0x50</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 140 行 / 修改后第 141 行</span><span class="what">新增勿扰用法值 0x9B（Generic Desktop 页）</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · key_code_define.h</th><th colspan="2" class="r">修改后 · key_code_define.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">140</td><td class="cd ctx">#define iSYS_POWER                      0x01</td><td class="ln r ctx">141</td><td class="cd ctx">#define iSYS_POWER                      0x01</td></tr>
+<tr><td class="ln ctx">141</td><td class="cd ctx">#define iSYS_SLEEP                      0x02</td><td class="ln r ctx">142</td><td class="cd ctx">#define iSYS_SLEEP                      0x02</td></tr>
+<tr><td class="ln ctx">142</td><td class="cd ctx">#define iSYS_WAKEUP                     0x04</td><td class="ln r ctx">143</td><td class="cd ctx">#define iSYS_WAKEUP                     0x04</td></tr>
+<tr><td class="ln ctx">143</td><td class="cd ctx"></td><td class="ln r ctx">144</td><td class="cd ctx"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">145</td><td class="cd add">//-----------------------------------------------------------------------------;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">146</td><td class="cd add">// 系统控制键用法（Generic Desktop 页，经 System Control 报告发送）</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">147</td><td class="cd add">//</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">148</td><td class="cd add">#define iSYS_GD_DO_NOT_DISTURB          0x9B    // System Do Not Disturb：MAC F6 勿扰模式</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">149</td><td class="cd add"></td></tr>
+<tr><td class="ln ctx">144</td><td class="cd ctx">//-----------------------------------------------------------------------------;</td><td class="ln r ctx">150</td><td class="cd ctx">//-----------------------------------------------------------------------------;</td></tr>
+<tr><td class="ln ctx">145</td><td class="cd ctx">// 标准键键值</td><td class="ln r ctx">151</td><td class="cd ctx">// 标准键键值</td></tr>
+<tr><td class="ln ctx">146</td><td class="cd ctx">//</td><td class="ln r ctx">152</td><td class="cd ctx">//</td></tr>
+<tr><td class="ln ctx">147</td><td class="cd ctx">#define iSTD_NULL                       0x00</td><td class="ln r ctx">153</td><td class="cd ctx">#define iSTD_NULL                       0x00</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 334 行 / 修改后第 340 行</span><span class="what">新增听写键码：Consumer 0x00CF</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · key_code_define.h</th><th colspan="2" class="r">修改后 · key_code_define.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">334</td><td class="cd ctx">//</td><td class="ln r ctx">340</td><td class="cd ctx">//</td></tr>
+<tr><td class="ln ctx">335</td><td class="cd ctx">#define iMMK_IOS_SIRI_H         0x00</td><td class="ln r ctx">341</td><td class="cd ctx">#define iMMK_IOS_SIRI_H         0x00</td></tr>
+<tr><td class="ln ctx">336</td><td class="cd ctx">#define iMMK_IOS_SIRI_L         0xCF</td><td class="ln r ctx">342</td><td class="cd ctx">#define iMMK_IOS_SIRI_L         0xCF</td></tr>
+<tr><td class="ln ctx">337</td><td class="cd ctx"></td><td class="ln r ctx">343</td><td class="cd ctx"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">344</td><td class="cd add">#define iMMK_MAC_DICTATION_H    0x00    // MAC 听写：Consumer Voice Command 0x00CF</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">345</td><td class="cd add">#define iMMK_MAC_DICTATION_L    0xCF    // （macOS Sonoma 起识别为听写，与苹果键盘 F5 一致）</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">346</td><td class="cd add"></td></tr>
+<tr><td class="ln ctx">338</td><td class="cd ctx">#define iMMK_MAC_CTRL_H         0x02    // MAC电脑控制台</td><td class="ln r ctx">347</td><td class="cd ctx">#define iMMK_MAC_CTRL_H         0x02    // MAC电脑控制台</td></tr>
+<tr><td class="ln ctx">339</td><td class="cd ctx">#define iMMK_MAC_CTRL_L         0xA0</td><td class="ln r ctx">348</td><td class="cd ctx">#define iMMK_MAC_CTRL_L         0xA0</td></tr>
+<tr><td class="ln ctx">340</td><td class="cd ctx"></td><td class="ln r ctx">349</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">341</td><td class="cd ctx">#define iMMK_BRIGHT_ADD_H       0x00</td><td class="ln r ctx">350</td><td class="cd ctx">#define iMMK_BRIGHT_ADD_H       0x00</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 346 行 / 修改后第 355 行</span><span class="what">新增聚焦搜索键码：Consumer 0x0221</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · key_code_define.h</th><th colspan="2" class="r">修改后 · key_code_define.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">346</td><td class="cd ctx">#define iMMK_MAC_MCONTROL_H     0x02            // MAC 任务窗口(Mission Control)</td><td class="ln r ctx">355</td><td class="cd ctx">#define iMMK_MAC_MCONTROL_H     0x02            // MAC 任务窗口(Mission Control)</td></tr>
+<tr><td class="ln ctx">347</td><td class="cd ctx">#define iMMK_MAC_MCONTROL_L     0x9F</td><td class="ln r ctx">356</td><td class="cd ctx">#define iMMK_MAC_MCONTROL_L     0x9F</td></tr>
+<tr><td class="ln ctx">348</td><td class="cd ctx">#define iMMK_MAC_LAUNCHPAD_H    0x02            // MAC 控制台(Launchpad)</td><td class="ln r ctx">357</td><td class="cd ctx">#define iMMK_MAC_LAUNCHPAD_H    0x02            // MAC 控制台(Launchpad)</td></tr>
+<tr><td class="ln ctx">349</td><td class="cd ctx">#define iMMK_MAC_LAUNCHPAD_L    0xA0</td><td class="ln r ctx">358</td><td class="cd ctx">#define iMMK_MAC_LAUNCHPAD_L    0xA0</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">359</td><td class="cd add">#define iMMK_MAC_SPOTLIGHT_H    0x02            // MAC 聚焦搜索(Spotlight)：Consumer AC Search 0x0221</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">360</td><td class="cd add">#define iMMK_MAC_SPOTLIGHT_L    0x21            // （新款苹果键盘 F4）</td></tr>
+<tr><td class="ln ctx">350</td><td class="cd ctx"></td><td class="ln r ctx">361</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">351</td><td class="cd ctx">#define iMMK_NEXT_TRACK_H       0x00</td><td class="ln r ctx">362</td><td class="cd ctx">#define iMMK_NEXT_TRACK_H       0x00</td></tr>
+<tr><td class="ln ctx">352</td><td class="cd ctx">#define iMMK_NEXT_TRACK_L       0xB5</td><td class="ln r ctx">363</td><td class="cd ctx">#define iMMK_NEXT_TRACK_L       0xB5</td></tr>
+<tr><td class="ln ctx">353</td><td class="cd ctx">#define iMMK_PREV_TRACK_H       0x00</td><td class="ln r ctx">364</td><td class="cd ctx">#define iMMK_PREV_TRACK_H       0x00</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-userdefined-key-callback-c"><div class="file-head"><h3 class="path">projects/mouse_demo/periph/userdefined_key_callback.c</h3><span class="num"><span class="plus">+12</span> <span class="minus">−3</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 500 行 / 修改后第 500 行  ·  附近：void __attribute__((noinline)) key_decode_cmd_0x30(void)</span><span class="what">FN+F11 全键盘锁定：只在 Win 布局下才能切换</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · userdefined_key_callback.c</th><th colspan="2" class="r">修改后 · userdefined_key_callback.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">500</td><td class="cd ctx"></td><td class="ln r ctx">500</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">501</td><td class="cd ctx">            break;</td><td class="ln r ctx">501</td><td class="cd ctx">            break;</td></tr>
+<tr><td class="ln ctx">502</td><td class="cd ctx">        case iKEY_LOCK&amp;0x0F:</td><td class="ln r ctx">502</td><td class="cd ctx">        case iKEY_LOCK&amp;0x0F:</td></tr>
+<tr><td class="ln ctx">503</td><td class="cd ctx">            special_key |= bkey_lock;</td><td class="ln r ctx">503</td><td class="cd ctx">            special_key |= bkey_lock;</td></tr>
+<tr><td class="ln del">504</td><td class="cd del">            if(0<del>=</del>=(<del>special_</del>key_<del>bak</del>&amp;b<del>key</del>_<del>lo</del>c<del>k</del>_<del>b</del>a<del>k</del>))</td><td class="ln r add">504</td><td class="cd add">            if(0<ins>!</ins>=(key_<ins>ctrl</ins>&amp;b<ins>win</ins>_<ins>ma</ins>c_<ins>s</ins>a<ins>taus</ins>))<ins>       // 全键盘锁定仅 Win 布局可切换</ins></td></tr>
+<tr><td class="ln ctx">505</td><td class="cd ctx">            {</td><td class="ln r ctx">505</td><td class="cd ctx">            {</td></tr>
+<tr><td class="ln del">506</td><td class="cd del">                special_key_bak<del> |= </del>bkey_lock_bak<del>;</del></td><td class="ln r add">506</td><td class="cd add">                <ins>if(0==(</ins>special_key_bak<ins>&amp;</ins>bkey_lock_bak<ins>))</ins></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">507</td><td class="cd add">                {</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">508</td><td class="cd add">                    special_key_bak |= bkey_lock_bak;</td></tr>
+<tr><td class="ln ctx">507</td><td class="cd ctx"></td><td class="ln r ctx">509</td><td class="cd ctx"></td></tr>
+<tr><td class="ln del">508</td><td class="cd del">                key_ctrl ^= bkey_lock_status;</td><td class="ln r add">510</td><td class="cd add"><ins>    </ins>                key_ctrl ^= bkey_lock_status;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">511</td><td class="cd add">                }</td></tr>
+<tr><td class="ln ctx">509</td><td class="cd ctx">            }</td><td class="ln r ctx">512</td><td class="cd ctx">            }</td></tr>
+<tr><td class="ln ctx">510</td><td class="cd ctx"></td><td class="ln r ctx">513</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">511</td><td class="cd ctx">            break;</td><td class="ln r ctx">514</td><td class="cd ctx">            break;</td></tr>
+<tr><td class="ln ctx">512</td><td class="cd ctx">    }</td><td class="ln r ctx">515</td><td class="cd ctx">    }</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 699 行 / 修改后第 702 行  ·  附近：void __attribute__((noinline)) key_decode_cmd_0x40(void)</span><span class="what">新增 F6 勿扰键处理：按住期间置 0x9B，松开后自动清零</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · userdefined_key_callback.c</th><th colspan="2" class="r">修改后 · userdefined_key_callback.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">699</td><td class="cd ctx">                key_ctrl_ex |= bshot_mac;</td><td class="ln r ctx">702</td><td class="cd ctx">                key_ctrl_ex |= bshot_mac;</td></tr>
+<tr><td class="ln ctx">700</td><td class="cd ctx">            }</td><td class="ln r ctx">703</td><td class="cd ctx">            }</td></tr>
+<tr><td class="ln ctx">701</td><td class="cd ctx">            define_key_ctrl |= bdefine_key_send;</td><td class="ln r ctx">704</td><td class="cd ctx">            define_key_ctrl |= bdefine_key_send;</td></tr>
+<tr><td class="ln ctx">702</td><td class="cd ctx"></td><td class="ln r ctx">705</td><td class="cd ctx"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">706</td><td class="cd add">            break;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">707</td><td class="cd add">        case iKEY_MAC_DND&amp;0x0F:                         // MAC F6：勿扰模式</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">708</td><td class="cd add">            // 库函数 key_decode() 只在按住期间调用本回调（首次扫描之后</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">709</td><td class="cd add">            // bkey_decode_end 就会置位），所以这里每次都置值，按住期间保持 0x9B；</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">710</td><td class="cd add">            // 松开后不再回调，扫描开头清 0，即发送释放</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">711</td><td class="cd add">            sys_data_tmp = iSYS_GD_DO_NOT_DISTURB;</td></tr>
+<tr><td class="ln ctx">703</td><td class="cd ctx">            break;</td><td class="ln r ctx">712</td><td class="cd ctx">            break;</td></tr>
+<tr><td class="ln ctx">704</td><td class="cd ctx">    }</td><td class="ln r ctx">713</td><td class="cd ctx">    }</td></tr>
+<tr><td class="ln ctx">705</td><td class="cd ctx">}</td><td class="ln r ctx">714</td><td class="cd ctx">}</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-matrix-key-c"><div class="file-head"><h3 class="path">projects/mouse_demo/periph/matrix_key.c</h3><span class="num"><span class="plus">+33</span> <span class="minus">−1</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 49 行 / 修改后第 49 行  ·  附近：uint8_t ctrl_key_value;</span><span class="what">新增变量 sys_data_tmp：本次扫描的勿扰键值</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key.c</th><th colspan="2" class="r">修改后 · matrix_key.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">49</td><td class="cd ctx">uint8_t                         std_key_value;</td><td class="ln r ctx">49</td><td class="cd ctx">uint8_t                         std_key_value;</td></tr>
+<tr><td class="ln ctx">50</td><td class="cd ctx">uint8_t                         com_ctrl_index;</td><td class="ln r ctx">50</td><td class="cd ctx">uint8_t                         com_ctrl_index;</td></tr>
+<tr><td class="ln ctx">51</td><td class="cd ctx"></td><td class="ln r ctx">51</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">52</td><td class="cd ctx">uint8_t                         desk_mac_index;</td><td class="ln r ctx">52</td><td class="cd ctx">uint8_t                         desk_mac_index;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">53</td><td class="cd add">uint8_t                         sys_data_tmp;           // 系统控制键（Generic Desktop）本次扫描值</td></tr>
+<tr><td class="ln ctx">53</td><td class="cd ctx"></td><td class="ln r ctx">54</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">54</td><td class="cd ctx">//******************************************************************************</td><td class="ln r ctx">55</td><td class="cd ctx">//******************************************************************************</td></tr>
+<tr><td class="ln ctx">55</td><td class="cd ctx">// 查表获取 数值中1的个数</td><td class="ln r ctx">56</td><td class="cd ctx">// 查表获取 数值中1的个数</td></tr>
+<tr><td class="ln ctx">56</td><td class="cd ctx">unsigned char const get_1_count[256] =</td><td class="ln r ctx">57</td><td class="cd ctx">unsigned char const get_1_count[256] =</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 107 行 / 修改后第 108 行  ·  附近：uint8_t mac_shot_index;</span><span class="what">全键盘锁定只在 Win 布局下屏蔽按键，Mac 下不生效；锁定时同时清掉勿扰键值</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key.c</th><th colspan="2" class="r">修改后 · matrix_key.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">107</td><td class="cd ctx">void __attribute__((noinline)) key_process(void)</td><td class="ln r ctx">108</td><td class="cd ctx">void __attribute__((noinline)) key_process(void)</td></tr>
+<tr><td class="ln ctx">108</td><td class="cd ctx">{</td><td class="ln r ctx">109</td><td class="cd ctx">{</td></tr>
+<tr><td class="ln ctx">109</td><td class="cd ctx">    uint8_t i, temp_bit;</td><td class="ln r ctx">110</td><td class="cd ctx">    uint8_t i, temp_bit;</td></tr>
+<tr><td class="ln ctx">110</td><td class="cd ctx"></td><td class="ln r ctx">111</td><td class="cd ctx"></td></tr>
+<tr><td class="ln del">111</td><td class="cd del">    if(0 != (key_ctrl&amp;bkey_lock_status))</td><td class="ln r add">112</td><td class="cd add">    // 全键盘锁定只在 Win 布局下生效（说明书：仅 Windows 布局可用）；</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">113</td><td class="cd add">    // Mac 下不清除锁定标志，切回 Win 后恢复原来的锁定状态</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">114</td><td class="cd add">    if((0 != (key_ctrl&amp;bkey_lock_status)) &amp;&amp; (0 != (key_ctrl&amp;bwin_mac_sataus)))</td></tr>
+<tr><td class="ln ctx">112</td><td class="cd ctx">    {</td><td class="ln r ctx">115</td><td class="cd ctx">    {</td></tr>
+<tr><td class="ln ctx">113</td><td class="cd ctx">        multi_data_tmp_l = 0;</td><td class="ln r ctx">116</td><td class="cd ctx">        multi_data_tmp_l = 0;</td></tr>
+<tr><td class="ln ctx">114</td><td class="cd ctx">        multi_data_tmp_l = 0;</td><td class="ln r ctx">117</td><td class="cd ctx">        multi_data_tmp_l = 0;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">118</td><td class="cd add">        sys_data_tmp = 0;</td></tr>
+<tr><td class="ln ctx">115</td><td class="cd ctx">        memset(key_data_tmp, 0x00, 22);</td><td class="ln r ctx">119</td><td class="cd ctx">        memset(key_data_tmp, 0x00, 22);</td></tr>
+<tr><td class="ln ctx">116</td><td class="cd ctx">        key_ctrl_ex &amp;= ~bcom_ctrl_en;</td><td class="ln r ctx">120</td><td class="cd ctx">        key_ctrl_ex &amp;= ~bcom_ctrl_en;</td></tr>
+<tr><td class="ln ctx">117</td><td class="cd ctx">    }</td><td class="ln r ctx">121</td><td class="cd ctx">    }</td></tr>
+<tr><td class="ln ctx">118</td><td class="cd ctx"></td><td class="ln r ctx">122</td><td class="cd ctx"></td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 227 行 / 修改后第 231 行  ·  附近：void __attribute__((noinline)) key_process(void)</span><span class="what">勿扰键：USB / 蓝牙置发送标志 bsys_data_send；勿扰键：2.4G 下改为排队发送系统键包（连发 8 包）</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key.c</th><th colspan="2" class="r">修改后 · matrix_key.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">227</td><td class="cd ctx">            m_data_flag |= bmmk_data_send;</td><td class="ln r ctx">231</td><td class="cd ctx">            m_data_flag |= bmmk_data_send;</td></tr>
+<tr><td class="ln ctx">228</td><td class="cd ctx">            mmk_tx_count = 8;</td><td class="ln r ctx">232</td><td class="cd ctx">            mmk_tx_count = 8;</td></tr>
+<tr><td class="ln ctx">229</td><td class="cd ctx">        }</td><td class="ln r ctx">233</td><td class="cd ctx">        }</td></tr>
+<tr><td class="ln ctx">230</td><td class="cd ctx">    }</td><td class="ln r ctx">234</td><td class="cd ctx">    }</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">235</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">236</td><td class="cd add">    // 系统控制键（MAC F6 勿扰）：USB / 蓝牙直接发 System Control 报告（Generic Desktop 0x9B）</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">237</td><td class="cd add">    if((sys_data_tmp != sys_data) &amp;&amp; (iDEVICE_TYPE_24G != device_type))</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">238</td><td class="cd add">    {</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">239</td><td class="cd add">        if(0==(m_data_flag &amp; bsys_data_send))</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">240</td><td class="cd add">        {</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">241</td><td class="cd add">            sys_data = sys_data_tmp;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">242</td><td class="cd add">            m_data_flag |= bsys_data_send;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">243</td><td class="cd add">        }</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">244</td><td class="cd add">    }</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">245</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">246</td><td class="cd add">    // 2.4G 下 MAC F6 勿扰：发 2.4G 系统键包 [iRF_K_TYPE_KB, iRF_K_OTHER_SYS, 用法值]，</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">247</td><td class="cd add">    // 用法值和 USB / 蓝牙的 System Control 报告完全相同（勿扰 0x9B，释放 0x00），</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">248</td><td class="cd add">    // 由接收器原样放进它的 System Control 报告转发给电脑（见 docs/2.4G接收器_勿扰键对接说明.md）。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">249</td><td class="cd add">    // 现有接收器不转发这个包：实测按 F6 无反应，也不会误触发电源/睡眠。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">250</td><td class="cd add">    // 状态变化时连发 8 包（同多媒体键），发送见 rf_data_process.c</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">251</td><td class="cd add">    if(iDEVICE_TYPE_24G == device_type)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">252</td><td class="cd add">    {</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">253</td><td class="cd add">        if(sys_data_tmp != sys_rf_data)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">254</td><td class="cd add">        {</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">255</td><td class="cd add">            sys_rf_data = sys_data_tmp;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">256</td><td class="cd add">            sys_tx_count = 8;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">257</td><td class="cd add">        }</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">258</td><td class="cd add">    }</td></tr>
+<tr><td class="ln ctx">231</td><td class="cd ctx">}</td><td class="ln r ctx">259</td><td class="cd ctx">}</td></tr>
+<tr><td class="ln ctx">232</td><td class="cd ctx"></td><td class="ln r ctx">260</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">233</td><td class="cd ctx">/******************************************************************************</td><td class="ln r ctx">261</td><td class="cd ctx">/******************************************************************************</td></tr>
+<tr><td class="ln ctx">234</td><td class="cd ctx">* 函数名称: mode_swtich_init</td><td class="ln r ctx">262</td><td class="cd ctx">* 函数名称: mode_swtich_init</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 242 行 / 修改后第 270 行  ·  附近：void mode_swtich_init(void)</span><span class="what">初始化时清除勿扰键状态</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key.c</th><th colspan="2" class="r">修改后 · matrix_key.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">242</td><td class="cd ctx">	memset(std_key, 0x00, 22);</td><td class="ln r ctx">270</td><td class="cd ctx">	memset(std_key, 0x00, 22);</td></tr>
+<tr><td class="ln ctx">243</td><td class="cd ctx"></td><td class="ln r ctx">271</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">244</td><td class="cd ctx">    mmk_data_l = 0;</td><td class="ln r ctx">272</td><td class="cd ctx">    mmk_data_l = 0;</td></tr>
+<tr><td class="ln ctx">245</td><td class="cd ctx">    mmk_data_h = 0;</td><td class="ln r ctx">273</td><td class="cd ctx">    mmk_data_h = 0;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">274</td><td class="cd add">    sys_data = 0;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">275</td><td class="cd add">    m_data_flag &amp;= ~bsys_data_send;</td></tr>
+<tr><td class="ln ctx">246</td><td class="cd ctx"></td><td class="ln r ctx">276</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">247</td><td class="cd ctx">    m_data_flag |= (bmouse_data_send|bstd_kb_data_send|bmmk_data_send);</td><td class="ln r ctx">277</td><td class="cd ctx">    m_data_flag |= (bmouse_data_send|bstd_kb_data_send|bmmk_data_send);</td></tr>
+<tr><td class="ln ctx">248</td><td class="cd ctx">}</td><td class="ln r ctx">278</td><td class="cd ctx">}</td></tr>
+<tr><td class="ln ctx">249</td><td class="cd ctx"></td><td class="ln r ctx">279</td><td class="cd ctx"></td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 262 行 / 修改后第 292 行  ·  附近：__RAM_CODE void matrixkey_value(void)</span><span class="what">每次扫描开头把勿扰键值清零</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key.c</th><th colspan="2" class="r">修改后 · matrix_key.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">262</td><td class="cd ctx"></td><td class="ln r ctx">292</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">263</td><td class="cd ctx">    modifier_key_tmp = 0;</td><td class="ln r ctx">293</td><td class="cd ctx">    modifier_key_tmp = 0;</td></tr>
+<tr><td class="ln ctx">264</td><td class="cd ctx">    multi_data_tmp_l = 0;</td><td class="ln r ctx">294</td><td class="cd ctx">    multi_data_tmp_l = 0;</td></tr>
+<tr><td class="ln ctx">265</td><td class="cd ctx">    multi_data_tmp_h = 0;</td><td class="ln r ctx">295</td><td class="cd ctx">    multi_data_tmp_h = 0;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">296</td><td class="cd add">    sys_data_tmp = 0;</td></tr>
+<tr><td class="ln ctx">266</td><td class="cd ctx"></td><td class="ln r ctx">297</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">267</td><td class="cd ctx">    key_ctrl &amp;= ~bkey_press_status;</td><td class="ln r ctx">298</td><td class="cd ctx">    key_ctrl &amp;= ~bkey_press_status;</td></tr>
+<tr><td class="ln ctx">268</td><td class="cd ctx"></td><td class="ln r ctx">299</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">269</td><td class="cd ctx">    decode_index = 0;</td><td class="ln r ctx">300</td><td class="cd ctx">    decode_index = 0;</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 475 行 / 修改后第 506 行  ·  附近：__RAM_CODE void matrixkey_scan(void)</span><span class="what">每次扫描开头把勿扰键值清零</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key.c</th><th colspan="2" class="r">修改后 · matrix_key.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">475</td><td class="cd ctx"></td><td class="ln r ctx">506</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">476</td><td class="cd ctx">    modifier_key_tmp = 0;</td><td class="ln r ctx">507</td><td class="cd ctx">    modifier_key_tmp = 0;</td></tr>
+<tr><td class="ln ctx">477</td><td class="cd ctx">    multi_data_tmp_l = 0;</td><td class="ln r ctx">508</td><td class="cd ctx">    multi_data_tmp_l = 0;</td></tr>
+<tr><td class="ln ctx">478</td><td class="cd ctx">    multi_data_tmp_h = 0;</td><td class="ln r ctx">509</td><td class="cd ctx">    multi_data_tmp_h = 0;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">510</td><td class="cd add">    sys_data_tmp = 0;</td></tr>
+<tr><td class="ln ctx">479</td><td class="cd ctx"></td><td class="ln r ctx">511</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">480</td><td class="cd ctx">    scan_key();</td><td class="ln r ctx">512</td><td class="cd ctx">    scan_key();</td></tr>
+<tr><td class="ln ctx">481</td><td class="cd ctx">    if(iDEVICE_TYPE_24G == device_type)</td><td class="ln r ctx">513</td><td class="cd ctx">    if(iDEVICE_TYPE_24G == device_type)</td></tr>
+<tr><td class="ln ctx">482</td><td class="cd ctx">    {</td><td class="ln r ctx">514</td><td class="cd ctx">    {</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-matrix-key-h"><div class="file-head"><h3 class="path">projects/mouse_demo/periph/matrix_key.h</h3><span class="num"><span class="plus">+2</span> <span class="minus">−1</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 100 行 / 修改后第 100 行  ·  附近：extern uint16_t key_ctrl;</span><span class="what">注释：保存的状态里不再包含 WIN LOCK</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key.h</th><th colspan="2" class="r">修改后 · matrix_key.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">100</td><td class="cd ctx">    #define bwin_mac_sataus     (1&lt;&lt;6)  // 位置不能更改 ???</td><td class="ln r ctx">100</td><td class="cd ctx">    #define bwin_mac_sataus     (1&lt;&lt;6)  // 位置不能更改 ???</td></tr>
+<tr><td class="ln ctx">101</td><td class="cd ctx">    #define bfn_key_status      (1&lt;&lt;4)</td><td class="ln r ctx">101</td><td class="cd ctx">    #define bfn_key_status      (1&lt;&lt;4)</td></tr>
+<tr><td class="ln ctx">102</td><td class="cd ctx"></td><td class="ln r ctx">102</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">103</td><td class="cd ctx">    #define bfn_save_cfg        (1&lt;&lt;3)  // 保存配置：亮度、速度、颜色</td><td class="ln r ctx">103</td><td class="cd ctx">    #define bfn_save_cfg        (1&lt;&lt;3)  // 保存配置：亮度、速度、颜色</td></tr>
+<tr><td class="ln del">104</td><td class="cd del">    #define bfn_save_status     (1&lt;&lt;2)  // 保存状态：系统模式、<del>WIN LOCK、</del>系统、电量、报告率、LED模式、LED开关</td><td class="ln r add">104</td><td class="cd add">    #define bfn_save_status     (1&lt;&lt;2)  // 保存状态：系统模式、系统、电量、报告率、LED模式、LED开关<ins>（WIN LOCK 掉电不保存）</ins></td></tr>
+<tr><td class="ln ctx">105</td><td class="cd ctx">    //  ??? 注意：由于之前数据结构已经确认,保存配置和保存状态一定要注意区分</td><td class="ln r ctx">105</td><td class="cd ctx">    //  ??? 注意：由于之前数据结构已经确认,保存配置和保存状态一定要注意区分</td></tr>
+<tr><td class="ln ctx">106</td><td class="cd ctx">//}</td><td class="ln r ctx">106</td><td class="cd ctx">//}</td></tr>
+<tr><td class="ln ctx">107</td><td class="cd ctx">extern uint16_t                 key_ctrl_ex;</td><td class="ln r ctx">107</td><td class="cd ctx">extern uint16_t                 key_ctrl_ex;</td></tr>
+<tr><td class="ln ctx">108</td><td class="cd ctx">//{</td><td class="ln r ctx">108</td><td class="cd ctx">//{</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 198 行 / 修改后第 198 行  ·  附近：extern unsigned char device_type_bak;</span><span class="what">声明 sys_data_tmp</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · matrix_key.h</th><th colspan="2" class="r">修改后 · matrix_key.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">198</td><td class="cd ctx">extern unsigned char            decode_index;</td><td class="ln r ctx">198</td><td class="cd ctx">extern unsigned char            decode_index;</td></tr>
+<tr><td class="ln ctx">199</td><td class="cd ctx"></td><td class="ln r ctx">199</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">200</td><td class="cd ctx">extern unsigned char            multi_data_tmp_l;</td><td class="ln r ctx">200</td><td class="cd ctx">extern unsigned char            multi_data_tmp_l;</td></tr>
+<tr><td class="ln ctx">201</td><td class="cd ctx">extern unsigned char            multi_data_tmp_h;</td><td class="ln r ctx">201</td><td class="cd ctx">extern unsigned char            multi_data_tmp_h;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">202</td><td class="cd add">extern unsigned char            sys_data_tmp;</td></tr>
+<tr><td class="ln ctx">202</td><td class="cd ctx">extern unsigned char            tmp_std_key[22];</td><td class="ln r ctx">203</td><td class="cd ctx">extern unsigned char            tmp_std_key[22];</td></tr>
+<tr><td class="ln ctx">203</td><td class="cd ctx"></td><td class="ln r ctx">204</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">204</td><td class="cd ctx">#define key_data_tmp            tmp_std_key</td><td class="ln r ctx">205</td><td class="cd ctx">#define key_data_tmp            tmp_std_key</td></tr>
+<tr><td class="ln ctx">205</td><td class="cd ctx">#define modifier_key_tmp        tmp_std_key[0]</td><td class="ln r ctx">206</td><td class="cd ctx">#define modifier_key_tmp        tmp_std_key[0]</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-main-c"><div class="file-head"><h3 class="path">projects/mouse_demo/main/main.c</h3><span class="num"><span class="plus">+9</span> <span class="minus">−4</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 82 行 / 修改后第 82 行  ·  附近：uint8_t m_tx_count;</span><span class="what">新增 2.4G 系统键包的发送计数 sys_tx_count 和数据 sys_rf_data</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · main.c</th><th colspan="2" class="r">修改后 · main.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">82</td><td class="cd ctx">uint8_t                     key_tx_count;</td><td class="ln r ctx">82</td><td class="cd ctx">uint8_t                     key_tx_count;</td></tr>
+<tr><td class="ln ctx">83</td><td class="cd ctx">uint8_t                     key_ex_tx_count;</td><td class="ln r ctx">83</td><td class="cd ctx">uint8_t                     key_ex_tx_count;</td></tr>
+<tr><td class="ln ctx">84</td><td class="cd ctx">uint8_t                     mmk_tx_count;</td><td class="ln r ctx">84</td><td class="cd ctx">uint8_t                     mmk_tx_count;</td></tr>
+<tr><td class="ln ctx">85</td><td class="cd ctx">uint8_t                     def_tx_count;</td><td class="ln r ctx">85</td><td class="cd ctx">uint8_t                     def_tx_count;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">86</td><td class="cd add">uint8_t                     sys_tx_count;       // 2.4G 系统键包剩余发送次数</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">87</td><td class="cd add">uint8_t                     sys_rf_data;        // 2.4G 系统键包：Generic Desktop 用法值（同 USB 的 sys_data，0 = 释放）</td></tr>
+<tr><td class="ln ctx">86</td><td class="cd ctx"></td><td class="ln r ctx">88</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">87</td><td class="cd ctx">uint8_t                     mouse_data_key;</td><td class="ln r ctx">89</td><td class="cd ctx">uint8_t                     mouse_data_key;</td></tr>
+<tr><td class="ln ctx">88</td><td class="cd ctx">uint16_t                    mouse_x;</td><td class="ln r ctx">90</td><td class="cd ctx">uint16_t                    mouse_x;</td></tr>
+<tr><td class="ln ctx">89</td><td class="cd ctx">uint16_t                    mouse_y;</td><td class="ln r ctx">91</td><td class="cd ctx">uint16_t                    mouse_y;</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 91 行 / 修改后第 93 行  ·  附近：uint8_t mouse_data_z;</span><span class="what">新增 sys_data：USB / 蓝牙当前发送的勿扰键值</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · main.c</th><th colspan="2" class="r">修改后 · main.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">91</td><td class="cd ctx"></td><td class="ln r ctx">93</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">92</td><td class="cd ctx">uint8_t                     std_key[22];</td><td class="ln r ctx">94</td><td class="cd ctx">uint8_t                     std_key[22];</td></tr>
+<tr><td class="ln ctx">93</td><td class="cd ctx">uint8_t                     mmk_data_l;</td><td class="ln r ctx">95</td><td class="cd ctx">uint8_t                     mmk_data_l;</td></tr>
+<tr><td class="ln ctx">94</td><td class="cd ctx">uint8_t                     mmk_data_h;</td><td class="ln r ctx">96</td><td class="cd ctx">uint8_t                     mmk_data_h;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">97</td><td class="cd add">uint8_t                     sys_data;</td></tr>
+<tr><td class="ln ctx">95</td><td class="cd ctx"></td><td class="ln r ctx">98</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">96</td><td class="cd ctx">uint8_t                     wheel_data;</td><td class="ln r ctx">99</td><td class="cd ctx">uint8_t                     wheel_data;</td></tr>
+<tr><td class="ln ctx">97</td><td class="cd ctx">//</td><td class="ln r ctx">100</td><td class="cd ctx">//</td></tr>
+<tr><td class="ln ctx">98</td><td class="cd ctx">//----------------------------------------------</td><td class="ln r ctx">101</td><td class="cd ctx">//----------------------------------------------</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 313 行 / 修改后第 316 行  ·  附近：soft_reset_process:</span><span class="what">开机进入主循环时按当前通道读取 Win/Mac 并装载按键表（初版固定读蓝牙通道 1 的设置）</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · main.c</th><th colspan="2" class="r">修改后 · main.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">313</td><td class="cd ctx">        sys_tick_count = 0;</td><td class="ln r ctx">316</td><td class="cd ctx">        sys_tick_count = 0;</td></tr>
+<tr><td class="ln ctx">314</td><td class="cd ctx">        bmode_swtich_valid = false;</td><td class="ln r ctx">317</td><td class="cd ctx">        bmode_swtich_valid = false;</td></tr>
+<tr><td class="ln ctx">315</td><td class="cd ctx">        rtc_init();</td><td class="ln r ctx">318</td><td class="cd ctx">        rtc_init();</td></tr>
+<tr><td class="ln ctx">316</td><td class="cd ctx">        b24g_nromal = false;</td><td class="ln r ctx">319</td><td class="cd ctx">        b24g_nromal = false;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">320</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">321</td><td class="cd add">        // 三段开关已确定当前通道：按通道取回保存的 Win/Mac 状态，并装载对应键表</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">322</td><td class="cd add">        // （开机读 flash 时通道还未确定，那时装载的键表不一定对应当前通道）</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">323</td><td class="cd add">        laod_win_mac_status();</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">324</td><td class="cd add">        laod_key_cfg();</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">325</td><td class="cd add"></td></tr>
+<tr><td class="ln ctx">317</td><td class="cd ctx">        flash_load_ble_addr();</td><td class="ln r ctx">326</td><td class="cd ctx">        flash_load_ble_addr();</td></tr>
+<tr><td class="ln ctx">318</td><td class="cd ctx">        hint_led_status = 0;</td><td class="ln r ctx">327</td><td class="cd ctx">        hint_led_status = 0;</td></tr>
+<tr><td class="ln ctx">319</td><td class="cd ctx">        kb_led_status = 0;</td><td class="ln r ctx">328</td><td class="cd ctx">        kb_led_status = 0;</td></tr>
+<tr><td class="ln ctx">320</td><td class="cd ctx">        device_led_on();</td><td class="ln r ctx">329</td><td class="cd ctx">        device_led_on();</td></tr>
+<tr><td class="ln ctx">321</td><td class="cd ctx"></td><td class="ln r ctx">330</td><td class="cd ctx"></td></tr>
+<tr><td class="ln del">322</td><td class="cd del">        key_ctrl &amp;= ~bwin_mac_sataus;</td><td class="ln r empty"></td><td class="cd empty"></td></tr>
+<tr><td class="ln del">323</td><td class="cd del">        if(sys_mode&amp;(1&lt;&lt;(0&amp;0x07)))</td><td class="ln r empty"></td><td class="cd empty"></td></tr>
+<tr><td class="ln del">324</td><td class="cd del">            key_ctrl |= bwin_mac_sataus;</td><td class="ln r empty"></td><td class="cd empty"></td></tr>
+<tr><td class="ln del">325</td><td class="cd del"></td><td class="ln r empty"></td><td class="cd empty"></td></tr>
+<tr><td class="ln ctx">326</td><td class="cd ctx">        if(iDEVICE_TYPE_USB == device_type)</td><td class="ln r ctx">331</td><td class="cd ctx">        if(iDEVICE_TYPE_USB == device_type)</td></tr>
+<tr><td class="ln ctx">327</td><td class="cd ctx">        {</td><td class="ln r ctx">332</td><td class="cd ctx">        {</td></tr>
+<tr><td class="ln ctx">328</td><td class="cd ctx">            DRV_RCC_CLOCK_ENABLE(RCC_CLK_RF, 1U);</td><td class="ln r ctx">333</td><td class="cd ctx">            DRV_RCC_CLOCK_ENABLE(RCC_CLK_RF, 1U);</td></tr>
+<tr><td class="ln ctx">329</td><td class="cd ctx">            mouse_usb_init();</td><td class="ln r ctx">334</td><td class="cd ctx">            mouse_usb_init();</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-main-h"><div class="file-head"><h3 class="path">projects/mouse_demo/main/main.h</h3><span class="num"><span class="plus">+5</span> <span class="minus">−0</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 289 行 / 修改后第 289 行  ·  附近：extern uint8_t m_tx_count;</span><span class="what">声明 sys_tx_count、sys_rf_data；新增发送标志位 bsys_data_send（第 5 位）</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · main.h</th><th colspan="2" class="r">修改后 · main.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">289</td><td class="cd ctx">extern uint8_t                  key_tx_count;</td><td class="ln r ctx">289</td><td class="cd ctx">extern uint8_t                  key_tx_count;</td></tr>
+<tr><td class="ln ctx">290</td><td class="cd ctx">extern uint8_t                  key_ex_tx_count;</td><td class="ln r ctx">290</td><td class="cd ctx">extern uint8_t                  key_ex_tx_count;</td></tr>
+<tr><td class="ln ctx">291</td><td class="cd ctx">extern uint8_t                  mmk_tx_count;</td><td class="ln r ctx">291</td><td class="cd ctx">extern uint8_t                  mmk_tx_count;</td></tr>
+<tr><td class="ln ctx">292</td><td class="cd ctx">extern uint8_t                  def_tx_count;</td><td class="ln r ctx">292</td><td class="cd ctx">extern uint8_t                  def_tx_count;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">293</td><td class="cd add">extern uint8_t                  sys_tx_count;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">294</td><td class="cd add">extern uint8_t                  sys_rf_data;</td></tr>
+<tr><td class="ln ctx">293</td><td class="cd ctx"></td><td class="ln r ctx">295</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">294</td><td class="cd ctx">//----------------------------------------------</td><td class="ln r ctx">296</td><td class="cd ctx">//----------------------------------------------</td></tr>
+<tr><td class="ln ctx">295</td><td class="cd ctx">// 鼠标键盘数据寄存器</td><td class="ln r ctx">297</td><td class="cd ctx">// 鼠标键盘数据寄存器</td></tr>
+<tr><td class="ln ctx">296</td><td class="cd ctx">//</td><td class="ln r ctx">298</td><td class="cd ctx">//</td></tr>
+<tr><td class="ln ctx">297</td><td class="cd ctx">extern uint8_t                  m_data_flag;</td><td class="ln r ctx">299</td><td class="cd ctx">extern uint8_t                  m_data_flag;</td></tr>
+<tr><td class="ln ctx">298</td><td class="cd ctx">//{</td><td class="ln r ctx">300</td><td class="cd ctx">//{</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">301</td><td class="cd add">    #define bsys_data_send      (1&lt;&lt;5)  // 系统控制键（MAC 勿扰）</td></tr>
+<tr><td class="ln ctx">299</td><td class="cd ctx">    #define bhid_data_send      (1&lt;&lt;4)</td><td class="ln r ctx">302</td><td class="cd ctx">    #define bhid_data_send      (1&lt;&lt;4)</td></tr>
+<tr><td class="ln ctx">300</td><td class="cd ctx">    #define bstd_ex_data_send   (1&lt;&lt;3)</td><td class="ln r ctx">303</td><td class="cd ctx">    #define bstd_ex_data_send   (1&lt;&lt;3)</td></tr>
+<tr><td class="ln ctx">301</td><td class="cd ctx">    #define bmmk_data_send      (1&lt;&lt;2)</td><td class="ln r ctx">304</td><td class="cd ctx">    #define bmmk_data_send      (1&lt;&lt;2)</td></tr>
+<tr><td class="ln ctx">302</td><td class="cd ctx">    #define bstd_kb_data_send   (1&lt;&lt;1)</td><td class="ln r ctx">305</td><td class="cd ctx">    #define bstd_kb_data_send   (1&lt;&lt;1)</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 337 行 / 修改后第 340 行  ·  附近：extern unsigned char std_key[];</span><span class="what">声明 sys_data</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · main.h</th><th colspan="2" class="r">修改后 · main.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">337</td><td class="cd ctx">//}</td><td class="ln r ctx">340</td><td class="cd ctx">//}</td></tr>
+<tr><td class="ln ctx">338</td><td class="cd ctx">// 多媒体寄存器</td><td class="ln r ctx">341</td><td class="cd ctx">// 多媒体寄存器</td></tr>
+<tr><td class="ln ctx">339</td><td class="cd ctx">extern uint8_t                  mmk_data_l;</td><td class="ln r ctx">342</td><td class="cd ctx">extern uint8_t                  mmk_data_l;</td></tr>
+<tr><td class="ln ctx">340</td><td class="cd ctx">extern uint8_t                  mmk_data_h;</td><td class="ln r ctx">343</td><td class="cd ctx">extern uint8_t                  mmk_data_h;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">344</td><td class="cd add">// 系统控制寄存器（Generic Desktop 页，0 = 释放）</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">345</td><td class="cd add">extern uint8_t                  sys_data;</td></tr>
+<tr><td class="ln ctx">341</td><td class="cd ctx">extern uint8_t                  kb_bd_addr[];</td><td class="ln r ctx">346</td><td class="cd ctx">extern uint8_t                  kb_bd_addr[];</td></tr>
+<tr><td class="ln ctx">342</td><td class="cd ctx"></td><td class="ln r ctx">347</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">343</td><td class="cd ctx">extern uint32_t const           ble_sleep_1_time_tbl[];</td><td class="ln r ctx">348</td><td class="cd ctx">extern uint32_t const           ble_sleep_1_time_tbl[];</td></tr>
+<tr><td class="ln ctx">344</td><td class="cd ctx">extern uint32_t const           ble_sleep_2_time_tbl[];</td><td class="ln r ctx">349</td><td class="cd ctx">extern uint32_t const           ble_sleep_2_time_tbl[];</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-flash-process-c"><div class="file-head"><h3 class="path">projects/mouse_demo/flash/flash_process.c</h3><span class="num"><span class="plus">+28</span> <span class="minus">−9</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 163 行 / 修改后第 163 行  ·  附近：void laod_defaut_status(void)</span><span class="what">新增 laod_win_mac_status()：按当前通道读取 Win/Mac</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · flash_process.c</th><th colspan="2" class="r">修改后 · flash_process.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">163</td><td class="cd ctx">    led_cur_mode = iMODE_LED_SBZL;</td><td class="ln r ctx">163</td><td class="cd ctx">    led_cur_mode = iMODE_LED_SBZL;</td></tr>
+<tr><td class="ln ctx">164</td><td class="cd ctx">    bled_bright_en = true;</td><td class="ln r ctx">164</td><td class="cd ctx">    bled_bright_en = true;</td></tr>
+<tr><td class="ln ctx">165</td><td class="cd ctx">}</td><td class="ln r ctx">165</td><td class="cd ctx">}</td></tr>
+<tr><td class="ln ctx">166</td><td class="cd ctx"></td><td class="ln r ctx">166</td><td class="cd ctx"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">167</td><td class="cd add">/*******************************************************************************</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">168</td><td class="cd add">* 函数名称: laod_win_mac_status()</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">169</td><td class="cd add">* 功能描述: 按当前通道取回保存的 Win/Mac 系统状态</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">170</td><td class="cd add">* 输入参数:无</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">171</td><td class="cd add">* 输出参数:无</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">172</td><td class="cd add">* 说    明: sys_mode 每一位对应一个 device_type（BT0~BT2、2.4G、USB），</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">173</td><td class="cd add">*           1 = Win，0 = Mac；flash_save_status() 也按 device_type 保存，</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">174</td><td class="cd add">*           两边一致，每个通道各自记住自己的系统。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">175</td><td class="cd add">*           开机读 flash 时三段开关还没扫描、device_type 无效，先按第 0 位取；</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">176</td><td class="cd add">*           确定通道后主循环入口会再调用一次，并重新装载键表。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">177</td><td class="cd add">*******************************************************************************/</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">178</td><td class="cd add">void laod_win_mac_status(void)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">179</td><td class="cd add">{</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">180</td><td class="cd add">    uint8_t mode_bit = 0;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">181</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">182</td><td class="cd add">    if(iDEVICE_TYPE_USB &gt;= device_type)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">183</td><td class="cd add">        mode_bit = (device_type&amp;0x07);</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">184</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">185</td><td class="cd add">    key_ctrl &amp;= ~bwin_mac_sataus;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">186</td><td class="cd add">    if(sys_mode&amp;(1&lt;&lt;mode_bit))</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">187</td><td class="cd add">        key_ctrl |= bwin_mac_sataus;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">188</td><td class="cd add">}</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">189</td><td class="cd add"></td></tr>
+<tr><td class="ln ctx">167</td><td class="cd ctx">/*******************************************************************************</td><td class="ln r ctx">190</td><td class="cd ctx">/*******************************************************************************</td></tr>
+<tr><td class="ln ctx">168</td><td class="cd ctx">* 函数名称: laod_mouse_status()</td><td class="ln r ctx">191</td><td class="cd ctx">* 函数名称: laod_mouse_status()</td></tr>
+<tr><td class="ln ctx">169</td><td class="cd ctx">* 功能描述:</td><td class="ln r ctx">192</td><td class="cd ctx">* 功能描述:</td></tr>
+<tr><td class="ln ctx">170</td><td class="cd ctx">* 输入参数:无</td><td class="ln r ctx">193</td><td class="cd ctx">* 输入参数:无</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 190 行 / 修改后第 213 行  ·  附近：void laod_mouse_status(void)</span><span class="what">不再从 flash 读取 Win 键锁定（Win 锁掉电不保存）；Win/Mac 改为按当前通道读取（初版固定读第 0 位）</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · flash_process.c</th><th colspan="2" class="r">修改后 · flash_process.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">190</td><td class="cd ctx">            bt_index = ((flash_fifo[i+6]&gt;&gt;2)&amp;0x03);</td><td class="ln r ctx">213</td><td class="cd ctx">            bt_index = ((flash_fifo[i+6]&gt;&gt;2)&amp;0x03);</td></tr>
+<tr><td class="ln ctx">191</td><td class="cd ctx">            //device_type = ((flash_fifo[i+6]&gt;&gt;4)&amp;0x07);  // 按键切换模式情况下才能打开 ！！！！！！！！</td><td class="ln r ctx">214</td><td class="cd ctx">            //device_type = ((flash_fifo[i+6]&gt;&gt;4)&amp;0x07);  // 按键切换模式情况下才能打开 ！！！！！！！！</td></tr>
+<tr><td class="ln ctx">192</td><td class="cd ctx">            bat_status &amp;= 0xE0;</td><td class="ln r ctx">215</td><td class="cd ctx">            bat_status &amp;= 0xE0;</td></tr>
+<tr><td class="ln ctx">193</td><td class="cd ctx">            bat_status |= (flash_fifo[i+7]&amp;0x1F);</td><td class="ln r ctx">216</td><td class="cd ctx">            bat_status |= (flash_fifo[i+7]&amp;0x1F);</td></tr>
+<tr><td class="ln del">194</td><td class="cd del">            key_ctrl &amp;= ~bwin_lock_status;</td><td class="ln r add">217</td><td class="cd add">            // Win 键锁定掉电不保存：不从 flash 读取，只保存在内存里，开机为解锁状态；</td></tr>
+<tr><td class="ln del">195</td><td class="cd del">            if(0!=(flash_fifo[i+7]&amp;(1&lt;&lt;5)))</td><td class="ln r add">218</td><td class="cd add">            // 运行中保存其他设置后重新加载状态，也不会改动当前的锁定状态。</td></tr>
+<tr><td class="ln del">196</td><td class="cd del">                <del>key_ctrl</del> <del>|= bwin_lock_status;</del></td><td class="ln r add">219</td><td class="cd add">            <ins>//</ins> <ins>（旧固件可能在第</ins> <ins>7</ins> <ins>字节第</ins> <ins>5</ins> <ins>位写过锁定状态，这里忽略）</ins></td></tr>
+<tr><td class="ln ctx">197</td><td class="cd ctx"></td><td class="ln r ctx">220</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">198</td><td class="cd ctx">            report_dpi[0] = flash_fifo[i+1];</td><td class="ln r ctx">221</td><td class="cd ctx">            report_dpi[0] = flash_fifo[i+1];</td></tr>
+<tr><td class="ln ctx">199</td><td class="cd ctx">            //report_dpi[1] = flash_fifo[i+2];</td><td class="ln r ctx">222</td><td class="cd ctx">            //report_dpi[1] = flash_fifo[i+2];</td></tr>
+<tr><td class="ln ctx">200</td><td class="cd ctx">            //report_dpi[2] = flash_fifo[i+3];</td><td class="ln r ctx">223</td><td class="cd ctx">            //report_dpi[2] = flash_fifo[i+3];</td></tr>
+<tr><td class="ln ctx">201</td><td class="cd ctx">            sys_mode = flash_fifo[i+4];</td><td class="ln r ctx">224</td><td class="cd ctx">            sys_mode = flash_fifo[i+4];</td></tr>
+<tr><td class="ln ctx">202</td><td class="cd ctx"></td><td class="ln r ctx">225</td><td class="cd ctx"></td></tr>
+<tr><td class="ln del">203</td><td class="cd del">            <del>key</del>_<del>ctrl &amp;= ~b</del>win_mac_sat<del>a</del>us;</td><td class="ln r add">226</td><td class="cd add">            <ins>laod</ins>_win_mac_s<ins>t</ins>atus<ins>()</ins>;<ins>          // 按当前通道取 Win/Mac（原来固定读第 0 位，非蓝牙1通道保存不住）</ins></td></tr>
+<tr><td class="ln del">204</td><td class="cd del">            if(sys_mode&amp;(1&lt;&lt;(0&amp;0x07)))</td><td class="ln r empty"></td><td class="cd empty"></td></tr>
+<tr><td class="ln del">205</td><td class="cd del">                key_ctrl |= bwin_mac_sataus;</td><td class="ln r empty"></td><td class="cd empty"></td></tr>
+<tr><td class="ln ctx">206</td><td class="cd ctx"></td><td class="ln r ctx">227</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">207</td><td class="cd ctx">            led_cur_mode = (flash_fifo[i+5]&amp;0x1F);</td><td class="ln r ctx">228</td><td class="cd ctx">            led_cur_mode = (flash_fifo[i+5]&amp;0x1F);</td></tr>
+<tr><td class="ln ctx">208</td><td class="cd ctx">            if(iMODE_LED_MAX &lt; led_cur_mode)</td><td class="ln r ctx">229</td><td class="cd ctx">            if(iMODE_LED_MAX &lt; led_cur_mode)</td></tr>
+<tr><td class="ln ctx">209</td><td class="cd ctx">                led_cur_mode = iMODE_LED_ON;</td><td class="ln r ctx">230</td><td class="cd ctx">                led_cur_mode = iMODE_LED_ON;</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 462 行 / 修改后第 483 行  ·  附近：__attribute__((noinline)) void flash_save_status(void)</span><span class="what">保存状态时不再写入 Win 键锁定</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · flash_process.c</th><th colspan="2" class="r">修改后 · flash_process.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">462</td><td class="cd ctx">        dat_temp[5] |= (1&lt;&lt;7);</td><td class="ln r ctx">483</td><td class="cd ctx">        dat_temp[5] |= (1&lt;&lt;7);</td></tr>
+<tr><td class="ln ctx">463</td><td class="cd ctx">    dat_temp[6] = (key_mode&amp;0x03);</td><td class="ln r ctx">484</td><td class="cd ctx">    dat_temp[6] = (key_mode&amp;0x03);</td></tr>
+<tr><td class="ln ctx">464</td><td class="cd ctx">    dat_temp[6] |= ((bt_index&lt;&lt;2)&amp;0x0C);</td><td class="ln r ctx">485</td><td class="cd ctx">    dat_temp[6] |= ((bt_index&lt;&lt;2)&amp;0x0C);</td></tr>
+<tr><td class="ln ctx">465</td><td class="cd ctx">    dat_temp[6] |= ((device_type&lt;&lt;4)&amp;0x70);</td><td class="ln r ctx">486</td><td class="cd ctx">    dat_temp[6] |= ((device_type&lt;&lt;4)&amp;0x70);</td></tr>
+<tr><td class="ln del">466</td><td class="cd del">    dat_temp[7] = (bat_status&amp;0x1F);</td><td class="ln r add">487</td><td class="cd add">    dat_temp[7] = (bat_status&amp;0x1F);<ins>           // 第 5 位原为 Win 键锁定，掉电不保存，不再写入</ins></td></tr>
+<tr><td class="ln del">467</td><td class="cd del">    if(key_ctrl&amp;bwin_lock_status)</td><td class="ln r empty"></td><td class="cd empty"></td></tr>
+<tr><td class="ln del">468</td><td class="cd del">        dat_temp[7] |= (1&lt;&lt;5);</td><td class="ln r empty"></td><td class="cd empty"></td></tr>
+<tr><td class="ln ctx">469</td><td class="cd ctx"></td><td class="ln r ctx">488</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">470</td><td class="cd ctx">    flash_read(iSTATUS_BANK_ADDR, 256);</td><td class="ln r ctx">489</td><td class="cd ctx">    flash_read(iSTATUS_BANK_ADDR, 256);</td></tr>
+<tr><td class="ln ctx">471</td><td class="cd ctx">    for(i=1; i&lt;8; i++)</td><td class="ln r ctx">490</td><td class="cd ctx">    for(i=1; i&lt;8; i++)</td></tr>
+<tr><td class="ln ctx">472</td><td class="cd ctx">    {</td><td class="ln r ctx">491</td><td class="cd ctx">    {</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-flash-process-h"><div class="file-head"><h3 class="path">projects/mouse_demo/flash/flash_process.h</h3><span class="num"><span class="plus">+1</span> <span class="minus">−0</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 210 行 / 修改后第 210 行  ·  附近：extern uint8_t sys_cfg_base;</span><span class="what">声明 laod_win_mac_status()</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · flash_process.h</th><th colspan="2" class="r">修改后 · flash_process.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">210</td><td class="cd ctx">// 内部函数引用</td><td class="ln r ctx">210</td><td class="cd ctx">// 内部函数引用</td></tr>
+<tr><td class="ln ctx">211</td><td class="cd ctx">//</td><td class="ln r ctx">211</td><td class="cd ctx">//</td></tr>
+<tr><td class="ln ctx">212</td><td class="cd ctx">extern void laod_defaut_status(void);</td><td class="ln r ctx">212</td><td class="cd ctx">extern void laod_defaut_status(void);</td></tr>
+<tr><td class="ln ctx">213</td><td class="cd ctx">extern void laod_mouse_status(void);</td><td class="ln r ctx">213</td><td class="cd ctx">extern void laod_mouse_status(void);</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">214</td><td class="cd add">extern void laod_win_mac_status(void);</td></tr>
+<tr><td class="ln ctx">214</td><td class="cd ctx">extern void laod_cfg_dpi(void);</td><td class="ln r ctx">215</td><td class="cd ctx">extern void laod_cfg_dpi(void);</td></tr>
+<tr><td class="ln ctx">215</td><td class="cd ctx"></td><td class="ln r ctx">216</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">216</td><td class="cd ctx">extern void laod_key_cfg(void);</td><td class="ln r ctx">217</td><td class="cd ctx">extern void laod_key_cfg(void);</td></tr>
+<tr><td class="ln ctx">217</td><td class="cd ctx">extern void laod_flash_cfg(void);</td><td class="ln r ctx">218</td><td class="cd ctx">extern void laod_flash_cfg(void);</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-usb-cfg-info-h"><div class="file-head"><h3 class="path">mode_usb/usb_cfg_info.h</h3><span class="num"><span class="plus">+1</span> <span class="minus">−0</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 19 行 / 修改后第 19 行</span><span class="what">USB 勿扰报告的报告 ID：0x03</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · usb_cfg_info.h</th><th colspan="2" class="r">修改后 · usb_cfg_info.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">19</td><td class="cd ctx">//配置常量定义区</td><td class="ln r ctx">19</td><td class="cd ctx">//配置常量定义区</td></tr>
+<tr><td class="ln ctx">20</td><td class="cd ctx">//</td><td class="ln r ctx">20</td><td class="cd ctx">//</td></tr>
+<tr><td class="ln ctx">21</td><td class="cd ctx">#define iREPORT_ID_MOUSE        0x02</td><td class="ln r ctx">21</td><td class="cd ctx">#define iREPORT_ID_MOUSE        0x02</td></tr>
+<tr><td class="ln ctx">22</td><td class="cd ctx">#define iREPORT_ID_MULTIM_KEY   0x01</td><td class="ln r ctx">22</td><td class="cd ctx">#define iREPORT_ID_MULTIM_KEY   0x01</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">23</td><td class="cd add">#define iREPORT_ID_SYS_KEY      0x03            // System Control（MAC 勿扰）</td></tr>
+<tr><td class="ln ctx">23</td><td class="cd ctx">#define iREPORT_ID_KB_KEY       0x05</td><td class="ln r ctx">24</td><td class="cd ctx">#define iREPORT_ID_KB_KEY       0x05</td></tr>
+<tr><td class="ln ctx">24</td><td class="cd ctx">#define iREPORT_ID_CUSTOMER_DATA 0x0E</td><td class="ln r ctx">25</td><td class="cd ctx">#define iREPORT_ID_CUSTOMER_DATA 0x0E</td></tr>
+<tr><td class="ln ctx">25</td><td class="cd ctx"></td><td class="ln r ctx">26</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">26</td><td class="cd ctx">//每个Endpoint的FIFO的size</td><td class="ln r ctx">27</td><td class="cd ctx">//每个Endpoint的FIFO的size</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-usb-descriptor-h"><div class="file-head"><h3 class="path">mode_usb/usb_descriptor.h</h3><span class="num"><span class="plus">+13</span> <span class="minus">−0</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 552 行 / 修改后第 552 行  ·  附近：unsigned char const HID_ReportDescriptor_Define[] = {</span><span class="what">USB 报告描述新增系统控制集合（Generic Desktop 0x9B）</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · usb_descriptor.h</th><th colspan="2" class="r">修改后 · usb_descriptor.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">552</td><td class="cd ctx">      HID_ReportCount(1),</td><td class="ln r ctx">552</td><td class="cd ctx">      HID_ReportCount(1),</td></tr>
+<tr><td class="ln ctx">553</td><td class="cd ctx">      HID_ReportSize(16),</td><td class="ln r ctx">553</td><td class="cd ctx">      HID_ReportSize(16),</td></tr>
+<tr><td class="ln ctx">554</td><td class="cd ctx">      HID_Input(HID_Data | HID_Array),</td><td class="ln r ctx">554</td><td class="cd ctx">      HID_Input(HID_Data | HID_Array),</td></tr>
+<tr><td class="ln ctx">555</td><td class="cd ctx">    HID_EndCollection,</td><td class="ln r ctx">555</td><td class="cd ctx">    HID_EndCollection,</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">556</td><td class="cd add">//SYSTEM CONTROL REPORT（MAC F6 勿扰：Generic Desktop 0x9B）</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">557</td><td class="cd add">    HID_UsagePage(HID_USAGE_PAGE_GENERIC),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">558</td><td class="cd add">    HID_Usage(HID_USAGE_GENERIC_SYSTEM_CTL),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">559</td><td class="cd add">    HID_Collection(HID_Application),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">560</td><td class="cd add">      HID_ReportID(iREPORT_ID_SYS_KEY),         // 与 QMK 的 System Control 报告格式一致</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">561</td><td class="cd add">      HID_UsageMin(0x01),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">562</td><td class="cd add">      HID_UsageMax(0xB7),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">563</td><td class="cd add">      HID_LogicalMin(1),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">564</td><td class="cd add">      HID_LogicalMaxS(0x00B7),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">565</td><td class="cd add">      HID_ReportCount(1),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">566</td><td class="cd add">      HID_ReportSize(16),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">567</td><td class="cd add">      HID_Input(HID_Data | HID_Array | HID_Absolute),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">568</td><td class="cd add">    HID_EndCollection,</td></tr>
+<tr><td class="ln ctx">556</td><td class="cd ctx">//HID REPORT//25byte</td><td class="ln r ctx">569</td><td class="cd ctx">//HID REPORT//25byte</td></tr>
+<tr><td class="ln ctx">557</td><td class="cd ctx">    HID_UsagePageVendor(0x0F),                //3byte</td><td class="ln r ctx">570</td><td class="cd ctx">    HID_UsagePageVendor(0x0F),                //3byte</td></tr>
+<tr><td class="ln ctx">558</td><td class="cd ctx">    HID_Usage(0x01),						  //2byte</td><td class="ln r ctx">571</td><td class="cd ctx">    HID_Usage(0x01),						  //2byte</td></tr>
+<tr><td class="ln ctx">559</td><td class="cd ctx">    HID_Collection(HID_Application),		  //2byte</td><td class="ln r ctx">572</td><td class="cd ctx">    HID_Collection(HID_Application),		  //2byte</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-usb-user-process-c"><div class="file-head"><h3 class="path">mode_usb/usb_user_process.c</h3><span class="num"><span class="plus">+16</span> <span class="minus">−1</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 92 行 / 修改后第 92 行  ·  附近：void usb_data_process(void)</span><span class="what">修正：初版写死 0x1F，漏掉第 5 位，单独按 F6 时勿扰报告发不出去</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · usb_user_process.c</th><th colspan="2" class="r">修改后 · usb_user_process.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">92</td><td class="cd ctx">    {</td><td class="ln r ctx">92</td><td class="cd ctx">    {</td></tr>
+<tr><td class="ln ctx">93</td><td class="cd ctx">        return;</td><td class="ln r ctx">93</td><td class="cd ctx">        return;</td></tr>
+<tr><td class="ln ctx">94</td><td class="cd ctx">    }</td><td class="ln r ctx">94</td><td class="cd ctx">    }</td></tr>
+<tr><td class="ln ctx">95</td><td class="cd ctx"></td><td class="ln r ctx">95</td><td class="cd ctx"></td></tr>
+<tr><td class="ln del">96</td><td class="cd del">    if(0==(m_data_flag&amp;0x1F))</td><td class="ln r add">96</td><td class="cd add">    // 有任一待发数据才继续（原来写死 0x1F，会漏掉第 5 位 bsys_data_send，</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">97</td><td class="cd add">    // 导致单独按 F6 勿扰时 System Control 报告永远发不出去）</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">98</td><td class="cd add">    if(0==(m_data_flag&amp;(bmouse_data_send|bstd_kb_data_send|bmmk_data_send</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">99</td><td class="cd add">                       |bstd_ex_data_send|bhid_data_send|bsys_data_send)))</td></tr>
+<tr><td class="ln ctx">97</td><td class="cd ctx">        return;</td><td class="ln r ctx">100</td><td class="cd ctx">        return;</td></tr>
+<tr><td class="ln ctx">98</td><td class="cd ctx"></td><td class="ln r ctx">101</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">99</td><td class="cd ctx">__disable_irq();</td><td class="ln r ctx">102</td><td class="cd ctx">__disable_irq();</td></tr>
+<tr><td class="ln ctx">100</td><td class="cd ctx">    OM_USB-&gt;INDEX = 1;</td><td class="ln r ctx">103</td><td class="cd ctx">    OM_USB-&gt;INDEX = 1;</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 153 行 / 修改后第 156 行  ·  附近：__disable_irq();</span><span class="what">USB：发送勿扰报告</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · usb_user_process.c</th><th colspan="2" class="r">修改后 · usb_user_process.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">153</td><td class="cd ctx"></td><td class="ln r ctx">156</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">154</td><td class="cd ctx">            OM_USB-&gt;TXCSR1 |= USB_TXCSR_P_TXPKTRDY;</td><td class="ln r ctx">157</td><td class="cd ctx">            OM_USB-&gt;TXCSR1 |= USB_TXCSR_P_TXPKTRDY;</td></tr>
+<tr><td class="ln ctx">155</td><td class="cd ctx">            g_USB_Ep_Status[3] = EP_TX;</td><td class="ln r ctx">158</td><td class="cd ctx">            g_USB_Ep_Status[3] = EP_TX;</td></tr>
+<tr><td class="ln ctx">156</td><td class="cd ctx">        }</td><td class="ln r ctx">159</td><td class="cd ctx">        }</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">160</td><td class="cd add">        else if(m_data_flag &amp; bsys_data_send)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">161</td><td class="cd add">        {                                       // 系统控制键（MAC 勿扰）</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">162</td><td class="cd add">            m_data_flag &amp;= ~bsys_data_send;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">163</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">164</td><td class="cd add">            fifo_epn = (volatile uint8_t *)&amp;OM_USB-&gt;EPnFIFO[3];</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">165</td><td class="cd add">            *fifo_epn = iREPORT_ID_SYS_KEY;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">166</td><td class="cd add">            *fifo_epn = sys_data;               // 16 位用法值，低字节</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">167</td><td class="cd add">            *fifo_epn = 0;                      // 高字节</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">168</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">169</td><td class="cd add">            OM_USB-&gt;TXCSR1 |= USB_TXCSR_P_TXPKTRDY;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">170</td><td class="cd add">            g_USB_Ep_Status[3] = EP_TX;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">171</td><td class="cd add">        }</td></tr>
+<tr><td class="ln ctx">157</td><td class="cd ctx">        else if(m_data_flag &amp; bhid_data_send)</td><td class="ln r ctx">172</td><td class="cd ctx">        else if(m_data_flag &amp; bhid_data_send)</td></tr>
+<tr><td class="ln ctx">158</td><td class="cd ctx">        {</td><td class="ln r ctx">173</td><td class="cd ctx">        {</td></tr>
+<tr><td class="ln ctx">159</td><td class="cd ctx">            m_data_flag &amp;= ~bhid_data_send;</td><td class="ln r ctx">174</td><td class="cd ctx">            m_data_flag &amp;= ~bhid_data_send;</td></tr>
+<tr><td class="ln ctx">160</td><td class="cd ctx"></td><td class="ln r ctx">175</td><td class="cd ctx"></td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-ex2-app-mouse-h"><div class="file-head"><h3 class="path">projects/mouse_demo/main/ex2_app_mouse.h</h3><span class="num"><span class="plus">+8</span> <span class="minus">−0</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 20 行 / 修改后第 20 行  ·  附近：extern &quot;C&quot;</span><span class="what">开关：启用蓝牙系统控制报告</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · ex2_app_mouse.h</th><th colspan="2" class="r">修改后 · ex2_app_mouse.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">20</td><td class="cd ctx">#define PROFILE_VENDOR_OTA             0</td><td class="ln r ctx">20</td><td class="cd ctx">#define PROFILE_VENDOR_OTA             0</td></tr>
+<tr><td class="ln ctx">21</td><td class="cd ctx">#define PROFILE_HID_MOUSE              1</td><td class="ln r ctx">21</td><td class="cd ctx">#define PROFILE_HID_MOUSE              1</td></tr>
+<tr><td class="ln ctx">22</td><td class="cd ctx">#define PROFILE_HID_CONSUMER_CONTROL   1</td><td class="ln r ctx">22</td><td class="cd ctx">#define PROFILE_HID_CONSUMER_CONTROL   1</td></tr>
+<tr><td class="ln ctx">23</td><td class="cd ctx">#define PROFILE_HID_KEYBOARD           1</td><td class="ln r ctx">23</td><td class="cd ctx">#define PROFILE_HID_KEYBOARD           1</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">24</td><td class="cd add">#define PROFILE_HID_SYSTEM_CONTROL     1 /* 系统控制：MAC F6 勿扰 */</td></tr>
+<tr><td class="ln ctx">24</td><td class="cd ctx">#define PROFILE_HID_BITMAP_KEYBOARD    1 /* 全无冲键盘 */ </td><td class="ln r ctx">25</td><td class="cd ctx">#define PROFILE_HID_BITMAP_KEYBOARD    1 /* 全无冲键盘 */ </td></tr>
+<tr><td class="ln ctx">25</td><td class="cd ctx"></td><td class="ln r ctx">26</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">26</td><td class="cd ctx">/*===========================================================================*/</td><td class="ln r ctx">27</td><td class="cd ctx">/*===========================================================================*/</td></tr>
+<tr><td class="ln ctx">27</td><td class="cd ctx">/* Local variables and types.                                                */</td><td class="ln r ctx">28</td><td class="cd ctx">/* Local variables and types.                                                */</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 94 行 / 修改后第 95 行  ·  附近：typedef enum {</span><span class="what">GATT 句柄表新增 4 项</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · ex2_app_mouse.h</th><th colspan="2" class="r">修改后 · ex2_app_mouse.h</th></tr></thead><tbody>
+<tr><td class="ln ctx">94</td><td class="cd ctx">    ATT_HANDLE_HID_CONSUMER_CONTROL_REPORT_CCD,    //2902: CCC</td><td class="ln r ctx">95</td><td class="cd ctx">    ATT_HANDLE_HID_CONSUMER_CONTROL_REPORT_CCD,    //2902: CCC</td></tr>
+<tr><td class="ln ctx">95</td><td class="cd ctx">    ATT_HANDLE_HID_CONSUMER_CONTROL_REPORT_RRD,    //2908: ReportID + ReportType=in</td><td class="ln r ctx">96</td><td class="cd ctx">    ATT_HANDLE_HID_CONSUMER_CONTROL_REPORT_RRD,    //2908: ReportID + ReportType=in</td></tr>
+<tr><td class="ln ctx">96</td><td class="cd ctx">    #endif</td><td class="ln r ctx">97</td><td class="cd ctx">    #endif</td></tr>
+<tr><td class="ln ctx">97</td><td class="cd ctx"></td><td class="ln r ctx">98</td><td class="cd ctx"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">99</td><td class="cd add">    #if (PROFILE_HID_SYSTEM_CONTROL)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">100</td><td class="cd add">    ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_CD,       //2A4D: Read | Notify</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">101</td><td class="cd add">    ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_CV,</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">102</td><td class="cd add">    ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_CCD,      //2902: CCC</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">103</td><td class="cd add">    ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_RRD,      //2908: ReportID + ReportType=in</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">104</td><td class="cd add">    #endif</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">105</td><td class="cd add"></td></tr>
+<tr><td class="ln ctx">98</td><td class="cd ctx">    #if (PROFILE_HID_KEYBOARD)</td><td class="ln r ctx">106</td><td class="cd ctx">    #if (PROFILE_HID_KEYBOARD)</td></tr>
+<tr><td class="ln ctx">99</td><td class="cd ctx">    #if (EXE_HOGP_PTS == 1)</td><td class="ln r ctx">107</td><td class="cd ctx">    #if (EXE_HOGP_PTS == 1)</td></tr>
+<tr><td class="ln ctx">100</td><td class="cd ctx">    ATT_HANDLE_HID_BOOT_KB_IN_REPORT_CD,     //2A22: Read | Notify</td><td class="ln r ctx">108</td><td class="cd ctx">    ATT_HANDLE_HID_BOOT_KB_IN_REPORT_CD,     //2A22: Read | Notify</td></tr>
+<tr><td class="ln ctx">101</td><td class="cd ctx">    ATT_HANDLE_HID_BOOT_KB_IN_REPORT_CV,</td><td class="ln r ctx">109</td><td class="cd ctx">    ATT_HANDLE_HID_BOOT_KB_IN_REPORT_CV,</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-ex2-profile-hid-mouse-c"><div class="file-head"><h3 class="path">projects/mouse_demo/main/ex2_profile_hid_mouse.c</h3><span class="num"><span class="plus">+42</span> <span class="minus">−0</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 77 行 / 修改后第 77 行  ·  附近：typedef enum {</span><span class="what">蓝牙勿扰报告的报告 ID：5</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · ex2_profile_hid_mouse.c</th><th colspan="2" class="r">修改后 · ex2_profile_hid_mouse.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">77</td><td class="cd ctx">    HID_REPORT_ID_MOUSE_INPUT             = 1,   /* Mouse input report ID */</td><td class="ln r ctx">77</td><td class="cd ctx">    HID_REPORT_ID_MOUSE_INPUT             = 1,   /* Mouse input report ID */</td></tr>
+<tr><td class="ln ctx">78</td><td class="cd ctx">    HID_REPORT_ID_CONSUMER_CONTROL_INPUT  = 2,   /* Consumer Control input report ID */</td><td class="ln r ctx">78</td><td class="cd ctx">    HID_REPORT_ID_CONSUMER_CONTROL_INPUT  = 2,   /* Consumer Control input report ID */</td></tr>
+<tr><td class="ln ctx">79</td><td class="cd ctx">    HID_REPORT_ID_KEYBOARD_INPUT          = 3,   /* Keyboard input report ID */</td><td class="ln r ctx">79</td><td class="cd ctx">    HID_REPORT_ID_KEYBOARD_INPUT          = 3,   /* Keyboard input report ID */</td></tr>
+<tr><td class="ln ctx">80</td><td class="cd ctx">    HID_REPORT_ID_BITMAP_KB_INPUT         = 4,   /* BITMAP Keyboard input report ID */</td><td class="ln r ctx">80</td><td class="cd ctx">    HID_REPORT_ID_BITMAP_KB_INPUT         = 4,   /* BITMAP Keyboard input report ID */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">81</td><td class="cd add">    HID_REPORT_ID_SYSTEM_CONTROL_INPUT    = 5,   /* System Control input report ID (MAC 勿扰) */</td></tr>
+<tr><td class="ln ctx">81</td><td class="cd ctx">} hid_report_id_t;</td><td class="ln r ctx">82</td><td class="cd ctx">} hid_report_id_t;</td></tr>
+<tr><td class="ln ctx">82</td><td class="cd ctx"></td><td class="ln r ctx">83</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">83</td><td class="cd ctx">// Protocol Mode values</td><td class="ln r ctx">84</td><td class="cd ctx">// Protocol Mode values</td></tr>
+<tr><td class="ln ctx">84</td><td class="cd ctx">static ble_hid_protocol_mode_t _hid_protocol_mode_value = BLE_HID_PROTOCOL_MODE_REPORT;</td><td class="ln r ctx">85</td><td class="cd ctx">static ble_hid_protocol_mode_t _hid_protocol_mode_value = BLE_HID_PROTOCOL_MODE_REPORT;</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 101 行 / 修改后第 102 行  ·  附近：static uint8_t hid_mouse_report_value[6];</span><span class="what">勿扰报告的数据缓存</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · ex2_profile_hid_mouse.c</th><th colspan="2" class="r">修改后 · ex2_profile_hid_mouse.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">101</td><td class="cd ctx">///consumer control bitmap value</td><td class="ln r ctx">102</td><td class="cd ctx">///consumer control bitmap value</td></tr>
+<tr><td class="ln ctx">102</td><td class="cd ctx">static uint8_t hid_consumer_control_report_value[2];</td><td class="ln r ctx">103</td><td class="cd ctx">static uint8_t hid_consumer_control_report_value[2];</td></tr>
+<tr><td class="ln ctx">103</td><td class="cd ctx">#endif</td><td class="ln r ctx">104</td><td class="cd ctx">#endif</td></tr>
+<tr><td class="ln ctx">104</td><td class="cd ctx"></td><td class="ln r ctx">105</td><td class="cd ctx"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">106</td><td class="cd add">#if (PROFILE_HID_SYSTEM_CONTROL)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">107</td><td class="cd add">///system control usage (Generic Desktop page)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">108</td><td class="cd add">static uint8_t hid_system_control_report_value[2];</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">109</td><td class="cd add">#endif</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">110</td><td class="cd add"></td></tr>
+<tr><td class="ln ctx">105</td><td class="cd ctx">#if (PROFILE_HID_KEYBOARD)</td><td class="ln r ctx">111</td><td class="cd ctx">#if (PROFILE_HID_KEYBOARD)</td></tr>
+<tr><td class="ln ctx">106</td><td class="cd ctx">///keyboard key code</td><td class="ln r ctx">112</td><td class="cd ctx">///keyboard key code</td></tr>
+<tr><td class="ln ctx">107</td><td class="cd ctx">static uint8_t hid_keyboard_in_report_value[8];</td><td class="ln r ctx">113</td><td class="cd ctx">static uint8_t hid_keyboard_in_report_value[8];</td></tr>
+<tr><td class="ln ctx">108</td><td class="cd ctx">static uint8_t bitmap_keyboard_report_value[15];</td><td class="ln r ctx">114</td><td class="cd ctx">static uint8_t bitmap_keyboard_report_value[15];</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 163 行 / 修改后第 169 行  ·  附近：static const uint8_t _hid_report_map_value[] = {</span><span class="what">Report Map 新增系统控制集合（格式与 USB 相同）</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · ex2_profile_hid_mouse.c</th><th colspan="2" class="r">修改后 · ex2_profile_hid_mouse.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">163</td><td class="cd ctx">    0x81 , 0x00,                      /*    INPUT (Data,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)*/</td><td class="ln r ctx">169</td><td class="cd ctx">    0x81 , 0x00,                      /*    INPUT (Data,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)*/</td></tr>
+<tr><td class="ln ctx">164</td><td class="cd ctx">    0xC0 ,                            /* END_COLLECTION*/</td><td class="ln r ctx">170</td><td class="cd ctx">    0xC0 ,                            /* END_COLLECTION*/</td></tr>
+<tr><td class="ln ctx">165</td><td class="cd ctx">#endif</td><td class="ln r ctx">171</td><td class="cd ctx">#endif</td></tr>
+<tr><td class="ln ctx">166</td><td class="cd ctx"></td><td class="ln r ctx">172</td><td class="cd ctx"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">173</td><td class="cd add">#if (PROFILE_HID_SYSTEM_CONTROL)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">174</td><td class="cd add">    0x05, 0x01,                       /* Usage Page (Generic Desktop) */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">175</td><td class="cd add">    0x09, 0x80,                       /* Usage (System Control) */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">176</td><td class="cd add">    0xA1, 0x01,                       /* Collection (Application) */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">177</td><td class="cd add">    0x85, HID_REPORT_ID_SYSTEM_CONTROL_INPUT, /* Report ID (5) */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">178</td><td class="cd add">    0x19, 0x01,                       /*     Usage Minimum (1) */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">179</td><td class="cd add">    0x29, 0xB7,                       /*     Usage Maximum (0xB7) */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">180</td><td class="cd add">    0x15, 0x01,                       /*     Logical Minimum (1) */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">181</td><td class="cd add">    0x26, 0xB7, 0x00,                 /*     Logical Maximum (0xB7) */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">182</td><td class="cd add">    0x95, 0x01,                       /*     Report Count (1) */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">183</td><td class="cd add">    0x75, 0x10,                       /*     Report Size (16)  与 QMK 一致 */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">184</td><td class="cd add">    0x81, 0x00,                       /*     Input (Data,Array,Abs) 0x9B = Do Not Disturb */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">185</td><td class="cd add">    0xC0,                             /* End Collection */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">186</td><td class="cd add">#endif</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">187</td><td class="cd add"></td></tr>
+<tr><td class="ln ctx">167</td><td class="cd ctx">#if (PROFILE_HID_BITMAP_KEYBOARD)</td><td class="ln r ctx">188</td><td class="cd ctx">#if (PROFILE_HID_BITMAP_KEYBOARD)</td></tr>
+<tr><td class="ln ctx">168</td><td class="cd ctx">    0x05, 0x01,                       /* Usage Page (Generic Desktop)   */                                                      </td><td class="ln r ctx">189</td><td class="cd ctx">    0x05, 0x01,                       /* Usage Page (Generic Desktop)   */                                                      </td></tr>
+<tr><td class="ln ctx">169</td><td class="cd ctx">    0x09, 0x06,                       /* Usage (Keyboard)    */                                                                 </td><td class="ln r ctx">190</td><td class="cd ctx">    0x09, 0x06,                       /* Usage (Keyboard)    */                                                                 </td></tr>
+<tr><td class="ln ctx">170</td><td class="cd ctx">    0xA1, 0x01,                       /* Collection (Application) */                                                            </td><td class="ln r ctx">191</td><td class="cd ctx">    0xA1, 0x01,                       /* Collection (Application) */                                                            </td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 264 行 / 修改后第 285 行  ·  附近：bool ex2_hid_tx_notification_consumer_control(uint8_t *buf)</span><span class="what">新增蓝牙勿扰报告的发送函数</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · ex2_profile_hid_mouse.c</th><th colspan="2" class="r">修改后 · ex2_profile_hid_mouse.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">264</td><td class="cd ctx">    else</td><td class="ln r ctx">285</td><td class="cd ctx">    else</td></tr>
+<tr><td class="ln ctx">265</td><td class="cd ctx">        return false;</td><td class="ln r ctx">286</td><td class="cd ctx">        return false;</td></tr>
+<tr><td class="ln ctx">266</td><td class="cd ctx">}</td><td class="ln r ctx">287</td><td class="cd ctx">}</td></tr>
+<tr><td class="ln ctx">267</td><td class="cd ctx"></td><td class="ln r ctx">288</td><td class="cd ctx"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">289</td><td class="cd add">bool ex2_hid_tx_notification_system_control(uint8_t *buf)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">290</td><td class="cd add">{</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">291</td><td class="cd add">#if (PROFILE_HID_SYSTEM_CONTROL)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">292</td><td class="cd add">    if(ex2_stk_get_txq_num() &lt;= MOUSE_DATA_IN_TXQ_MAX_NUM)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">293</td><td class="cd add">        return ex2_att_tx_notification(ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_CV, buf, 2);</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">294</td><td class="cd add">    else</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">295</td><td class="cd add">        return false;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">296</td><td class="cd add">#else</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">297</td><td class="cd add">    (void)buf;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">298</td><td class="cd add">    return true;                                    /* 未启用时直接丢弃 */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">299</td><td class="cd add">#endif</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">300</td><td class="cd add">}</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">301</td><td class="cd add"></td></tr>
+<tr><td class="ln ctx">268</td><td class="cd ctx">void hid_notification_enable(uint16_t hid_cccd)</td><td class="ln r ctx">302</td><td class="cd ctx">void hid_notification_enable(uint16_t hid_cccd)</td></tr>
+<tr><td class="ln ctx">269</td><td class="cd ctx">{</td><td class="ln r ctx">303</td><td class="cd ctx">{</td></tr>
+<tr><td class="ln ctx">270</td><td class="cd ctx">    _hid_cccd_value = hid_cccd;</td><td class="ln r ctx">304</td><td class="cd ctx">    _hid_cccd_value = hid_cccd;</td></tr>
+<tr><td class="ln ctx">271</td><td class="cd ctx">    _bas_cccd_value = hid_cccd;</td><td class="ln r ctx">305</td><td class="cd ctx">    _bas_cccd_value = hid_cccd;</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 362 行 / 修改后第 396 行  ·  附近：const exe_att_ent_t ex2_tbl_gatt_database[] = {</span><span class="what">GATT 表新增勿扰报告的 4 个属性</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · ex2_profile_hid_mouse.c</th><th colspan="2" class="r">修改后 · ex2_profile_hid_mouse.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">362</td><td class="cd ctx">    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_DESCRIPTOR_CLIENT_CHAR_CONFIG, EX2_ATT_VALUE_TYPE_PTR,  2,                                          &amp;_hid_cccd_value,                                                                    EX2_ATT_PER_READ | EX2_ATT_PER_WRITE | EX2_ATT_PER_ENCRYPT),</td><td class="ln r ctx">396</td><td class="cd ctx">    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_DESCRIPTOR_CLIENT_CHAR_CONFIG, EX2_ATT_VALUE_TYPE_PTR,  2,                                          &amp;_hid_cccd_value,                                                                    EX2_ATT_PER_READ | EX2_ATT_PER_WRITE | EX2_ATT_PER_ENCRYPT),</td></tr>
+<tr><td class="ln ctx">363</td><td class="cd ctx">    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_REPORT_REF_DESCR,              EX2_ATT_VALUE_TYPE_DATA, sizeof(ble_hid_report_ref_t),               BLE_HID_REPORT_REF(HID_REPORT_ID_CONSUMER_CONTROL_INPUT, BLE_HID_REPORT_TYPE_INPUT), EX2_ATT_PER_READ),</td><td class="ln r ctx">397</td><td class="cd ctx">    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_REPORT_REF_DESCR,              EX2_ATT_VALUE_TYPE_DATA, sizeof(ble_hid_report_ref_t),               BLE_HID_REPORT_REF(HID_REPORT_ID_CONSUMER_CONTROL_INPUT, BLE_HID_REPORT_TYPE_INPUT), EX2_ATT_PER_READ),</td></tr>
+<tr><td class="ln ctx">364</td><td class="cd ctx">    #endif</td><td class="ln r ctx">398</td><td class="cd ctx">    #endif</td></tr>
+<tr><td class="ln ctx">365</td><td class="cd ctx"></td><td class="ln r ctx">399</td><td class="cd ctx"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">400</td><td class="cd add">    #if (PROFILE_HID_SYSTEM_CONTROL)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">401</td><td class="cd add">    /* System Control&#x27;s CD,CV,CCCD,RRD (MAC 勿扰) */</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">402</td><td class="cd add">    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_CHARACTERISTIC,                EX2_ATT_VALUE_TYPE_DATA, 1,                                         BLE_CHAR_PROP_READ | BLE_CHAR_PROP_NOTIFY,                                          EX2_ATT_PER_READ),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">403</td><td class="cd add">    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_REPORT_CHAR,                   EX2_ATT_VALUE_TYPE_PTR,  sizeof(hid_system_control_report_value),   &amp;hid_system_control_report_value[0],                                                EX2_ATT_PER_READ),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">404</td><td class="cd add">    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_DESCRIPTOR_CLIENT_CHAR_CONFIG, EX2_ATT_VALUE_TYPE_PTR,  2,                                         &amp;_hid_cccd_value,                                                                   EX2_ATT_PER_READ | EX2_ATT_PER_WRITE | EX2_ATT_PER_ENCRYPT),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">405</td><td class="cd add">    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_REPORT_REF_DESCR,              EX2_ATT_VALUE_TYPE_DATA, sizeof(ble_hid_report_ref_t),              BLE_HID_REPORT_REF(HID_REPORT_ID_SYSTEM_CONTROL_INPUT, BLE_HID_REPORT_TYPE_INPUT),  EX2_ATT_PER_READ),</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">406</td><td class="cd add">    #endif</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">407</td><td class="cd add"></td></tr>
+<tr><td class="ln ctx">366</td><td class="cd ctx">    #if (PROFILE_HID_KEYBOARD)</td><td class="ln r ctx">408</td><td class="cd ctx">    #if (PROFILE_HID_KEYBOARD)</td></tr>
+<tr><td class="ln ctx">367</td><td class="cd ctx">    #if (EXE_HOGP_PTS == 1)</td><td class="ln r ctx">409</td><td class="cd ctx">    #if (EXE_HOGP_PTS == 1)</td></tr>
+<tr><td class="ln ctx">368</td><td class="cd ctx">    /* boot keyboard input report CD,CV,CCCD */</td><td class="ln r ctx">410</td><td class="cd ctx">    /* boot keyboard input report CD,CV,CCCD */</td></tr>
+<tr><td class="ln ctx">369</td><td class="cd ctx">    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_CHARACTERISTIC,                EX2_ATT_VALUE_TYPE_DATA, 1,                                        BLE_CHAR_PROP_READ | BLE_CHAR_PROP_NOTIFY,                                   EX2_ATT_PER_READ),</td><td class="ln r ctx">411</td><td class="cd ctx">    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_CHARACTERISTIC,                EX2_ATT_VALUE_TYPE_DATA, 1,                                        BLE_CHAR_PROP_READ | BLE_CHAR_PROP_NOTIFY,                                   EX2_ATT_PER_READ),</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-mouse-hw-c"><div class="file-head"><h3 class="path">projects/mouse_demo/main/mouse_hw.c</h3><span class="num"><span class="plus">+12</span> <span class="minus">−0</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 147 行 / 修改后第 147 行  ·  附近：pmu_lpm_t pm_checker_callback(void)</span><span class="what">声明蓝牙勿扰报告的发送函数</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · mouse_hw.c</th><th colspan="2" class="r">修改后 · mouse_hw.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">147</td><td class="cd ctx">extern bool ex2_hid_tx_notification_mouse(uint8_t *buf);</td><td class="ln r ctx">147</td><td class="cd ctx">extern bool ex2_hid_tx_notification_mouse(uint8_t *buf);</td></tr>
+<tr><td class="ln ctx">148</td><td class="cd ctx">extern bool ex2_hid_tx_notification_keyboard(uint8_t *buf);</td><td class="ln r ctx">148</td><td class="cd ctx">extern bool ex2_hid_tx_notification_keyboard(uint8_t *buf);</td></tr>
+<tr><td class="ln ctx">149</td><td class="cd ctx">extern bool ex2_hid_tx_notification_bitmap_kb(uint8_t *buf);</td><td class="ln r ctx">149</td><td class="cd ctx">extern bool ex2_hid_tx_notification_bitmap_kb(uint8_t *buf);</td></tr>
+<tr><td class="ln ctx">150</td><td class="cd ctx">extern bool ex2_hid_tx_notification_consumer_control(uint8_t *buf);</td><td class="ln r ctx">150</td><td class="cd ctx">extern bool ex2_hid_tx_notification_consumer_control(uint8_t *buf);</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">151</td><td class="cd add">extern bool ex2_hid_tx_notification_system_control(uint8_t *buf);</td></tr>
+<tr><td class="ln ctx">151</td><td class="cd ctx">extern bool profile_bas_tx_notification(uint8_t level);</td><td class="ln r ctx">152</td><td class="cd ctx">extern bool profile_bas_tx_notification(uint8_t level);</td></tr>
+<tr><td class="ln ctx">152</td><td class="cd ctx">extern  uint8_t hid_keyboard_out_report_value;</td><td class="ln r ctx">153</td><td class="cd ctx">extern  uint8_t hid_keyboard_out_report_value;</td></tr>
+<tr><td class="ln ctx">153</td><td class="cd ctx"></td><td class="ln r ctx">154</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">154</td><td class="cd ctx">/*********************************************************************</td><td class="ln r ctx">155</td><td class="cd ctx">/*********************************************************************</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 208 行 / 修改后第 209 行  ·  附近：__RAM_CODE uint8_t ex2_app_mouse_scan(void)</span><span class="what">蓝牙：有勿扰键数据时发送通知</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · mouse_hw.c</th><th colspan="2" class="r">修改后 · mouse_hw.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">208</td><td class="cd ctx">            mmk_tx_count = 0;</td><td class="ln r ctx">209</td><td class="cd ctx">            mmk_tx_count = 0;</td></tr>
+<tr><td class="ln ctx">209</td><td class="cd ctx">        }</td><td class="ln r ctx">210</td><td class="cd ctx">        }</td></tr>
+<tr><td class="ln ctx">210</td><td class="cd ctx">        return 1;</td><td class="ln r ctx">211</td><td class="cd ctx">        return 1;</td></tr>
+<tr><td class="ln ctx">211</td><td class="cd ctx">    }</td><td class="ln r ctx">212</td><td class="cd ctx">    }</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">213</td><td class="cd add">    else if(0!=(m_data_flag&amp;bsys_data_send))</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">214</td><td class="cd add">    {                                           // 系统控制键（MAC F6 勿扰）</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">215</td><td class="cd add">        temp_buff[0] = sys_data;                // 16 位用法值，低字节</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">216</td><td class="cd add">        temp_buff[1] = 0;                       // 高字节</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">217</td><td class="cd add">        if(true == ex2_hid_tx_notification_system_control(temp_buff))</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">218</td><td class="cd add">        {</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">219</td><td class="cd add">            rtc_init_value = drv_rtc_read(OM_RTC);  // 有数据，重置休眠计时</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">220</td><td class="cd add">            m_data_flag &amp;= ~bsys_data_send;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">221</td><td class="cd add">        }</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">222</td><td class="cd add">        return 1;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">223</td><td class="cd add">    }</td></tr>
+<tr><td class="ln ctx">212</td><td class="cd ctx">    else if(0!=(m_data_flag&amp;bstd_ex_data_send))</td><td class="ln r ctx">224</td><td class="cd ctx">    else if(0!=(m_data_flag&amp;bstd_ex_data_send))</td></tr>
+<tr><td class="ln ctx">213</td><td class="cd ctx">    {</td><td class="ln r ctx">225</td><td class="cd ctx">    {</td></tr>
+<tr><td class="ln ctx">214</td><td class="cd ctx">        if(true == ex2_hid_tx_notification_bitmap_kb(std_key+7))</td><td class="ln r ctx">226</td><td class="cd ctx">        if(true == ex2_hid_tx_notification_bitmap_kb(std_key+7))</td></tr>
+<tr><td class="ln ctx">215</td><td class="cd ctx">        {</td><td class="ln r ctx">227</td><td class="cd ctx">        {</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-rf-data-process-c"><div class="file-head"><h3 class="path">mode_24g/rf_data_process.c</h3><span class="num"><span class="plus">+13</span> <span class="minus">−0</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 230 行 / 修改后第 230 行  ·  附近：__RAM_CODE void rf_tx_data_process(void)</span><span class="what">2.4G：发送系统键包 [0x80, 0x40, 用法值]</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · rf_data_process.c</th><th colspan="2" class="r">修改后 · rf_data_process.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">230</td><td class="cd ctx">        rf_ctrl_reg |= brf_data_tx;</td><td class="ln r ctx">230</td><td class="cd ctx">        rf_ctrl_reg |= brf_data_tx;</td></tr>
+<tr><td class="ln ctx">231</td><td class="cd ctx">        pkt_press_count = 0;</td><td class="ln r ctx">231</td><td class="cd ctx">        pkt_press_count = 0;</td></tr>
+<tr><td class="ln ctx">232</td><td class="cd ctx">        rtc_init_value = drv_rtc_read(OM_RTC);</td><td class="ln r ctx">232</td><td class="cd ctx">        rtc_init_value = drv_rtc_read(OM_RTC);</td></tr>
+<tr><td class="ln ctx">233</td><td class="cd ctx">    }</td><td class="ln r ctx">233</td><td class="cd ctx">    }</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">234</td><td class="cd add">    else if(sys_tx_count)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">235</td><td class="cd add">    {                                           // 系统键包（MAC F6 勿扰），格式同多媒体键包</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">236</td><td class="cd add">        sys_tx_count--;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">237</td><td class="cd add">        rf_data_fifo[0] = iRF_K_TYPE_KB;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">238</td><td class="cd add">        rf_data_fifo[1] = iRF_K_OTHER_SYS;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">239</td><td class="cd add">        rf_data_fifo[2] = sys_rf_data;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">240</td><td class="cd add">        rf_data_length = iRF_K_LENGTH_OTHER;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">241</td><td class="cd add">        rf_ctrl_reg |= brf_data_tx;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">242</td><td class="cd add">        pkt_press_count = 0;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">243</td><td class="cd add">        rtc_init_value = drv_rtc_read(OM_RTC);</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">244</td><td class="cd add">    }</td></tr>
+<tr><td class="ln ctx">234</td><td class="cd ctx">    else if(key_tx_count)</td><td class="ln r ctx">245</td><td class="cd ctx">    else if(key_tx_count)</td></tr>
+<tr><td class="ln ctx">235</td><td class="cd ctx">    {</td><td class="ln r ctx">246</td><td class="cd ctx">    {</td></tr>
+<tr><td class="ln ctx">236</td><td class="cd ctx">        key_tx_count--;</td><td class="ln r ctx">247</td><td class="cd ctx">        key_tx_count--;</td></tr>
+<tr><td class="ln ctx">237</td><td class="cd ctx"></td><td class="ln r ctx">248</td><td class="cd ctx"></td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 289 行 / 修改后第 300 行  ·  附近：__RAM_CODE void rf_tx_data_process(void)</span><span class="what">按住勿扰键期间定期补发</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · rf_data_process.c</th><th colspan="2" class="r">修改后 · rf_data_process.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">289</td><td class="cd ctx"></td><td class="ln r ctx">300</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">290</td><td class="cd ctx">    pkt_press_count++;</td><td class="ln r ctx">301</td><td class="cd ctx">    pkt_press_count++;</td></tr>
+<tr><td class="ln ctx">291</td><td class="cd ctx">    if(64 &lt;= pkt_press_count)</td><td class="ln r ctx">302</td><td class="cd ctx">    if(64 &lt;= pkt_press_count)</td></tr>
+<tr><td class="ln ctx">292</td><td class="cd ctx">    {</td><td class="ln r ctx">303</td><td class="cd ctx">    {</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">304</td><td class="cd add">        if(sys_rf_data)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">305</td><td class="cd add">            sys_tx_count = 2;                   // 按住勿扰键期间保活</td></tr>
+<tr><td class="ln ctx">293</td><td class="cd ctx">        if(mmk_data_l)</td><td class="ln r ctx">306</td><td class="cd ctx">        if(mmk_data_l)</td></tr>
+<tr><td class="ln ctx">294</td><td class="cd ctx">        {</td><td class="ln r ctx">307</td><td class="cd ctx">        {</td></tr>
+<tr><td class="ln ctx">295</td><td class="cd ctx">            mmk_tx_count = 2;</td><td class="ln r ctx">308</td><td class="cd ctx">            mmk_tx_count = 2;</td></tr>
+<tr><td class="ln ctx">296</td><td class="cd ctx">        }</td><td class="ln r ctx">309</td><td class="cd ctx">        }</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-sleep-c"><div class="file-head"><h3 class="path">mode_24g/sleep.c</h3><span class="num"><span class="plus">+3</span> <span class="minus">−2</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 103 行 / 修改后第 103 行  ·  附近：void sleep_process(void)</span><span class="what">未连接接收器时清零系统键包计数</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · sleep.c</th><th colspan="2" class="r">修改后 · sleep.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">103</td><td class="cd ctx">                    mouse_periph_wakeup_enable(WAKEUP_ALL_DISABLE);</td><td class="ln r ctx">103</td><td class="cd ctx">                    mouse_periph_wakeup_enable(WAKEUP_ALL_DISABLE);</td></tr>
+<tr><td class="ln ctx">104</td><td class="cd ctx">                    clr_rgb();              // 只清灯效；保留 LEDC 输出第 1 颗指示灯，避免重试时整条灯瞬间熄灭</td><td class="ln r ctx">104</td><td class="cd ctx">                    clr_rgb();              // 只清灯效；保留 LEDC 输出第 1 颗指示灯，避免重试时整条灯瞬间熄灭</td></tr>
+<tr><td class="ln ctx">105</td><td class="cd ctx">                    key_tx_count = 0;</td><td class="ln r ctx">105</td><td class="cd ctx">                    key_tx_count = 0;</td></tr>
+<tr><td class="ln ctx">106</td><td class="cd ctx">                    mmk_tx_count = 0;</td><td class="ln r ctx">106</td><td class="cd ctx">                    mmk_tx_count = 0;</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">107</td><td class="cd add">                    sys_tx_count = 0;</td></tr>
+<tr><td class="ln ctx">107</td><td class="cd ctx">                    rtc_value = drv_rtc_read(OM_RTC);</td><td class="ln r ctx">108</td><td class="cd ctx">                    rtc_value = drv_rtc_read(OM_RTC);</td></tr>
+<tr><td class="ln ctx">108</td><td class="cd ctx">                    do</td><td class="ln r ctx">109</td><td class="cd ctx">                    do</td></tr>
+<tr><td class="ln ctx">109</td><td class="cd ctx">                    {</td><td class="ln r ctx">110</td><td class="cd ctx">                    {</td></tr>
+<tr><td class="ln ctx">110</td><td class="cd ctx">                        // 提示灯闪烁期间不进 STOP1：STOP1 会暂停系统时钟，打断 LEDC 正在发送的帧，</td><td class="ln r ctx">111</td><td class="cd ctx">                        // 提示灯闪烁期间不进 STOP1：STOP1 会暂停系统时钟，打断 LEDC 正在发送的帧，</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 145 行 / 修改后第 146 行  ·  附近：void sleep_process(void)</span><span class="what">未连接接收器时，系统键也算有按键数据，会触发重新同步</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · sleep.c</th><th colspan="2" class="r">修改后 · sleep.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">145</td><td class="cd ctx">                                break;</td><td class="ln r ctx">146</td><td class="cd ctx">                                break;</td></tr>
+<tr><td class="ln ctx">146</td><td class="cd ctx">                        }</td><td class="ln r ctx">147</td><td class="cd ctx">                        }</td></tr>
+<tr><td class="ln ctx">147</td><td class="cd ctx">                        else</td><td class="ln r ctx">148</td><td class="cd ctx">                        else</td></tr>
+<tr><td class="ln ctx">148</td><td class="cd ctx">                        {</td><td class="ln r ctx">149</td><td class="cd ctx">                        {</td></tr>
+<tr><td class="ln del">149</td><td class="cd del">                            if((0!=key_tx_count)||(0!=mmk_tx_count))</td><td class="ln r add">150</td><td class="cd add">                            if((0!=key_tx_count)||(0!=mmk_tx_count)<ins>||(0!=sys_tx_count</ins>)<ins>)</ins></td></tr>
+<tr><td class="ln ctx">150</td><td class="cd ctx">                                break;</td><td class="ln r ctx">151</td><td class="cd ctx">                                break;</td></tr>
+<tr><td class="ln ctx">151</td><td class="cd ctx"></td><td class="ln r ctx">152</td><td class="cd ctx"></td></tr>
+<tr><td class="ln ctx">152</td><td class="cd ctx">                            hint_led_status &amp;= ~bled_hint_mode;</td><td class="ln r ctx">153</td><td class="cd ctx">                            hint_led_status &amp;= ~bled_hint_mode;</td></tr>
+<tr><td class="ln ctx">153</td><td class="cd ctx">	                        led_status_hint();</td><td class="ln r ctx">154</td><td class="cd ctx">	                        led_status_hint();</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">初版第 156 行 / 修改后第 157 行  ·  附近：void sleep_process(void)</span><span class="what">未连接接收器时，系统键也算有按键数据，会触发重新同步</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · sleep.c</th><th colspan="2" class="r">修改后 · sleep.c</th></tr></thead><tbody>
+<tr><td class="ln ctx">156</td><td class="cd ctx">                        }</td><td class="ln r ctx">157</td><td class="cd ctx">                        }</td></tr>
+<tr><td class="ln ctx">157</td><td class="cd ctx">                    }</td><td class="ln r ctx">158</td><td class="cd ctx">                    }</td></tr>
+<tr><td class="ln ctx">158</td><td class="cd ctx">                    while(1);</td><td class="ln r ctx">159</td><td class="cd ctx">                    while(1);</td></tr>
+<tr><td class="ln ctx">159</td><td class="cd ctx"></td><td class="ln r ctx">160</td><td class="cd ctx"></td></tr>
+<tr><td class="ln del">160</td><td class="cd del">                    if((0!=key_tx_count)||(0!=mmk_tx_count))</td><td class="ln r add">161</td><td class="cd add">                    if((0!=key_tx_count)||(0!=mmk_tx_count)<ins>||(0!=sys_tx_count</ins>)<ins>)</ins></td></tr>
+<tr><td class="ln ctx">161</td><td class="cd ctx">                    {</td><td class="ln r ctx">162</td><td class="cd ctx">                    {</td></tr>
+<tr><td class="ln ctx">162</td><td class="cd ctx">                        no_dongle_time_count=0;</td><td class="ln r ctx">163</td><td class="cd ctx">                        no_dongle_time_count=0;</td></tr>
+<tr><td class="ln ctx">163</td><td class="cd ctx">                        rf_ctrl_reg |= (brf_sync_time|brf_sync_status);</td><td class="ln r ctx">164</td><td class="cd ctx">                        rf_ctrl_reg |= (brf_sync_time|brf_sync_status);</td></tr>
+<tr><td class="ln ctx">164</td><td class="cd ctx">                    }</td><td class="ln r ctx">165</td><td class="cd ctx">                    }</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-gitignore"><div class="file-head"><h3 class="path">.gitignore<span class="newfile">新文件</span></h3><span class="num"><span class="plus">+28</span> <span class="minus">−0</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">新文件，共 28 行</span><span class="what">新文件：忽略 Keil 编译产物，避免再误烧旧固件</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · （初版没有这个文件）</th><th colspan="2" class="r">修改后 · .gitignore</th></tr></thead><tbody>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">1</td><td class="cd add"># ============================================================</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">2</td><td class="cd add"># Keil MDK 编译产物：每次编译都会重新生成，不要提交到 git。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">3</td><td class="cd add"># 提交旧产物会让 Keil 误以为“已是最新”而跳过编译，烧进旧固件。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">4</td><td class="cd add"># 保留 .gitkeep 是为了让目录在新克隆里也存在</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">5</td><td class="cd add"># （fromelf 编译后命令会往 _build/ 里写 SE73K.dis，目录不存在会报错）。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">6</td><td class="cd add"># ============================================================</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">7</td><td class="cd add">projects/mouse_demo/keil5/out/*</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">8</td><td class="cd add">!projects/mouse_demo/keil5/out/.gitkeep</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">9</td><td class="cd add">projects/mouse_demo/keil5/out_boot/*</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">10</td><td class="cd add">!projects/mouse_demo/keil5/out_boot/.gitkeep</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">11</td><td class="cd add">projects/mouse_demo/keil5/_build/*</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">12</td><td class="cd add">!projects/mouse_demo/keil5/_build/.gitkeep</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">13</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">14</td><td class="cd add"># fromelf 编译后命令生成的固件</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">15</td><td class="cd add">projects/mouse_demo/keil5/SE73K.bin</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">16</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">17</td><td class="cd add"># 编译 / 调试日志</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">18</td><td class="cd add">projects/mouse_demo/keil5/*.log</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">19</td><td class="cd add">projects/mouse_demo/keil5/JLinkLog.txt</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">20</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">21</td><td class="cd add"># ------------------------------------------------------------</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">22</td><td class="cd add"># 注意：下面这些是没有源码的预编译库 / 固件，必须保留在 git 中，</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">23</td><td class="cd add"># 不要加 *.o、*.lib、*.bin 之类的通配规则把它们忽略掉：</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">24</td><td class="cd add">#   projects/mouse_demo/periph/userdefined_key.o</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">25</td><td class="cd add">#   mode_24g/rf_encryption.o、mode_24g/rf_protocol.o</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">26</td><td class="cd add">#   components/exble2/stack/*.lib</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">27</td><td class="cd add">#   SE73_BootLoader_DLS853_20260330.bin（boot_img.s 用 .incbin 引用）</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">28</td><td class="cd add"># ------------------------------------------------------------</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="file" id="f-2-4g-md"><div class="file-head"><h3 class="path">docs/2.4G接收器_勿扰键对接说明.md<span class="newfile">新文件</span></h3><span class="num"><span class="plus">+70</span> <span class="minus">−0</span></span></div>
+<div class="hunk"><div class="hunk-note"><span class="loc">新文件，共 70 行</span><span class="what">新文件：给接收器固件开发者的对接说明</span></div>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="ln"><col class="cd"><col class="ln"><col class="cd"></colgroup>
+<thead><tr><th colspan="2">初版 · （初版没有这个文件）</th><th colspan="2" class="r">修改后 · 2.4G接收器_勿扰键对接说明.md</th></tr></thead><tbody>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">1</td><td class="cd add"># 2.4G 接收器：Mac 勿扰键（F6）对接说明</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">2</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">3</td><td class="cd add">键盘在 Mac 布局下按 F6，USB 和蓝牙模式直接发送 Generic Desktop `0x9B`（System Do Not Disturb），Mac 收到后切换勿扰（专注）模式，无需任何系统设置。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">4</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">5</td><td class="cd add">勿扰在 macOS 上**只能**用 Generic Desktop 页的 `0x9B` 发送，Consumer（多媒体）页没有对应的用法（见苹果《Accessory Design Guidelines》第 14.1 节表 14-3、表 14-4），所以没法借用接收器现有的多媒体报告。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">6</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">7</td><td class="cd add">2.4G 模式下 Mac 只和接收器通信，需要接收器把键盘发来的值放进它自己的 System Control 报告转发给 Mac。**键盘这一侧已经实现，本文说明接收器需要做的修改。**</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">8</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">9</td><td class="cd add">## 1. 键盘发出的 RF 数据包</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">10</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">11</td><td class="cd add">格式与多媒体键包相同，长度 `iRF_K_LENGTH_OTHER`（3 字节），加密包类型为 `PACKET_TYPE_FOR_OTHERS`。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">12</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">13</td><td class="cd add">| 字节 | 值 | 说明 |</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">14</td><td class="cd add">|---|---|---|</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">15</td><td class="cd add">| 0 | `0x80` | `iRF_K_TYPE_KB` |</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">16</td><td class="cd add">| 1 | `0x40` | `iRF_K_OTHER_SYS`（系统键包） |</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">17</td><td class="cd add">| 2 | 用法值 | Generic Desktop 用法 ID：按下勿扰为 `0x9B`，释放为 `0x00` |</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">18</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">19</td><td class="cd add">第 2 字节和键盘 USB / 蓝牙 System Control 报告里的用法值**完全相同**，接收器不需要做转换。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">20</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">21</td><td class="cd add">发送时机：</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">22</td><td class="cd add">- **按下 F6**：发 `0x9B`；**松开**：发 `0x00`。每次状态变化连发 8 包。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">23</td><td class="cd add">- **按住不放**：每约 64 个发送周期补发 2 包（保活），内容与当前状态相同。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">24</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">25</td><td class="cd add">接收器应按&quot;状态&quot;处理：只在值变化时向电脑发送报告，重复包忽略。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">26</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">27</td><td class="cd add">## 2. 接收器需要修改的地方</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">28</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">29</td><td class="cd add">### 2.1 USB 报告描述符新增 System Control 集合</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">30</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">31</td><td class="cd add">使用和键盘 USB / 蓝牙相同的格式（与 QMK `host_system_send()` 一致，已在 macOS 上验证可切换勿扰）。`&lt;ID&gt;` 换成接收器里未被占用的报告 ID：</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">32</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">33</td><td class="cd add">```</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">34</td><td class="cd add">05 01        Usage Page (Generic Desktop)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">35</td><td class="cd add">09 80        Usage (System Control)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">36</td><td class="cd add">A1 01        Collection (Application)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">37</td><td class="cd add">85 &lt;ID&gt;        Report ID (&lt;ID&gt;)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">38</td><td class="cd add">19 01          Usage Minimum (0x01)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">39</td><td class="cd add">29 B7          Usage Maximum (0xB7)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">40</td><td class="cd add">15 01          Logical Minimum (1)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">41</td><td class="cd add">26 B7 00       Logical Maximum (0xB7)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">42</td><td class="cd add">95 01          Report Count (1)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">43</td><td class="cd add">75 10          Report Size (16)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">44</td><td class="cd add">81 00          Input (Data, Array, Absolute)</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">45</td><td class="cd add">C0           End Collection</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">46</td><td class="cd add">```</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">47</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">48</td><td class="cd add">### 2.2 收到系统键包时发送报告</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">49</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">50</td><td class="cd add">把第 2 字节原样作为 16 位用法值的低字节：</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">51</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">52</td><td class="cd add">| 收到的第 2 字节 | 发给电脑的报告 |</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">53</td><td class="cd add">|---|---|</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">54</td><td class="cd add">| `0x9B` | `[&lt;ID&gt;, 0x9B, 0x00]`（勿扰按下） |</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">55</td><td class="cd add">| `0x00` | `[&lt;ID&gt;, 0x00, 0x00]`（释放） |</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">56</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">57</td><td class="cd add">## 3. 现有接收器的实测结果</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">58</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">59</td><td class="cd add">用现有接收器测试时，键盘已经按第 1 节发送 `[0x80, 0x40, 0x9B]`：按 F6 **没有任何反应**，也没有误触发电源或睡眠。所以：</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">60</td><td class="cd add">- 现有接收器不转发系统键包，需要按第 2 节升级接收器固件；</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">61</td><td class="cd add">- 升级之前，2.4G 下按 F6 没有作用，但不会造成任何副作用。USB、蓝牙下不受影响。</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">62</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">63</td><td class="cd add">## 4. 键盘侧代码位置</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">64</td><td class="cd add"></td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">65</td><td class="cd add">| 文件 | 内容 |</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">66</td><td class="cd add">|---|---|</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">67</td><td class="cd add">| `projects/mouse_demo/periph/matrix_key.c` | `key_process()`：2.4G 下把 F6 的用法值（`sys_data_tmp`）放进 `sys_rf_data`，状态变化时 `sys_tx_count = 8` |</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">68</td><td class="cd add">| `mode_24g/rf_data_process.c` | `rf_tx_data_process()`：组包发送、按住保活 |</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">69</td><td class="cd add">| `mode_24g/sleep.c` | 未连接接收器时，系统键也算有按键数据 |</td></tr>
+<tr><td class="ln empty"></td><td class="cd empty"></td><td class="ln r add">70</td><td class="cd add">| `projects/mouse_demo/periph/userdefined_key_callback.c` | F6（`iKEY_MAC_DND`）按住期间置 `sys_data_tmp = 0x9B` |</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="head doc" id="docs"><h2>说明书左右对比</h2><p class="note">Word 文件是二进制格式，这里对比的是正文文字，只列出改动过的段落和表格行。表格单元格之间用“│”分隔。</p>
+<div class="hunk"><h3 class="path">docs/R12三模ARGB键盘_按键连接灯效使用说明_V1.0.docx → docs/R12三模ARGB键盘_按键连接灯效使用说明_V1.1.docx</h3>
+<p class="note">同时更新：<span class="mono">.cleaned.docx</span>（去掉作者等元数据的版本），以及两个 PDF。</p>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="sec"><col class="cd"><col class="cd"></colgroup>
+<thead><tr><th>所在章节</th><th>初版 · 按键连接灯效使用说明_V1.0.docx</th><th class="r">修改后 · 按键连接灯效使用说明_V1.1.docx</th></tr></thead><tbody>
+<tr><td class="sec">封面</td><td class="cd del">文档版本 │ V1.<del>0</del></td><td class="cd r add">文档版本 │ V1.<ins>1</ins></td></tr>
+<tr><td class="sec">封面</td><td class="cd del">发布日期 │ 2026-11-2<del>3</del></td><td class="cd r add">发布日期 │ 2026-11-2<ins>4</ins></td></tr>
+<tr><td class="sec">1.6 多设备切换</td><td class="cd empty">（初版没有这段）</td><td class="cd r add">• 布局随模式保存：Windows / macOS 布局在 USB、2.4G 和蓝牙通道 1 / 2 / 3 下分别保存，切换模式或蓝牙通道后，自动使用该模式上次设置的布局。</td></tr>
+<tr><td class="sec">2.1 Windows 布局（默认）</td><td class="cd del">FN+A │ 切换 Windows 布局 │ 默认布局</td><td class="cd r add">FN+A │ 切换 Windows 布局 │ 默认布局<ins>；按模式分别保存</ins></td></tr>
+<tr><td class="sec">2.1 Windows 布局（默认）</td><td class="cd del">FN+S │ 切换 macOS 布局 │ Alt 与 Win 键功能互换</td><td class="cd r add">FN+S │ 切换 macOS 布局 │ Alt 与 Win 键功能互换<ins>；按模式分别保存</ins></td></tr>
+<tr><td class="sec">2.2 macOS 布局</td><td class="cd del">按 FN+S 切换到 macOS 布局，按 FN+A 切回 Windows 布局。macOS 布局下 Alt 与 Win 键功能互换：<del>Win</del> 键相当于 Command，<del>Alt</del> 键相当于 Option。</td><td class="cd r add">按 FN+S 切换到 macOS 布局，按 FN+A 切回 Windows 布局。macOS 布局下 Alt 与 Win 键功能互换<ins>，与苹果键盘的按键排列一致</ins>：<ins>Alt</ins> 键相当于 Command，<ins>Win</ins> 键相当于 Option。</td></tr>
+<tr><td class="sec">2.2 macOS 布局</td><td class="cd empty">（初版没有这段）</td><td class="cd r add">Windows / macOS 布局掉电保存，并且按模式分别保存：USB、2.4G 以及蓝牙通道 1、2、3 各自记住自己的布局，互不影响。例如在 USB 模式下切换为 macOS 布局后，2.4G 和蓝牙仍保持各自原来的布局；如需在其他模式下使用 macOS 布局，请在该模式下再按一次 FN+S。出厂默认及恢复出厂设置后，所有模式均为 Windows 布局。</td></tr>
+<tr><td class="sec">2.2 macOS 布局</td><td class="cd del">F4 │ <del>启动台</del> <del>Launc</del>h<del>pad</del> │ F10 │ 静音</td><td class="cd r add">F4 │ <ins>聚焦搜索</ins> <ins>Spotlig</ins>h<ins>t</ins> │ F10 │ 静音</td></tr>
+<tr><td class="sec">2.2 macOS 布局</td><td class="cd del">F5 │ <del>短按搜索 / 长按 Siri</del> │ F11 │ 音量 −</td><td class="cd r add">F5 │ <ins>听写</ins> │ F11 │ 音量 −</td></tr>
+<tr><td class="sec">2.2 macOS 布局</td><td class="cd del">F6 │ <del>截屏（Cmd+Shift+3）</del> │ F12 │ 音量 +</td><td class="cd r add">F6 │ <ins>勿扰模式</ins> │ F12 │ 音量 +</td></tr>
+<tr><td class="sec">2.2 macOS 布局</td><td class="cd del">在 macOS 布局下，FN+F1 ~ FN+F12 输出标准 F1 ~ F12。全键盘锁定<del>功能</del>仅在 Windows 布局下可用。</td><td class="cd r add">在 macOS 布局下，FN+F1 ~ FN+F12 输出标准 F1 ~ F12。<ins>Win 键锁定和</ins>全键盘锁定仅在 Windows 布局下可用<ins>：macOS 布局下这两项不生效，切回 Windows 布局后恢复原来的锁定状态</ins>。</td></tr>
+<tr><td class="sec">2.2 macOS 布局</td><td class="cd empty">（初版没有这段）</td><td class="cd r add">F6 勿扰模式在 USB 和蓝牙模式下按下即可开关；2.4G 模式需要接收器支持该功能，现有接收器暂不支持，按 F6 无反应。</td></tr>
+<tr><td class="sec">2.3 锁定与游戏功能</td><td class="cd del">• Win 键锁定：Windows 布局下按 FN+Win 锁定 Win 键，防止游戏中误触；再次按下解锁。该状态掉电不保存。</td><td class="cd r add">• Win 键锁定：Windows 布局下按 FN+Win 锁定 Win 键，防止游戏中误触；再次按下解锁。该状态掉电不保存。<ins>macOS 布局下不生效，切回 Windows 布局后恢复。</ins></td></tr>
+<tr><td class="sec">2.3 锁定与游戏功能</td><td class="cd del">• 全键盘锁定：Windows 布局下按 FN+F11 锁定全部按键，所有按键停止输出；再次按 FN+F11 解锁。该状态掉电不保存。</td><td class="cd r add">• 全键盘锁定：Windows 布局下按 FN+F11 锁定全部按键，所有按键停止输出；再次按 FN+F11 解锁。该状态掉电不保存。<ins>macOS 布局下不生效，切回 Windows 布局后恢复锁定。</ins></td></tr>
+<tr><td class="sec">2.3 锁定与游戏功能</td><td class="cd del">• 恢复出厂设置：长按 FN+ESC 约 2 秒，指示灯闪烁后键盘重启，清除全部配对信息、灯效设置和按键设置。恢复后需重新配对。</td><td class="cd r add">• 恢复出厂设置：长按 FN+ESC 约 2 秒，指示灯闪烁后键盘重启，清除全部配对信息、灯效设置和按键设置<ins>，所有模式恢复为 Windows 布局</ins>。恢复后需重新配对。</td></tr>
+</tbody></table></div></div>
+<div class="hunk"><h3 class="path">docs/R12三模ARGB键盘用户使用规格书_V1.0.docx → docs/R12三模ARGB键盘用户使用规格书_V1.1.docx</h3>
+<p class="note">同时更新：<span class="mono">.cleaned.docx</span>（去掉作者等元数据的版本）。</p>
+<div class="tbl-scroll"><table class="sbs"><colgroup><col class="sec"><col class="cd"><col class="cd"></colgroup>
+<thead><tr><th>所在章节</th><th>初版 · 用户使用规格书_V1.0.docx</th><th class="r">修改后 · 用户使用规格书_V1.1.docx</th></tr></thead><tbody>
+<tr><td class="sec">封面</td><td class="cd del">文档版本 │ V1.<del>0</del></td><td class="cd r add">文档版本 │ V1.<ins>1</ins></td></tr>
+<tr><td class="sec">封面</td><td class="cd del">发布日期 │ 2026-11-2<del>3</del></td><td class="cd r add">发布日期 │ 2026-11-2<ins>4</ins></td></tr>
+<tr><td class="sec">2 产品特性</td><td class="cd del">• 全尺寸布局：标准 104 键布局，26 键无冲；Windows / macOS 布局可切换。</td><td class="cd r add">• 全尺寸布局：标准 104 键布局，26 键无冲；Windows / macOS 布局可切换<ins>，并按连接模式分别保存</ins>。</td></tr>
+<tr><td class="sec">5.4 多设备切换</td><td class="cd empty">（初版没有这段）</td><td class="cd r add">• 布局随模式保存：Windows / macOS 布局在 USB、2.4G 和蓝牙通道 1 / 2 / 3 下分别保存，切换模式或蓝牙通道后，自动使用该模式上次设置的布局。</td></tr>
+<tr><td class="sec">6.1 Windows 布局（默认）</td><td class="cd del">FN+A │ 切换 Windows 布局 │ 默认布局</td><td class="cd r add">FN+A │ 切换 Windows 布局 │ 默认布局<ins>；按模式分别保存</ins></td></tr>
+<tr><td class="sec">6.1 Windows 布局（默认）</td><td class="cd del">FN+S │ 切换 macOS 布局 │ Alt 与 Win 键功能互换</td><td class="cd r add">FN+S │ 切换 macOS 布局 │ Alt 与 Win 键功能互换<ins>；按模式分别保存</ins></td></tr>
+<tr><td class="sec">6.2 macOS 布局</td><td class="cd del">按 FN+S 切换到 macOS 布局，按 FN+A 切回 Windows 布局。macOS 布局下 Alt 与 Win 键功能互换：<del>Win</del> 键相当于 Command，<del>Alt</del> 键相当于 Option。</td><td class="cd r add">按 FN+S 切换到 macOS 布局，按 FN+A 切回 Windows 布局。macOS 布局下 Alt 与 Win 键功能互换<ins>，与苹果键盘的按键排列一致</ins>：<ins>Alt</ins> 键相当于 Command，<ins>Win</ins> 键相当于 Option。</td></tr>
+<tr><td class="sec">6.2 macOS 布局</td><td class="cd empty">（初版没有这段）</td><td class="cd r add">Windows / macOS 布局掉电保存，并且按模式分别保存：USB、2.4G 以及蓝牙通道 1、2、3 各自记住自己的布局，互不影响。例如在 USB 模式下切换为 macOS 布局后，2.4G 和蓝牙仍保持各自原来的布局；如需在其他模式下使用 macOS 布局，请在该模式下再按一次 FN+S。出厂默认及恢复出厂设置后，所有模式均为 Windows 布局。</td></tr>
+<tr><td class="sec">6.2 macOS 布局</td><td class="cd del">F4 │ <del>启动台</del> <del>Launc</del>h<del>pad</del> │ F10 │ 静音</td><td class="cd r add">F4 │ <ins>聚焦搜索</ins> <ins>Spotlig</ins>h<ins>t</ins> │ F10 │ 静音</td></tr>
+<tr><td class="sec">6.2 macOS 布局</td><td class="cd del">F5 │ <del>短按搜索 / 长按 Siri</del> │ F11 │ 音量 −</td><td class="cd r add">F5 │ <ins>听写</ins> │ F11 │ 音量 −</td></tr>
+<tr><td class="sec">6.2 macOS 布局</td><td class="cd del">F6 │ <del>截屏（Cmd+Shift+3）</del> │ F12 │ 音量 +</td><td class="cd r add">F6 │ <ins>勿扰模式</ins> │ F12 │ 音量 +</td></tr>
+<tr><td class="sec">6.2 macOS 布局</td><td class="cd del">在 macOS 布局下，FN+F1 ~ FN+F12 输出标准 F1 ~ F12。全键盘锁定<del>功能</del>仅在 Windows 布局下可用。</td><td class="cd r add">在 macOS 布局下，FN+F1 ~ FN+F12 输出标准 F1 ~ F12。<ins>Win 键锁定和</ins>全键盘锁定仅在 Windows 布局下可用<ins>：macOS 布局下这两项不生效，切回 Windows 布局后恢复原来的锁定状态</ins>。</td></tr>
+<tr><td class="sec">6.2 macOS 布局</td><td class="cd empty">（初版没有这段）</td><td class="cd r add">F6 勿扰模式在 USB 和蓝牙模式下按下即可开关；2.4G 模式需要接收器支持该功能，现有接收器暂不支持，按 F6 无反应。</td></tr>
+<tr><td class="sec">6.3 锁定与游戏功能</td><td class="cd del">• Win 键锁定：Windows 布局下按 FN+Win 锁定 Win 键，防止游戏中误触；再次按下解锁。该状态掉电不保存。</td><td class="cd r add">• Win 键锁定：Windows 布局下按 FN+Win 锁定 Win 键，防止游戏中误触；再次按下解锁。该状态掉电不保存。<ins>macOS 布局下不生效，切回 Windows 布局后恢复。</ins></td></tr>
+<tr><td class="sec">6.3 锁定与游戏功能</td><td class="cd del">• 全键盘锁定：Windows 布局下按 FN+F11 锁定全部按键，所有按键停止输出；再次按 FN+F11 解锁。该状态掉电不保存。</td><td class="cd r add">• 全键盘锁定：Windows 布局下按 FN+F11 锁定全部按键，所有按键停止输出；再次按 FN+F11 解锁。该状态掉电不保存。<ins>macOS 布局下不生效，切回 Windows 布局后恢复锁定。</ins></td></tr>
+<tr><td class="sec">6.3 锁定与游戏功能</td><td class="cd del">• 恢复出厂设置：长按 FN+ESC 约 2 秒，指示灯闪烁后键盘重启，清除全部配对信息、灯效设置和按键设置。恢复后需重新配对。</td><td class="cd r add">• 恢复出厂设置：长按 FN+ESC 约 2 秒，指示灯闪烁后键盘重启，清除全部配对信息、灯效设置和按键设置<ins>，所有模式恢复为 Windows 布局</ins>。恢复后需重新配对。</td></tr>
+<tr><td class="sec">9 常见问题与排查</td><td class="cd del">按键字符与键帽不符 │ Windows / macOS 布局不匹配、系统键盘布局错误 │ 按 FN+A 切换 Windows 布局或 FN+S 切换 macOS 布局；检查系统键盘布局</td><td class="cd r add">按键字符与键帽不符 │ Windows / macOS 布局不匹配、系统键盘布局错误 │ <ins>在当前模式下</ins>按 FN+A 切换 Windows 布局或 FN+S 切换 macOS 布局<ins>（布局按模式分别保存）</ins>；检查系统键盘布局</td></tr>
+<tr><td class="sec">9 常见问题与排查</td><td class="cd empty">（初版没有这段）</td><td class="cd r add">切换模式后布局变了 │ Windows / macOS 布局按模式分别保存，当前模式还是原来的布局 │ 在当前模式下按 FN+S 切换 macOS 布局或 FN+A 切回 Windows 布局，之后该模式会记住</td></tr>
+<tr><td class="sec">9 常见问题与排查</td><td class="cd empty">（初版没有这段）</td><td class="cd r add">2.4G 下按 F6 勿扰无反应 │ 现有 2.4G 接收器暂不支持勿扰功能 │ 在 USB 或蓝牙模式下使用 F6 勿扰</td></tr>
+<tr><td class="sec">11.2 版本记录</td><td class="cd empty">（初版没有这段）</td><td class="cd r add">V1.1 │ 2026-11-24 │ 按新固件更新：macOS 布局 F3~F6 为调度中心 / 聚焦搜索 / 听写 / 勿扰；Windows / macOS 布局按模式分别保存；macOS 布局下 Win 键锁定与全键盘锁定不生效；更正 macOS 布局下 Alt / Win 键说明</td></tr>
+</tbody></table></div></div>
+</section>
+<section class="head" id="removed"><h2>移出 git 的编译产物</h2><p class="note">这些文件每次编译都会重新生成，初版把旧的一起提交了，导致误烧旧固件。现在用 <span class="mono">.gitignore</span> 忽略，本地编译不受影响。<span class="mono">out/</span>、<span class="mono">out_boot/</span>、<span class="mono">_build/</span> 各保留一个 <span class="mono">.gitkeep</span>，保证目录存在。</p>
+<div class="tbl-scroll"><table class="removed"><thead><tr><th>路径</th><th class="num">文件数</th><th>内容</th></tr></thead><tbody>
+<tr><td class="mono">projects/mouse_demo/keil5/out/</td><td class="num">198</td><td>编译中间文件和 SE73K.axf</td></tr>
+<tr><td class="mono">projects/mouse_demo/keil5/out_boot/</td><td class="num">8</td><td>bootloader 工程的编译输出</td></tr>
+<tr><td class="mono">projects/mouse_demo/keil5/_build/SE73K.dis</td><td class="num">1</td><td>反汇编文件</td></tr>
+<tr><td class="mono">projects/mouse_demo/keil5/SE73K.bin</td><td class="num">1</td><td>编译生成的固件（旧版）</td></tr>
+<tr><td class="mono">projects/mouse_demo/keil5/build_fn_esc.log、build_pull.log</td><td class="num">2</td><td>编译日志</td></tr>
+<tr><td class="mono">projects/mouse_demo/keil5/JLinkLog.txt</td><td class="num">1</td><td>J-Link 调试日志</td></tr>
+</tbody></table></div><p class="note">保留在 git 中、没有改动：预编译库 <span class="mono">userdefined_key.o</span>、<span class="mono">rf_*.o</span>、<span class="mono">*.lib</span>，bootloader <span class="mono">SE73_BootLoader_DLS853_20260330.bin</span>，以及发布用的 <span class="mono">RX_RX12_20261123__C5D6.bin</span>。</p></section>
+<section class="head"><h2>修改过程</h2><p class="note">按时间顺序。上面的对比只看最终结果；有些中间步骤后来又改掉了，比如 2.4G 下 F6 先改发 F13，后来改成系统键包。</p><div class="hist">
+<div class="pr"><b>PR #1</b> <span class="mono muted">d1979fa</span><ul><li><span class="mono">11a6c90</span> MAC 模式 F5 改为听写、F6 改为勿扰模式</li></ul></div>
+<div class="pr"><b>PR #2</b> <span class="mono muted">7b8277a</span><ul><li><span class="mono">0c22abb</span> 修正 MAC F6 勿扰：按住保持，报告格式与 QMK 一致</li></ul></div>
+<div class="pr"><b>PR #3</b> <span class="mono muted">bcc3f84</span><ul><li><span class="mono">94d3c6d</span> 修正 USB 模式下 F6 勿扰报告发不出去</li><li><span class="mono">7f68422</span> 从 git 中移除 Keil 编译产物并添加 .gitignore</li></ul></div>
+<div class="pr"><b>PR #4</b> <span class="mono muted">95b6269</span><ul><li><span class="mono">c041089</span> MAC 模式 F4 改为聚焦搜索，与新款苹果键盘一致</li></ul></div>
+<div class="pr"><b>PR #5</b> <span class="mono muted">667bca6</span><ul><li><span class="mono">41ac7fb</span> Win/Mac 系统切换按通道保存</li><li><span class="mono">81d89b6</span> 全键盘锁定在 Mac 布局下不生效，切回 Win 后恢复</li><li><span class="mono">ebca1bf</span> 2.4G 模式下 MAC F6 勿扰改发 F13（PrintScreen）</li></ul></div>
+<div class="pr"><b>PR #6</b> <span class="mono muted">dc8b00d</span><ul><li><span class="mono">1928c30</span> 2.4G 下 MAC F6 勿扰改发系统键包，不再发 F13</li><li><span class="mono">6d3d0e1</span> 试验：2.4G 系统键包勿扰值改为 0x9B</li><li><span class="mono">96b5f13</span> 2.4G 系统键包直接发与 USB 相同的勿扰用法值 0x9B</li></ul></div>
+<div class="pr"><b>PR #7</b> <span class="mono muted">fe57c49</span><ul><li><span class="mono">fe5a909</span> 更新按键连接灯效使用说明至 V1.1：布局按模式分别保存等</li><li><span class="mono">e811bfa</span> Win 键锁定改为真正掉电不保存</li><li><span class="mono">b5b4360</span> 更新用户使用规格书至 V1.1，更正 macOS 布局 Alt / Win 键说明</li></ul></div>
+</div></section>
+</div>
+</body>
+</html>
