@@ -557,14 +557,14 @@ unsigned char const HID_ReportDescriptor_Define[] = {
     HID_UsagePage(HID_USAGE_PAGE_GENERIC),
     HID_Usage(HID_USAGE_GENERIC_SYSTEM_CTL),
     HID_Collection(HID_Application),
-      HID_ReportID(iREPORT_ID_SYS_KEY),
-      HID_UsageMin(0x00),
+      HID_ReportID(iREPORT_ID_SYS_KEY),         // 与 QMK 的 System Control 报告格式一致
+      HID_UsageMin(0x01),
       HID_UsageMax(0xB7),
-      HID_LogicalMin(0),
+      HID_LogicalMin(1),
       HID_LogicalMaxS(0x00B7),
       HID_ReportCount(1),
-      HID_ReportSize(8),
-      HID_Input(HID_Data | HID_Array),
+      HID_ReportSize(16),
+      HID_Input(HID_Data | HID_Array | HID_Absolute),
     HID_EndCollection,
 //HID REPORT//25byte
     HID_UsagePageVendor(0x0F),                //3byte

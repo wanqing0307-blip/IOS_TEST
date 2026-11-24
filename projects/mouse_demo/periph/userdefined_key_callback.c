@@ -702,10 +702,10 @@ void __attribute__((noinline)) key_decode_cmd_0x40(void)
 
             break;
         case iKEY_MAC_DND&0x0F:                         // MAC F6：勿扰模式
-            if(0 == (define_key_flag & bkey_decode_end))
-            {                                           // 按住期间保持 0x9B，松开后扫描清 0 即发送释放
-                sys_data_tmp = iSYS_GD_DO_NOT_DISTURB;
-            }
+            // 库函数 key_decode() 只在按住期间调用本回调（首次扫描之后
+            // bkey_decode_end 就会置位），所以这里每次都置值，按住期间保持 0x9B；
+            // 松开后不再回调，扫描开头清 0，即发送释放
+            sys_data_tmp = iSYS_GD_DO_NOT_DISTURB;
             break;
     }
 }

@@ -212,7 +212,8 @@ __RAM_CODE uint8_t ex2_app_mouse_scan(void)
     }
     else if(0!=(m_data_flag&bsys_data_send))
     {                                           // 系统控制键（MAC F6 勿扰）
-        temp_buff[0] = sys_data;
+        temp_buff[0] = sys_data;                // 16 位用法值，低字节
+        temp_buff[1] = 0;                       // 高字节
         if(true == ex2_hid_tx_notification_system_control(temp_buff))
         {
             rtc_init_value = drv_rtc_read(OM_RTC);  // 有数据，重置休眠计时
