@@ -2346,13 +2346,14 @@ typedef struct {
 extern om_error_t drv_ledc_init(OM_LEDC_Type *om_ledc, ledc_config_t *config);
 # 106 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write();
-# 119 "../../../hal/driver/include/../om6239/drv_ledc.h"
+extern void drv_ledc_blank(void);
+# 120 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write_int(OM_LEDC_Type *om_ledc, uint8_t *data, uint16_t data_len);
-# 132 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 133 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_register_isr_callback(OM_LEDC_Type *om_ledc, drv_isr_callback_t isr_cb);
-# 146 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 147 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr_callback(OM_LEDC_Type *om_ledc, drv_event_t event);
-# 157 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 158 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr(OM_LEDC_Type *om_ledc);
 # 77 "../../../hal/driver/include/../om6239/driver_om6239.h" 2
 # 1 "../../../hal/driver/include/../om6239/drv_encoder.h" 1
@@ -2553,11 +2554,9 @@ extern unsigned char pwm_value;
 extern enum led_level led_light_lev;
 
 extern uint16_t lfsr_value;
-extern uint8_t start_dec_count;
 extern uint8_t snake_led_index;
 
 extern uint8_t pwm_time_count;
-extern uint16_t delay_time_count;
 extern uint8_t rgb_index;
 extern uint8_t led_process_index;
 extern uint8_t hint_time_count;
@@ -2605,7 +2604,17 @@ extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
 extern void led_mode_sbzl(void);
 
+extern void led_mode_baoshan_init(void);
 extern void led_mode_baoshan(void);
+extern void led_timer_reset(void);
+extern void led_mode_breath_init(void);
+extern void led_mode_liuguang_init(void);
+extern void led_mode_sbzl_init(void);
+extern void led_mode_star_init(void);
+extern void led_mode_nhjb_init(void);
+extern void led_mode_lhtw_init(void);
+extern void led_mode_tw_init(void);
+extern void led_mode_qcnh_init(void);
 extern void led_mode_qcnh(void);
 extern void led_mode_lhtw(void);
 extern void led_mode_dxtw(void);
@@ -2800,25 +2809,12 @@ unsigned char const sbzl_b_tbl[]={
 unsigned char const sbzl_ctrl_tbl[]={
   0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 1, 1, 1, 2,};
 # 16 "../led/logo_mode.c" 2
-# 27 "../led/logo_mode.c"
+# 26 "../led/logo_mode.c"
 _Bool bled_run_dir;
 
 uint16_t lfsr_value;
-uint8_t start_dec_count;
 uint8_t snake_led_index;
-static uint8_t qcnh_phase;
-static uint8_t qcnh_first = 1;
-static uint8_t qcnh_cur[(8)][3];
-# 43 "../led/logo_mode.c"
-static const unsigned char gamma_tbl[65] = {
-     0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3,
-     3, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 10, 10, 11, 12, 13,
-    14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 25, 27, 28, 29, 31, 32,
-    34, 36, 37, 39, 41, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62,
-    64,
-};
-
-
+# 38 "../led/logo_mode.c"
 static const unsigned char hue_rgb_tbl[48][3] = {
     {64, 0, 0}, {64, 8, 0}, {64, 16, 0}, {64, 24, 0}, {64, 32, 0}, {64, 40, 0},
     {64, 48, 0}, {64, 56, 0}, {64, 64, 0}, {56, 64, 0}, {48, 64, 0}, {40, 64, 0},
@@ -2829,7 +2825,55 @@ static const unsigned char hue_rgb_tbl[48][3] = {
     {32, 0, 64}, {40, 0, 64}, {48, 0, 64}, {56, 0, 64}, {64, 0, 64}, {64, 0, 56},
     {64, 0, 48}, {64, 0, 40}, {64, 0, 32}, {64, 0, 24}, {64, 0, 16}, {64, 0, 8},
 };
-# 74 "../led/logo_mode.c"
+# 57 "../led/logo_mode.c"
+typedef struct {
+    uint32_t last;
+    _Bool refresh;
+} led_timer_t;
+
+static led_timer_t led_timer_main;
+
+
+
+
+
+void led_timer_reset(void)
+{
+    led_timer_main.refresh = 1;
+}
+# 83 "../led/logo_mode.c"
+static uint8_t led_timer_take(led_timer_t *t, uint32_t period, uint8_t max_step)
+{
+    uint32_t now = drv_rtc_read(((OM_RTC_Type *) 0x40000200));
+    uint32_t n;
+
+    if(t->refresh)
+    {
+        t->refresh = 0;
+        t->last = now;
+        return 1;
+    }
+
+    n = (now - t->last) / period;
+    if(0 == n)
+        return 0;
+
+    if(max_step < n)
+    {
+        t->last = now;
+        return max_step;
+    }
+
+    t->last += n * period;
+    return (uint8_t)n;
+}
+
+
+static uint8_t led_speed_index(void)
+{
+    return (4 < led_speed_lev) ? 4 : led_speed_lev;
+}
+# 126 "../led/logo_mode.c"
 void led_mode_on(void)
 {
     unsigned char h;
@@ -2837,7 +2881,7 @@ void led_mode_on(void)
     rgb_enable = rgb_en_tbl[led_rgb_index&0x07];
     for(gtemp_j=0; gtemp_j<(8); gtemp_j++)
     {
-        if(7 == led_rgb_index)
+        if(7 == (led_rgb_index&0x07))
         {
 
             h = (gtemp_j*(48/(8))) % 48;
@@ -2850,668 +2894,802 @@ void led_mode_on(void)
         rgb_w_max();
     }
 }
-# 102 "../led/logo_mode.c"
+
+
+
+
+
+static const unsigned short breath_cycle_tbl[] = { 400, 600, 800, 1067, 1333 };
+# 164 "../led/logo_mode.c"
+static const unsigned short breath_curve_tbl[33] = {
+       0, 5, 25, 60, 112, 182, 270, 374, 495, 632, 783,
+     948, 1124, 1310, 1505, 1706, 1911, 2118, 2325, 2529, 2729, 2922,
+    3107, 3280, 3441, 3588, 3718, 3831, 3925, 3999, 4053, 4085, 4096,
+};
+
+static unsigned short breath_phase;
+static unsigned char breath_hue;
+
+
+
+
+
+void led_mode_breath_init(void)
+{
+    breath_phase = 0;
+    breath_hue = 0;
+}
+
+
+static unsigned short breath_curve(unsigned short x)
+{
+    unsigned char idx = x >> 5;
+    unsigned char frac = x & 0x1F;
+    unsigned short a = breath_curve_tbl[idx];
+
+    return a + (((breath_curve_tbl[idx+1] - a) * frac) >> 5);
+}
+# 203 "../led/logo_mode.c"
 void led_mode_breath(void)
 {
-    unsigned char i, h;
+    unsigned char i, n, h, en;
+    unsigned short cycle, pos, x;
+    uint32_t lum;
 
-    if(led_speed_lev>delay_time_count)
-    {
-  delay_time_count++;
+    n = led_timer_take(&led_timer_main, (((15)<<5) >> 1), 8);
+    if(0 == n)
         return;
- }
-    delay_time_count = 0;
 
-    i = pwm_time_count;
-    if(!bback_led_status)
+    cycle = breath_cycle_tbl[led_speed_index()];
+    breath_phase += n;
+    if(cycle <= breath_phase)
     {
-        if(pwm_time_count >= 64)
-            pwm_value = 0;
-        else
-            pwm_value = gamma_tbl[64 - i];
+        breath_phase %= cycle;
+        breath_hue = (breath_hue + 3) % 48;
+    }
+
+    pos = ((uint32_t)breath_phase * 1024) / cycle;
+
+    if(pos < 435)
+    {
+        x = ((uint32_t)pos * 1024) / (435);
+        lum = breath_curve(x);
+    }
+    else if(pos < 486)
+    {
+        lum = 4096;
+    }
+    else if(pos < 921)
+    {
+        x = ((uint32_t)(921 - 1 - pos) * 1024) / (435);
+        lum = breath_curve(x);
     }
     else
     {
-        if(pwm_time_count >= 64)
-            pwm_value = 64;
-        else
-            pwm_value = gamma_tbl[i];
+        lum = 0;
     }
 
-    if(pwm_time_count == 64)
-    {
-        pwm_time_count = 0;
-        bback_led_status = !bback_led_status;
-        if(bback_led_status)
-            rgb_index++;
-    }
-
-
+    en = rgb_en_tbl[led_rgb_index&0x07];
     for(i=0; i<(8); i++)
     {
-        h = (rgb_index*3 + i*(48/(8))) % 48;
+        unsigned char r, g, b;
 
-        pwm_rgb_tbl[i][0x01] = (hue_rgb_tbl[h][0] * pwm_value) >> 6;
-        pwm_rgb_tbl[i][0x00] = (hue_rgb_tbl[h][1] * pwm_value) >> 6;
-        pwm_rgb_tbl[i][0x02] = (hue_rgb_tbl[h][2] * pwm_value) >> 6;
+        if(7 == (led_rgb_index&0x07))
+        {
+
+            h = (breath_hue + i*(48/(8))) % 48;
+            r = hue_rgb_tbl[h][0];
+            g = hue_rgb_tbl[h][1];
+            b = hue_rgb_tbl[h][2];
+        }
+        else
+        {
+            r = (en & 0x01) ? 64 : 0;
+            g = (en & 0x02) ? 64 : 0;
+            b = (en & 0x04) ? 64 : 0;
+        }
+
+        pwm_rgb_tbl[i][0x01] = (r * lum + (4096/2)) / 4096;
+        pwm_rgb_tbl[i][0x00] = (g * lum + (4096/2)) / 4096;
+        pwm_rgb_tbl[i][0x02] = (b * lum + (4096/2)) / 4096;
     }
-
-    pwm_time_count++;
 }
-# 165 "../led/logo_mode.c"
+
+
+
+
+
+
+static const unsigned short nhjb_cycle_tbl[] = { 384, 768, 1152, 1536, 1920 };
+
+static uint16_t nhjb_phase;
+
+
+
+
+
+void led_mode_nhjb_init(void)
+{
+    nhjb_phase = 0;
+}
+# 296 "../led/logo_mode.c"
 void led_mode_nhjb(void)
 {
-    unsigned char i;
+    uint8_t i, n, h0, h1, hf;
+    uint16_t cycle, hue, sum, r, g, b;
+    uint32_t k;
 
-    if(led_speed_lev>delay_time_count)
-    {
-  delay_time_count++;
+    n = led_timer_take(&led_timer_main, (((15)<<5) >> 1), 8);
+    if(0 == n)
         return;
- }
-    delay_time_count = 0;
 
-    if(0 == led_process_index)
-    {
-        pwm_duty_array_0[1]++;
-        if(64 <= pwm_duty_array_0[1])
-            led_process_index++;
-    }
-    else if(1 == led_process_index)
-    {
-        pwm_duty_array_0[0]--;
-        if(0 == pwm_duty_array_0[0])
-            led_process_index++;
-    }
-    else if(2 == led_process_index)
-    {
-        pwm_duty_array_0[2]++;
-        if(64 <= pwm_duty_array_0[2])
-            led_process_index++;
-    }
-    else if(3 == led_process_index)
-    {
-        pwm_duty_array_0[1]--;
-        if(0 == pwm_duty_array_0[1])
-            led_process_index++;
-    }
-    else if(4 == led_process_index)
-    {
-        pwm_duty_array_0[0]++;
-        if(64 <= pwm_duty_array_0[0])
-            led_process_index++;
-    }
-    else
-    {
-        pwm_duty_array_0[2]--;
-        if(0 == pwm_duty_array_0[2])
-            led_process_index = 0;
-    }
+    cycle = nhjb_cycle_tbl[led_speed_index()];
+    nhjb_phase += n;
+    while(cycle <= nhjb_phase)
+        nhjb_phase -= cycle;
+
+    hue = ((uint32_t)nhjb_phase * (48 * 256)) / cycle;
+    h0 = hue >> 8;
+    hf = hue & 0xFF;
+    h1 = (48 -1 <= h0) ? 0 : (h0 + 1);
+
+
+    r = hue_rgb_tbl[h0][0] * (256 - hf) + hue_rgb_tbl[h1][0] * hf;
+    g = hue_rgb_tbl[h0][1] * (256 - hf) + hue_rgb_tbl[h1][1] * hf;
+    b = hue_rgb_tbl[h0][2] * (256 - hf) + hue_rgb_tbl[h1][2] * hf;
+
+
+    sum = (r + g + b) >> 8;
+    if(sum < 64)
+        sum = 64;
+    k =(64UL << 12) / (64 + (((uint32_t)(sum - 64) * 106) >> 8));
 
     for(i=0; i<(8); i++)
     {
-        pwm_rgb_tbl[i][0] = pwm_duty_array_0[0x01];
-        pwm_rgb_tbl[i][1] = pwm_duty_array_0[0x00];
-        pwm_rgb_tbl[i][2] = pwm_duty_array_0[0x02];
+        pwm_rgb_tbl[i][0x01] = ((uint32_t)r * k + (1UL << 19)) >> 20;
+        pwm_rgb_tbl[i][0x00] = ((uint32_t)g * k + (1UL << 19)) >> 20;
+        pwm_rgb_tbl[i][0x02] = ((uint32_t)b * k + (1UL << 19)) >> 20;
     }
+}
+# 344 "../led/logo_mode.c"
+static const unsigned short lg_period_tbl[] = { 128, 256, 384, 512, 640 };
+# 353 "../led/logo_mode.c"
+static const unsigned short lg_band_tbl[33] = {
+    4096, 4074, 4010, 3904, 3761, 3583, 3375, 3142, 2891, 2627, 2356,
+    2085, 1818, 1562, 1319, 1095, 891, 710, 553, 419, 308, 219,
+     150, 97, 60, 34, 18, 8, 3, 1, 0, 0, 0,
+};
+
+static unsigned short lg_phase;
+static unsigned short lg_hue;
+
+
+
+
+
+void led_mode_liuguang_init(void)
+{
+    lg_phase = 0;
+    lg_hue = 0;
 }
 
 
+static unsigned short lg_band(unsigned short x)
+{
+    unsigned char idx, frac;
+    unsigned short a;
 
+    if(1024/2 < x)
+        x = 1024 - x;
+    x <<= 1;
+    if(1024 <= x)
+        return 0;
 
-
+    idx = x >> 5;
+    frac = x & 0x1F;
+    a = lg_band_tbl[idx];
+    return a - (((a - lg_band_tbl[idx+1]) * frac) >> 5);
+}
+# 398 "../led/logo_mode.c"
 void led_mode_liuguang(void)
 {
-    unsigned char i, k;
-    uint16_t x;
+    unsigned char i, n, h0, h1, hf, en;
+    unsigned short period, pos, x, hue;
+    uint32_t lum;
 
-    if(led_speed_lev>delay_time_count)
-    {
-  delay_time_count++;
+    n = led_timer_take(&led_timer_main, (((15)<<5) >> 1), 8);
+    if(0 == n)
         return;
- }
-    delay_time_count = 0;
 
-    x = 0x01;
+    period = lg_period_tbl[led_speed_index()];
+
+
+    lg_hue = (lg_hue + ((uint32_t)((48 * 256) / 8) * n) / period) % (48 * 256);
+
+    lg_phase += n;
+    while(period <= lg_phase)
+        lg_phase -= period;
+
+    pos = ((uint32_t)lg_phase * 1024) / period;
+    en = rgb_en_tbl[led_rgb_index&0x07];
+
     for(i=0; i<(8); i++)
     {
-        if(led_status_reg & x)
+        unsigned short r, g, b;
+
+
+        x = (pos + 1024 - (i % 4) * (1024 / 4)) % 1024;
+        lum = lg_band(x);
+
+        if(7 == (led_rgb_index&0x07))
         {
-            pwm_duty_array_0[i]++;
-            if(64 <= pwm_duty_array_0[i])
-            {
-                led_status_reg &= ~x;
-            }
+
+            hue = (lg_hue + (uint32_t)i * ((48 * 256) / (8))) % (48 * 256);
+            h0 = hue >> 8;
+            hf = hue & 0xFF;
+            h1 = (48 -1 <= h0) ? 0 : (h0 + 1);
+            r = (hue_rgb_tbl[h0][0] * (256 - hf) + hue_rgb_tbl[h1][0] * hf) >> 8;
+            g = (hue_rgb_tbl[h0][1] * (256 - hf) + hue_rgb_tbl[h1][1] * hf) >> 8;
+            b = (hue_rgb_tbl[h0][2] * (256 - hf) + hue_rgb_tbl[h1][2] * hf) >> 8;
         }
         else
         {
-            pwm_duty_array_0[i]--;
-            if(0 == pwm_duty_array_0[i])
-            {
-                pwm_duty_array_1[i]++;
-                if(7 < pwm_duty_array_1[i])
-                    pwm_duty_array_1[i]=1;
-                led_status_reg |= x;
-            }
-        }
-        x <<= 1;
-    }
-
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-    rgb_enable = 0x07;
-
-    for(k=0; k<(8); k++)
-    {
-        if(bled_run_dir)
-        {
-            gtemp_j = pwm_duty_array_0[k];
-            if(7 == led_rgb_index)
-                rgb_enable = pwm_duty_array_1[k];
-        }
-        else
-        {
-            gtemp_j = pwm_duty_array_0[(8)-1-k];
-            if(7 == led_rgb_index)
-                rgb_enable = pwm_duty_array_1[(8)-1-k];
+            r = (en & 0x01) ? 64 : 0;
+            g = (en & 0x02) ? 64 : 0;
+            b = (en & 0x04) ? 64 : 0;
         }
 
-        if(rgb_enable&0x01)
-            pwm_rgb_tbl[k][0x01] = gtemp_j;
-        else
-            pwm_rgb_tbl[k][0x01] = 0;
-        if(rgb_enable&0x02)
-            pwm_rgb_tbl[k][0x00] = gtemp_j;
-        else
-            pwm_rgb_tbl[k][0x00] = 0;
-        if(rgb_enable&0x04)
-            pwm_rgb_tbl[k][0x02] = gtemp_j;
-        else
-            pwm_rgb_tbl[k][0x02] = 0;
+        pwm_rgb_tbl[i][0x01] = (r * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][0x00] = (g * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][0x02] = (b * lum + 2048) >> 12;
     }
 }
+# 459 "../led/logo_mode.c"
+static const unsigned char star_spawn_tbl[] = { 20, 40, 70, 110, 160 };
 
-unsigned char const start_dec_delay[]={
-    20,
-    40,
-    70,
-    110,
-    160,
+static const unsigned char star_life_tbl[] = { 80, 96, 128, 160, 192 };
+
+
+
+
+static const unsigned short star_curve_tbl[33] = {
+       0, 182, 783, 1706, 2729, 3588, 4053, 4090, 4053, 3982, 3880,
+    3748, 3588, 3402, 3195, 2969, 2729, 2478, 2221, 1962, 1706, 1456,
+    1216, 991, 783, 596, 432, 294, 182, 98, 40, 9, 0,
 };
-# 310 "../led/logo_mode.c"
+
+static uint8_t star_age[(8)];
+static uint8_t star_hue[(8)];
+static int16_t star_next;
+
+
+static uint16_t star_rand(void)
+{
+    lfsr_value = (lfsr_value >> 1) ^ ((uint16_t)(-(int16_t)(lfsr_value & 0x01)) & 0xB400);
+    return lfsr_value;
+}
+
+
+
+
+
+void led_mode_star_init(void)
+{
+    uint8_t i;
+
+    for(i=0; i<(8); i++)
+        star_age[i] = 0xFF;
+    if(0 == lfsr_value)
+        lfsr_value = 0x55AA;
+    star_next = 0;
+}
+
+
+static void led_mode_star_spawn(void)
+{
+    uint8_t i, cnt = 0, pick;
+    uint8_t idle[(8)];
+
+    for(i=0; i<(8); i++)
+    {
+        if(0xFF == star_age[i])
+            idle[cnt++] = i;
+    }
+    if(0 == cnt)
+        return;
+
+    pick = idle[star_rand() % cnt];
+    star_age[pick] = 0;
+    star_hue[pick] = star_rand() % 48;
+}
+# 525 "../led/logo_mode.c"
 void led_mode_star(void)
 {
-    unsigned char i, j;
+    uint8_t i, n, lev, life, en, idx, frac;
+    uint16_t x, a;
+    uint32_t lum;
 
-    delay_time_count++;
-    i = start_dec_delay[led_speed_lev&0x07];
-    if(i > delay_time_count)
-    {
-        start_dec_count++;
-        if(led_speed_lev>start_dec_count)
-        {
-            start_dec_count++;
-            return;
-        }
-        start_dec_count = 0;
-
-        rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-        for(i=0; i<(8); i++)
-        {
-            if(0 != pwm_duty_array_0[i])
-            {
-                pwm_duty_array_0[i]--;
-
-
-                    rgb_enable = (pwm_duty_array_1[i]&0x0F);
-
-                if(rgb_enable&0x01)
-                    pwm_rgb_tbl[i][0x01] = pwm_duty_array_0[i];
-                else
-                    pwm_rgb_tbl[i][0x01] = 0;
-                if(rgb_enable&0x02)
-                    pwm_rgb_tbl[i][0x00] = pwm_duty_array_0[i];
-                else
-                    pwm_rgb_tbl[i][0x00] = 0;
-                if(rgb_enable&0x04)
-                    pwm_rgb_tbl[i][0x02] = pwm_duty_array_0[i];
-                else
-                    pwm_rgb_tbl[i][0x02] = 0;
-            }
-            else
-            {
-                pwm_rgb_tbl[i][0x01] = 0;
-                pwm_rgb_tbl[i][0x00] = 0;
-                pwm_rgb_tbl[i][0x02] = 0;
-            }
-        }
-
+    n = led_timer_take(&led_timer_main, (((15)<<5) >> 1), 8);
+    if(0 == n)
         return;
-    }
 
-    delay_time_count = 0;
+    lev = led_speed_index();
+    life = star_life_tbl[lev];
 
-    lfsr_value = lfsr_value>>1;
-    if(lfsr_value & 0x01)
-        lfsr_value ^= 0xF521;
 
-    j = ((lfsr_value+(lfsr_value>>8))&0x0F);
-
-    pwm_duty_array_0[j] = 64;
-    pwm_duty_array_1[j] = ((lfsr_value>>8)&0x0F);
-    if(0==pwm_duty_array_1[j])
-        pwm_duty_array_1[j] = 1;
-}
-# 381 "../led/logo_mode.c"
-void led_mode_sbzl(void)
-{
-    if(led_speed_lev > delay_time_count)
+    for(i=0; i<(8); i++)
     {
-        delay_time_count++;
-        return;
-    }
-    delay_time_count = 0;
-
-    for(gtemp_x=0; gtemp_x<(8); gtemp_x++)
-    {
-        if(0 == pwm_duty_array_3[gtemp_x])
-        {
-            pwm_duty_array_0[gtemp_x]--;
-            pwm_duty_array_1[gtemp_x]=64 -pwm_duty_array_0[gtemp_x];
-            if(0 == pwm_duty_array_0[gtemp_x])
-                pwm_duty_array_3[gtemp_x]++;
-        }
-        else if(1 == pwm_duty_array_3[gtemp_x])
-        {
-            pwm_duty_array_1[gtemp_x]--;
-            pwm_duty_array_2[gtemp_x]=64 -pwm_duty_array_1[gtemp_x];
-            if(0 == pwm_duty_array_1[gtemp_x])
-                pwm_duty_array_3[gtemp_x]++;
-        }
+        if(0xFF == star_age[i])
+            continue;
+        if(life <= (uint16_t)star_age[i] + n)
+            star_age[i] = 0xFF;
         else
-        {
-            pwm_duty_array_2[gtemp_x]--;
-            pwm_duty_array_0[gtemp_x]=64 -pwm_duty_array_2[gtemp_x];
-            if(0 == pwm_duty_array_2[gtemp_x])
-                pwm_duty_array_3[gtemp_x]=0;
-        }
+            star_age[i] += n;
     }
 
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-    rgb_enable = 0x07;
 
-    if(!bled_run_dir)
+    star_next -= n;
+    if(star_next <= 0)
     {
-        for(gtemp_x = 0; gtemp_x<(8); gtemp_x++)
-        {
-            if(rgb_enable&0x01)
-               pwm_rgb_tbl[gtemp_x][0x01] = pwm_duty_array_0[gtemp_x];
-           else
-               pwm_rgb_tbl[gtemp_x][0x01] = 0;
-            if(rgb_enable&0x02)
-               pwm_rgb_tbl[gtemp_x][0x00] = pwm_duty_array_1[gtemp_x];
-           else
-               pwm_rgb_tbl[gtemp_x][0x00] = 0;
-            if(rgb_enable&0x04)
-               pwm_rgb_tbl[gtemp_x][0x02] = pwm_duty_array_2[gtemp_x];
-           else
-               pwm_rgb_tbl[gtemp_x][0x02] = 0;
-        }
+        led_mode_star_spawn();
+        star_next = (star_spawn_tbl[lev] >> 1) + (star_rand() % (star_spawn_tbl[lev] + 1));
     }
-    else
+
+    en = rgb_en_tbl[led_rgb_index&0x07];
+    for(i=0; i<(8); i++)
     {
-        for(gtemp_x = 0; gtemp_x<(8); gtemp_x++)
+        uint16_t r, g, b;
+
+        if(0xFF == star_age[i])
         {
-            if(rgb_enable&0x01)
-                pwm_rgb_tbl[gtemp_x][0x01] = pwm_duty_array_0[(8)-1-gtemp_x];
-            else
-                pwm_rgb_tbl[gtemp_x][0x01] = 0;
-            if(rgb_enable&0x02)
-                pwm_rgb_tbl[gtemp_x][0x00] = pwm_duty_array_1[(8)-1-gtemp_x];
-            else
-                pwm_rgb_tbl[gtemp_x][0x00] = 0;
-            if(rgb_enable&0x04)
-                pwm_rgb_tbl[gtemp_x][0x02] = pwm_duty_array_2[(8)-1-gtemp_x];
-            else
-                pwm_rgb_tbl[gtemp_x][0x02] = 0;
-        }
-    }
-}
-
-unsigned int const bs_dec_delay[8]={
-    40,
-    60,
-    90,
-    140,
-    200,
-};
-# 471 "../led/logo_mode.c"
-void led_mode_baoshan(void)
-{
-    delay_time_count++;
-    if(bs_dec_delay[led_speed_lev&0x07] > delay_time_count)
-        return;
-
-    delay_time_count = 0;
-    clr_rgb();
-
- if(0 == led_process_index)
- {
-
-
-
-            rgb_enable = rgb_en_tbl[rgb_index&0x0F];
-     gtemp_j = 0;
-     rgb_w_max();
-     gtemp_j = 2;
-     rgb_w_max();
-     gtemp_j = 4;
-     rgb_w_max();
-     gtemp_j = 6;
-     rgb_w_max();
-
-        led_process_index++;
-    }
-    else if(1 == led_process_index)
- {
-
-
-
-            rgb_enable = rgb_en_tbl[rgb_index&0x0F];
-     gtemp_j = 1;
-     rgb_w_max();
-     gtemp_j = 3;
-     rgb_w_max();
-     gtemp_j = 5;
-     rgb_w_max();
-     gtemp_j = 7;
-     rgb_w_max();
-
-        led_process_index++;
-    }
- else if(2 == led_process_index)
- {
-
-
-
-            rgb_enable = ~rgb_en_tbl[rgb_index&0x0F];
-        if(0==(rgb_enable&0x07))
-            rgb_enable = 0x01;
-
-     gtemp_j = 0;
-     rgb_w_max();
-     gtemp_j = 2;
-     rgb_w_max();
-     gtemp_j = 4;
-     rgb_w_max();
-     gtemp_j = 6;
-     rgb_w_max();
-
-        led_process_index++;
-    }
-    else
- {
-
-
-
-            rgb_enable = ~rgb_en_tbl[rgb_index&0x0F];
-        if(0==(rgb_enable&0x07))
-            rgb_enable = 0x01;
-     gtemp_j = 1;
-     rgb_w_max();
-     gtemp_j = 3;
-     rgb_w_max();
-     gtemp_j = 5;
-     rgb_w_max();
-     gtemp_j = 7;
-     rgb_w_max();
-
-        led_process_index=0;
-        rgb_index++;
-        if(7<=rgb_index)
-            rgb_index = 0;
-    }
-}
-
-unsigned char const qcnh_en_tbl[]={
-    0x01,
-    0x02,
-    0x04,
-    0x01|0x04,
-    0x01|0x02,
-    0x02|0x04,
-    0x0F,
-
-    0x01,
-    0x02,
-    0x04,
-    0x01|0x04,
-    0x01|0x02,
-    0x02|0x04,
-    0x0F,
-    0x01,
-    0x02,
-};
-unsigned int const qcnh_dec_delay[]={
-    40,
-    60,
-    90,
-    140,
-    200,
-};
-
-
-
-static const unsigned char qcnh_hue12_tbl[12][3] = {
-    {64,30,19}, {64,53,19}, {53,64,19}, {30,64,19}, {19,64,30}, {19,64,53},
-    {19,53,64}, {19,30,64}, {30,19,64}, {53,19,64}, {64,19,53}, {64,19,30},
-};
-
-
-static const unsigned char qcnh_layer_tbl[(8)] = { 36, 48, 58, 64, 64, 58, 48, 36 };
-# 605 "../led/logo_mode.c"
-void led_mode_qcnh(void)
-{
-    unsigned char i, k, light;
-
-    delay_time_count++;
-    if(qcnh_first || (qcnh_dec_delay[led_speed_lev&0x07] <= delay_time_count))
-    {
-        qcnh_first = 0;
-        delay_time_count = 0;
-
-        if(++qcnh_phase >= 12)
-            qcnh_phase = 0;
-
-        for(i = 0; i<(8); i++)
-        {
-            k = qcnh_phase + ((8) - i);
-            if(12 <= k)
-                k -= 12;
-
-            qcnh_cur[i][0] = qcnh_hue12_tbl[k][0];
-            qcnh_cur[i][1] = qcnh_hue12_tbl[k][1];
-            qcnh_cur[i][2] = qcnh_hue12_tbl[k][2];
-        }
-    }
-
-
-    for(i = 0; i<(8); i++)
-    {
-        light = qcnh_layer_tbl[i];
-
-        pwm_rgb_tbl[i][0x01] = (qcnh_cur[i][0] * light) >> 6;
-        pwm_rgb_tbl[i][0x00] = (qcnh_cur[i][1] * light) >> 6;
-        pwm_rgb_tbl[i][0x02] = (qcnh_cur[i][2] * light) >> 6;
-    }
-}
-
-unsigned int const lhtw_dec_delay[]={
-    8,
-    12,
-    18,
-    24,
-    32,
-};
-
-
-
-
-
-
-
-void led_mode_lhtw(void)
-{
-    unsigned char i;
-
-    delay_time_count++;
-    if(lhtw_dec_delay[led_speed_lev&0x07] > delay_time_count)
-        return;
-
-    delay_time_count = 0;
-
-    if(!bback_led_status)
-    {
-        for(i=0; i<led_process_index; i++)
-        {
-            rgb_enable = qcnh_en_tbl[i];
-         gtemp_j = i;
-         rgb_w_max();
-        }
-        led_process_index++;
-        if((8) < led_process_index)
-            bback_led_status = 1;
-    }
-    else
-    {
-        for(i=led_process_index; i<(8); i++)
-        {
-            rgb_enable = qcnh_en_tbl[i];
             pwm_rgb_tbl[i][0x01] = 0;
             pwm_rgb_tbl[i][0x00] = 0;
             pwm_rgb_tbl[i][0x02] = 0;
+            continue;
         }
 
-        if(0 != led_process_index)
-            led_process_index--;
+        x = ((uint16_t)star_age[i] * 1024) / life;
+        idx = x >> 5;
+        frac = x & 0x1F;
+        a = star_curve_tbl[idx];
+        lum = (int32_t)a + ((((int32_t)star_curve_tbl[idx+1] - a) * frac) >> 5);
+
+        if(7 == (led_rgb_index&0x07))
+        {
+            r = hue_rgb_tbl[star_hue[i]][0];
+            g = hue_rgb_tbl[star_hue[i]][1];
+            b = hue_rgb_tbl[star_hue[i]][2];
+        }
         else
-            bback_led_status = 0;
+        {
+            r = (en & 0x01) ? 64 : 0;
+            g = (en & 0x02) ? 64 : 0;
+            b = (en & 0x04) ? 64 : 0;
+        }
+
+        pwm_rgb_tbl[i][0x01] = (r * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][0x00] = (g * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][0x02] = (b * lum + 2048) >> 12;
     }
 }
-# 701 "../led/logo_mode.c"
-void led_mode_dxtw(void)
+# 602 "../led/logo_mode.c"
+static const unsigned short sbzl_cycle_tbl[] = { 192, 384, 576, 768, 960 };
+# 612 "../led/logo_mode.c"
+static const unsigned short sbzl_wave_tbl[33] = {
+    4096, 4086, 4057, 4009, 3943, 3860, 3762, 3650, 3526, 3391, 3249,
+    3100, 2948, 2793, 2639, 2487, 2338, 2194, 2056, 1926, 1804, 1691,
+    1588, 1494, 1410, 1337, 1273, 1220, 1176, 1142, 1119, 1104, 1099,
+};
+
+static unsigned short sbzl_hue_phase;
+static unsigned short sbzl_wave_phase;
+
+
+
+
+
+void led_mode_sbzl_init(void)
 {
-    unsigned char x;
+    sbzl_hue_phase = 0;
+    sbzl_wave_phase = 0;
+}
 
-    if(led_speed_lev>delay_time_count)
-    {
-  delay_time_count++;
+
+static unsigned short sbzl_wave(unsigned short x)
+{
+    unsigned char idx, frac;
+    unsigned short a;
+
+    if(1024/2 < x)
+        x = 1024 - x;
+    x <<= 1;
+    if(1024 <= x)
+        return sbzl_wave_tbl[32];
+
+    idx = x >> 5;
+    frac = x & 0x1F;
+    a = sbzl_wave_tbl[idx];
+    return a - (((a - sbzl_wave_tbl[idx+1]) * frac) >> 5);
+}
+# 657 "../led/logo_mode.c"
+void led_mode_sbzl(void)
+{
+    unsigned char i, n, h0, h1, hf, en;
+    unsigned short cycle, wave_cycle, hue, wpos, x;
+    uint32_t lum;
+
+    n = led_timer_take(&led_timer_main, (((15)<<5) >> 1), 8);
+    if(0 == n)
         return;
- }
-    delay_time_count = 0;
 
- snake_led_index &= 0x0F;
-    x = --pwm_duty_array_0[snake_led_index];
-    if(((64*3)/4)>x)
+    cycle = sbzl_cycle_tbl[led_speed_index()];
+    wave_cycle = (cycle * 3) / 4;
+
+    sbzl_hue_phase += n;
+    sbzl_wave_phase += n;
+    while(cycle <= sbzl_hue_phase)
+        sbzl_hue_phase -= cycle;
+    while(wave_cycle <= sbzl_wave_phase)
+        sbzl_wave_phase -= wave_cycle;
+
+    hue = ((uint32_t)sbzl_hue_phase * (48 * 256)) / cycle;
+    wpos = ((uint32_t)sbzl_wave_phase * 1024) / wave_cycle;
+    en = rgb_en_tbl[led_rgb_index&0x07];
+
+    for(i=0; i<(8); i++)
     {
-     snake_led_index++;
-        if(16<=snake_led_index)
+        unsigned short r, g, b, h;
+
+
+        x = (wpos + 1024 - i * (1024 / (8))) % 1024;
+        lum = sbzl_wave(x);
+
+        if(7 == (led_rgb_index&0x07))
         {
-            snake_led_index = 3;
-            pwm_duty_array_0[snake_led_index] = 64;
-            return;
+            h = (hue + (48 * 256) - (i * ((48 * 256) * 375 / 3600)) % (48 * 256)) % (48 * 256);
+            h0 = h >> 8;
+            hf = h & 0xFF;
+            h1 = (48 -1 <= h0) ? 0 : (h0 + 1);
+            r = (hue_rgb_tbl[h0][0] * (256 - hf) + hue_rgb_tbl[h1][0] * hf) >> 8;
+            g = (hue_rgb_tbl[h0][1] * (256 - hf) + hue_rgb_tbl[h1][1] * hf) >> 8;
+            b = (hue_rgb_tbl[h0][2] * (256 - hf) + hue_rgb_tbl[h1][2] * hf) >> 8;
         }
-        pwm_duty_array_0[snake_led_index] = 64;
-    }
-    x = pwm_duty_array_0[snake_led_index];
-    pwm_duty_array_0[snake_led_index-1] = x-((64*1)/4);
-    pwm_duty_array_0[snake_led_index-2] = x-((64*2)/4);
-    pwm_duty_array_0[snake_led_index-3] = x-((64*3)/4);
-
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-    for(gtemp_x=5; gtemp_x<((8)+5); gtemp_x++)
-    {
-
+        else
         {
-            rgb_enable = (gtemp_x&0x07);
-            if(0==rgb_enable)
-                rgb_enable = 4;
+            r = (en & 0x01) ? 64 : 0;
+            g = (en & 0x02) ? 64 : 0;
+            b = (en & 0x04) ? 64 : 0;
         }
 
-        gtemp_j = (gtemp_x-5);
-        rgb_pwm0_w();
+        pwm_rgb_tbl[i][0x01] = (r * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][0x00] = (g * lum + 2048) >> 12;
+        pwm_rgb_tbl[i][0x02] = (b * lum + 2048) >> 12;
     }
 }
-# 752 "../led/logo_mode.c"
-void led_mode_sxtw(void)
+
+
+
+
+
+
+
+static const unsigned short bs_period_ms_tbl[] = { 300, 450, 675, 1050, 1500 };
+
+
+
+
+
+static uint32_t bs_start;
+static uint8_t bs_base;
+static uint8_t bs_lev;
+
+
+
+
+
+void led_mode_baoshan_init(void)
 {
-    unsigned char x;
+    bs_start = drv_rtc_read(((OM_RTC_Type *) 0x40000200));
+    bs_base = 0;
+    bs_lev = led_speed_index();
+}
+# 747 "../led/logo_mode.c"
+void led_mode_baoshan(void)
+{
+    uint32_t now, period, k;
+    uint8_t frame, sub, en, j;
 
-    if(led_speed_lev>delay_time_count)
+    now = drv_rtc_read(((OM_RTC_Type *) 0x40000200));
+    period = ((bs_period_ms_tbl[bs_lev])<<5);
+    k = (now - bs_start) / period;
+
+
+    if(bs_lev != led_speed_index())
     {
-  delay_time_count++;
+        bs_base = (bs_base + k) % (7 * 4);
+        bs_start = now;
+        bs_lev = led_speed_index();
+        k = 0;
+    }
+
+
+    if((7 * 4) <= k)
+    {
+        bs_start += (k / (7 * 4)) * (7 * 4) * period;
+        k %= (7 * 4);
+    }
+
+    frame = (bs_base + k) % (7 * 4);
+    sub = frame % 4;
+
+    en = rgb_en_tbl[frame / 4];
+    if(2 <= sub)
+    {
+        en = ~en;
+        if(0 == (en & 0x07))
+            en = 0x01;
+    }
+
+    clr_rgb();
+    rgb_enable = en;
+    for(j = (sub & 0x01); j < (8); j += 2)
+    {
+        gtemp_j = j;
+        rgb_w_max();
+    }
+}
+
+
+unsigned char const lhtw_en_tbl[]={
+    0x01,
+    0x02,
+    0x04,
+    0x01|0x04,
+    0x01|0x02,
+    0x02|0x04,
+    0x0F,
+
+    0x01,
+    0x02,
+    0x04,
+    0x01|0x04,
+    0x01|0x02,
+    0x02|0x04,
+    0x0F,
+    0x01,
+    0x02,
+};
+# 827 "../led/logo_mode.c"
+static const unsigned short qcnh_cycle_ms_tbl[] = { 4500, 6700, 9000, 13400, 26900 };
+# 836 "../led/logo_mode.c"
+static const unsigned char qcnh_color_tbl[7][3] = {
+    {64, 0, 0},
+    {64, 30, 0},
+    {64, 59, 0},
+    { 0, 64, 0},
+    { 0, 64, 64},
+    { 0, 5, 64},
+    {43, 0, 64},
+};
+
+
+
+static const unsigned short qcnh_block_tbl[33] = {
+    4096, 4087, 4061, 4019, 3960, 3886, 3798, 3698, 3587, 3466, 3337,
+    3203, 3065, 2925, 2784, 2644, 2507, 2374, 2246, 2124, 2009, 1903,
+    1804, 1715, 1634, 1563, 1501, 1449, 1407, 1374, 1350, 1336, 1331,
+};
+# 862 "../led/logo_mode.c"
+static uint16_t qcnh_phase;
+
+
+
+
+
+void led_mode_qcnh_init(void)
+{
+    qcnh_phase = 0;
+}
+
+
+
+static uint16_t qcnh_blend(uint8_t f)
+{
+    uint32_t t;
+
+    if(f <= (96 / 2))
+        return 0;
+    if(f >= (256 - 96 / 2))
+        return 256;
+
+    t = ((uint32_t)(f - (96 / 2)) * 256) / ((256 - 96 / 2) - (96 / 2));
+    return (uint16_t)((t * t * (768 - 2 * t)) >> 16);
+}
+
+
+static uint16_t qcnh_block(uint8_t f)
+{
+    uint8_t x, idx, frac;
+    uint16_t a;
+
+    x = (f <= 128) ? f : (uint8_t)(256 - f);
+    idx = x >> 2;
+    frac = x & 0x03;
+    a = qcnh_block_tbl[idx];
+    if(32 <= idx)
+        return a;
+    return a - (((a - qcnh_block_tbl[idx+1]) * frac) >> 2);
+}
+# 911 "../led/logo_mode.c"
+void led_mode_qcnh(void)
+{
+    uint8_t i, n, c, nc, f;
+    uint16_t cycle, pos, p, t, lum;
+    const unsigned char *a, *b;
+
+    n = led_timer_take(&led_timer_main, (((15)<<5) >> 1), 8);
+    if(0 == n)
         return;
- }
-    delay_time_count = 0;
 
- snake_led_index &= 0x0F;
-    if(!bback_led_status)
+    cycle = ((uint32_t)qcnh_cycle_ms_tbl[led_speed_index()] * 2) / 15;
+    qcnh_phase += n;
+    while(cycle <= qcnh_phase)
+        qcnh_phase -= cycle;
+
+    pos = ((uint32_t)qcnh_phase * (7 * 256)) / cycle;
+
+    for(i = 0; i<(8); i++)
     {
-        x = --pwm_duty_array_0[snake_led_index];
-        if(((64*3)/4)>x)
-        {
-         snake_led_index++;
-            if(16<=snake_led_index)
-            {
-                snake_led_index = (16 -4);
-                pwm_duty_array_0[snake_led_index] = 64;
-                bback_led_status = 1;
-                return;
-            }
-            pwm_duty_array_0[snake_led_index] = 64;
-        }
-        x = pwm_duty_array_0[snake_led_index];
-        pwm_duty_array_0[snake_led_index-1] = x-((64*1)/4);
-        pwm_duty_array_0[snake_led_index-2] = x-((64*2)/4);
-        pwm_duty_array_0[snake_led_index-3] = x-((64*3)/4);
+
+
+
+
+
+        p = (pos + ((8) - 1 - i) * (256 / 2)) % (7 * 256);
+
+        c = p / 256;
+        f = p % 256;
+        nc = (7 - 1 <= c) ? 0 : (c + 1);
+        a = qcnh_color_tbl[c];
+        b = qcnh_color_tbl[nc];
+        t = qcnh_blend(f);
+        lum = qcnh_block(f);
+
+
+        pwm_rgb_tbl[i][0x01] = ((uint32_t)(a[0] * (256 - t) + b[0] * t) * lum + (1UL << 19)) >> 20;
+        pwm_rgb_tbl[i][0x00] = ((uint32_t)(a[1] * (256 - t) + b[1] * t) * lum + (1UL << 19)) >> 20;
+        pwm_rgb_tbl[i][0x02] = ((uint32_t)(a[2] * (256 - t) + b[2] * t) * lum + (1UL << 19)) >> 20;
+    }
+}
+# 960 "../led/logo_mode.c"
+static const unsigned short tw_tail_tbl[33] = {
+    4096, 3820, 3554, 3298, 3053, 2819, 2594, 2380, 2175, 1981, 1796,
+    1621, 1456, 1301, 1155, 1019, 891, 773, 665, 565, 473, 391,
+     317, 251, 194, 145, 103, 69, 42, 22, 9, 2, 0,
+};
+
+static uint16_t tw_phase;
+
+
+
+
+
+void led_mode_tw_init(void)
+{
+    tw_phase = 0;
+}
+
+
+
+static uint16_t tw_comet(int16_t d)
+{
+    uint16_t x, a;
+    uint8_t idx, frac;
+
+    if(d <= -128)
+        return 0;
+    if(d < 0)
+        return (uint16_t)(d + 128) << 5;
+    if((4 * 256) <= d)
+        return 0;
+
+    x = ((uint32_t)d * 1024) / (4 * 256);
+    idx = x >> 5;
+    frac = x & 0x1F;
+    a = tw_tail_tbl[idx];
+    return a - (((a - tw_tail_tbl[idx+1]) * frac) >> 5);
+}
+
+
+static void tw_put(uint8_t i, uint8_t hue, uint16_t lum)
+{
+    uint16_t r, g, b;
+    uint8_t en;
+
+    if(7 == (led_rgb_index&0x07))
+    {
+        r = hue_rgb_tbl[hue][0];
+        g = hue_rgb_tbl[hue][1];
+        b = hue_rgb_tbl[hue][2];
     }
     else
     {
-        x = --pwm_duty_array_0[snake_led_index];
-        if(((64*3)/4)>x)
-        {
-            if(0 != snake_led_index)
-            {
-             snake_led_index--;
-            }
-            else
-            {
-                snake_led_index = 3;
-                pwm_duty_array_0[snake_led_index] = 64;
-                bback_led_status = 0;
-                return;
-            }
-            pwm_duty_array_0[snake_led_index] = 64;
-        }
-        x = pwm_duty_array_0[snake_led_index];
-        pwm_duty_array_0[snake_led_index+1] = x-((64*1)/4);
-        pwm_duty_array_0[snake_led_index+2] = x-((64*2)/4);
-        pwm_duty_array_0[snake_led_index+3] = x-((64*3)/4);
+        en = rgb_en_tbl[led_rgb_index&0x07];
+        r = (en & 0x01) ? 64 : 0;
+        g = (en & 0x02) ? 64 : 0;
+        b = (en & 0x04) ? 64 : 0;
     }
 
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
-    for(gtemp_x=5; gtemp_x<((8)+5); gtemp_x++)
-    {
-
-        {
-            rgb_enable = (gtemp_x&0x07);
-            if(0==rgb_enable)
-                rgb_enable = 4;
-        }
-
-        gtemp_j = (gtemp_x-5);
-        rgb_pwm0_w();
-    }
+    pwm_rgb_tbl[i][0x01] = ((uint32_t)r * lum + 2048) >> 12;
+    pwm_rgb_tbl[i][0x00] = ((uint32_t)g * lum + 2048) >> 12;
+    pwm_rgb_tbl[i][0x02] = ((uint32_t)b * lum + 2048) >> 12;
 }
 
+
+
+static uint16_t tw_advance(uint16_t tpl, uint32_t len256)
+{
+    uint8_t n;
+    uint16_t cycle;
+
+    n = led_timer_take(&led_timer_main, (((15)<<5) >> 1), 8);
+    if(0 == n)
+        return 0xFFFF;
+
+    cycle = (uint16_t)((len256 * tpl) >> 8);
+    tw_phase += n;
+    while(cycle <= tw_phase)
+        tw_phase -= cycle;
+    return tw_phase;
+}
+
+
+static int16_t tw_head(uint16_t phase, uint16_t tpl)
+{
+    return (int16_t)(((uint32_t)phase * 256) / tpl) - 256 - 128;
+}
+# 1058 "../led/logo_mode.c"
+void led_mode_dxtw(void)
+{
+    uint8_t i;
+    uint16_t tpl = ((uint16_t)17 * (led_speed_index() + 1)), ph;
+    int16_t h;
+
+    ph = tw_advance(tpl, (256 + 128 + (8) * 256 + 4 * 256 - 128));
+    if(0xFFFF == ph)
+        return;
+
+    h = tw_head(ph, tpl);
+    for(i=0; i<(8); i++)
+        tw_put(i, (i * (48/(8))) % 48, tw_comet(h - (int16_t)i * 256));
+}
+
+
+
+
+
+void led_mode_sxtw(void)
+{
+    uint8_t i, back;
+    uint16_t tpl = ((uint16_t)17 * (led_speed_index() + 1)), ph, leg;
+    int16_t h;
+
+    ph = tw_advance(tpl, 2UL * (256 + 128 + (8) * 256 + 4 * 256 - 128));
+    if(0xFFFF == ph)
+        return;
+
+    leg = (uint16_t)(((uint32_t)(256 + 128 + (8) * 256 + 4 * 256 - 128) * tpl) >> 8);
+    back = (leg <= ph);
+    if(back)
+        ph -= leg;
+
+    h = tw_head(ph, tpl);
+    for(i=0; i<(8); i++)
+    {
+        uint8_t pos = back ? ((8) - 1 - i) : i;
+        tw_put(i, (i * (48/(8))) % 48, tw_comet(h - (int16_t)pos * 256));
+    }
+}
 
 
 
@@ -3520,101 +3698,71 @@ void led_mode_sxtw(void)
 
 void led_mode_txtw(void)
 {
-    unsigned char x;
+    uint8_t i, pair;
+    uint16_t tpl = ((uint16_t)17 * (led_speed_index() + 1)), ph;
+    int16_t h;
 
-    if(led_speed_lev>delay_time_count)
-    {
-  delay_time_count++;
+
+    ph = tw_advance(tpl, 256 + ((8)/2) * 256 + 4 * 256 - 256);
+    if(0xFFFF == ph)
         return;
- }
-    delay_time_count = 0;
 
- snake_led_index &= 0x0F;
-    x = --pwm_duty_array_0[snake_led_index];
-    if(((64*3)/4)>x)
+    h = tw_head(ph, tpl);
+    for(i=0; i<(8); i++)
     {
-     snake_led_index++;
-        if(11<=snake_led_index)
-        {
-            snake_led_index = 3;
-            pwm_duty_array_0[snake_led_index] = 64;
-            return;
-        }
-        pwm_duty_array_0[snake_led_index] = 64;
+        pair = (i < (8)/2) ? i : ((8) - 1 - i);
+        if(iMODE_LED_FXTW == led_cur_mode)
+            pair = ((8)/2 - 1) - pair;
+        tw_put(i, (((i < (8)/2) ? i : ((8) - 1 - i)) * 12) % 48,
+               tw_comet(h - (int16_t)pair * 256));
     }
-    x = pwm_duty_array_0[snake_led_index];
-    pwm_duty_array_0[snake_led_index-1] = x-((64*1)/4);
-    pwm_duty_array_0[snake_led_index-2] = x-((64*2)/4);
-    pwm_duty_array_0[snake_led_index-3] = x-((64*3)/4);
+}
 
-    rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
 
-    if(iMODE_LED_TXTW == led_cur_mode)
+
+
+
+static const unsigned char lhtw_step_tbl[] = { 8, 12, 18, 24, 32 };
+
+
+
+
+
+void led_mode_lhtw_init(void)
+{
+    tw_phase = 0;
+}
+
+
+
+
+
+
+void led_mode_lhtw(void)
+{
+    uint8_t i;
+    uint16_t tpl = lhtw_step_tbl[led_speed_index()], ph;
+    int32_t lv, x;
+
+    ph = tw_advance(tpl, (2 * (8) + 3) * 256);
+    if(0xFFFF == ph)
+        return;
+
+    lv = ((uint32_t)ph * 256) / tpl;
+    if(lv < (8) * 256)
+        ;
+    else if(lv < ((8) + 1) * 256)
+        lv = (8) * 256;
+    else if(lv < (2 * (8) + 1) * 256)
+        lv = (2 * (8) + 1) * 256 - lv;
+    else
+        lv = 0;
+
+    for(i=0; i<(8); i++)
     {
-
-            rgb_enable = 0x01;
-        gtemp_x = 4;
-        gtemp_j = 0;
-        rgb_pwm0_w();
-        gtemp_j = 7;
-        rgb_pwm0_w();
-
-
-            rgb_enable = 0x02;
-        gtemp_x = 5;
-        gtemp_j = 1;
-        rgb_pwm0_w();
-        gtemp_j = 6;
-        rgb_pwm0_w();
-
-
-            rgb_enable = 0x04;
-        gtemp_x = 6;
-        gtemp_j = 2;
-        rgb_pwm0_w();
-        gtemp_j = 5;
-        rgb_pwm0_w();
-
-
-            rgb_enable = 0x03;
-        gtemp_x = 7;
-        gtemp_j = 3;
-        rgb_pwm0_w();
-        gtemp_j = 4;
-        rgb_pwm0_w();
-    }
-    else if(iMODE_LED_FXTW == led_cur_mode)
-    {
-
-            rgb_enable = 0x01;
-        gtemp_x = 7;
-        gtemp_j = 0;
-        rgb_pwm0_w();
-        gtemp_j = 7;
-        rgb_pwm0_w();
-
-
-            rgb_enable = 0x02;
-        gtemp_x = 6;
-        gtemp_j = 1;
-        rgb_pwm0_w();
-        gtemp_j = 6;
-        rgb_pwm0_w();
-
-
-            rgb_enable = 0x04;
-        gtemp_x = 5;
-        gtemp_j = 2;
-        rgb_pwm0_w();
-        gtemp_j = 5;
-        rgb_pwm0_w();
-
-
-            rgb_enable = 0x03;
-        gtemp_x = 4;
-        gtemp_j = 3;
-        rgb_pwm0_w();
-        gtemp_j = 4;
-        rgb_pwm0_w();
+        x = lv - (int32_t)i * 256;
+        if(x < 0) x = 0;
+        if(x > 256) x = 256;
+        tw_put(i, (i * (48/(8))) % 48, (uint16_t)((x * x) >> 4));
     }
 }

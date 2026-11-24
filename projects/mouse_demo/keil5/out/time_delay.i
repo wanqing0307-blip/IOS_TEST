@@ -2222,13 +2222,14 @@ typedef struct {
 extern om_error_t drv_ledc_init(OM_LEDC_Type *om_ledc, ledc_config_t *config);
 # 106 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write();
-# 119 "../../../hal/driver/include/../om6239/drv_ledc.h"
+extern void drv_ledc_blank(void);
+# 120 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write_int(OM_LEDC_Type *om_ledc, uint8_t *data, uint16_t data_len);
-# 132 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 133 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_register_isr_callback(OM_LEDC_Type *om_ledc, drv_isr_callback_t isr_cb);
-# 146 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 147 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr_callback(OM_LEDC_Type *om_ledc, drv_event_t event);
-# 157 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 158 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr(OM_LEDC_Type *om_ledc);
 # 77 "../../../hal/driver/include/../om6239/driver_om6239.h" 2
 # 1 "../../../hal/driver/include/../om6239/drv_encoder.h" 1

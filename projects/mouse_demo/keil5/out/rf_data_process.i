@@ -2663,13 +2663,14 @@ typedef struct {
 extern om_error_t drv_ledc_init(OM_LEDC_Type *om_ledc, ledc_config_t *config);
 # 106 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write();
-# 119 "../../../hal/driver/include/../om6239/drv_ledc.h"
+extern void drv_ledc_blank(void);
+# 120 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write_int(OM_LEDC_Type *om_ledc, uint8_t *data, uint16_t data_len);
-# 132 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 133 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_register_isr_callback(OM_LEDC_Type *om_ledc, drv_isr_callback_t isr_cb);
-# 146 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 147 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr_callback(OM_LEDC_Type *om_ledc, drv_event_t event);
-# 157 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 158 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr(OM_LEDC_Type *om_ledc);
 # 77 "../../../hal/driver/include/../om6239/driver_om6239.h" 2
 # 1 "../../../hal/driver/include/../om6239/drv_encoder.h" 1
@@ -2949,11 +2950,9 @@ extern unsigned char pwm_value;
 extern enum led_level led_light_lev;
 
 extern uint16_t lfsr_value;
-extern uint8_t start_dec_count;
 extern uint8_t snake_led_index;
 
 extern uint8_t pwm_time_count;
-extern uint16_t delay_time_count;
 extern uint8_t rgb_index;
 extern uint8_t led_process_index;
 extern uint8_t hint_time_count;
@@ -3001,7 +3000,17 @@ extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
 extern void led_mode_sbzl(void);
 
+extern void led_mode_baoshan_init(void);
 extern void led_mode_baoshan(void);
+extern void led_timer_reset(void);
+extern void led_mode_breath_init(void);
+extern void led_mode_liuguang_init(void);
+extern void led_mode_sbzl_init(void);
+extern void led_mode_star_init(void);
+extern void led_mode_nhjb_init(void);
+extern void led_mode_lhtw_init(void);
+extern void led_mode_tw_init(void);
+extern void led_mode_qcnh_init(void);
 extern void led_mode_qcnh(void);
 extern void led_mode_lhtw(void);
 extern void led_mode_dxtw(void);
@@ -3346,12 +3355,13 @@ void rf_sync_ok_callback(void)
         report_24g = ((report_dpi[key_mode]>>4)&0x03);
     m_tx_count = 0;
 
-    if(1 == b24g_nromal)
-        ble_24g_ctrl &= ~(1<<2);
+    ble_24g_ctrl |= (1<<3);
+
+    rtc_init_value = drv_rtc_read(((OM_RTC_Type *) 0x40000200));
 
     hid_ctrl_reg |= (1<<0);
 }
-# 168 "../../../mode_24g/rf_data_process.c"
+# 169 "../../../mode_24g/rf_data_process.c"
 void rf_hid_rx_callback(void)
 {
     out_report_data[1] &= 0x3F;
@@ -3362,7 +3372,7 @@ void rf_hid_rx_callback(void)
 
 extern void hid_get_fw_mode_info(void);
 extern uint8_t lvd_value;
-# 186 "../../../mode_24g/rf_data_process.c"
+# 187 "../../../mode_24g/rf_data_process.c"
 __attribute((used, section("RAM_CODE"), noinline)) void rf_tx_data_process(void)
 {
     if(0==(m_data_flag & (1<<4)))
@@ -3509,11 +3519,12 @@ __attribute((used, section("RAM_CODE"), noinline)) void rf_normal_mode_sleep(voi
     drv_pmu_set_low_power_mode(PMU_LPM_STOP1);
     if (!_primask) { __enable_irq(); } } while(0);
 }
-# 346 "../../../mode_24g/rf_data_process.c"
+# 347 "../../../mode_24g/rf_data_process.c"
 void rf_tx1_idle_callback(void)
 {
     lvd_scan_count++;
-    if(4==(lvd_scan_count&0x07))
+
+    if((4==(lvd_scan_count&0x07)) && (0 == dat_24g_0[27]))
         device_led_process();
     if(0==(lvd_scan_count&0x01))
         logo_process();
@@ -3522,7 +3533,7 @@ void rf_tx1_idle_callback(void)
 void rf_tx1_irq_callback(void)
 {
     lvd_scan_count++;
-    if(4==(lvd_scan_count&0x07))
+    if((4==(lvd_scan_count&0x07)) && (0 == dat_24g_0[27]))
         device_led_process();
     if(0==(lvd_scan_count&0x01))
         logo_process();
@@ -3548,7 +3559,7 @@ void rf_no_rx_callback(void)
 {
 
 }
-# 392 "../../../mode_24g/rf_data_process.c"
+# 394 "../../../mode_24g/rf_data_process.c"
 void rf_encrypt_get_random_val(uint16_t* lfsr)
 {
     do { (1) ? (((OM_RCC_Type *) 0x40000600)->CLKGATE |= (RCC_CLK_RTC)) : (((OM_RCC_Type *) 0x40000600)->CLKGATE &= ~(RCC_CLK_RTC)); } while(0);

@@ -36,7 +36,18 @@ void mouse_24g_init(void)
 {
     mouse_periph_wakeup_enable(WAKEUP_ALL_DISABLE);
 
+    // 2.4G 休眠时 logo_off() 已关闭 LEDC/ARGB，唤醒后立即重新初始化，
+    // 不依赖后续 logo_process 的懒初始化，保证第一颗指示灯第一时间有输出
+    if(false == bargb_valid)
+    {
+        OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+        OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+        ledc_init();
+    }
+
     drv_rf24g_init();
+    ble_24g_ctrl &= ~bom6239_sync_ok;       // 新一轮同步：先清连接成功标志
+    ble_24g_ctrl |= bom6239_sync_ing;       // 回连中：指示灯按回连节奏闪烁
     rf_mode_convert(iRF_MODE_SYNC);
     rtc_init();
 
@@ -45,6 +56,7 @@ void mouse_24g_init(void)
     drv_rtc_set_alarm0(rtc_reload_value);
 
     __enable_irq();
+
 }
 
 /******************************************************************************
@@ -75,6 +87,8 @@ int main_24g(void)
                     device_led_process();
                 led_hint_process();
                 logo_process();
+                drv_ledc_write();       // 同步/重试阶段也持续刷新 ARGB（与蓝牙 ADV 路径一致），
+                                        // 重试过程扰动输出后能尽快恢复，不会暗到下一轮循环
                 sleep_process();
             }
         }

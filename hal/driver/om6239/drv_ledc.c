@@ -94,15 +94,23 @@ om_error_t drv_ledc_init(OM_LEDC_Type *om_ledc, ledc_config_t *config)
 extern void uart_tx(unsigned char data);
 extern bool bargb_valid;
 
+__ALIGNED(4) static uint8_t pwm_temp[iLED_HW_MAX*3];
+static uint8_t pwm_disp[iLED_MAX][3];               // 时间平滑后的显示值
+
+// 关闭 ARGB 时清空发送/平滑缓冲，避免重新上电时先闪出旧画面
+void drv_ledc_blank(void)
+{
+    memset(pwm_temp, 0, sizeof(pwm_temp));
+    memset(pwm_disp, 0, sizeof(pwm_disp));
+}
+
 __RAM_CODE om_error_t drv_ledc_write()
 {
-    __ALIGNED(4) static uint8_t pwm_temp[iLED_HW_MAX*3];
-    static uint8_t pwm_disp[iLED_MAX][3];               // 时间平滑后的显示值
 
     if(false == bargb_valid)
         return OM_ERROR_OK;
 OM_CRITICAL_BEGIN();
-    // 第 1 颗为模式指示灯，保持不动；灯珠为反向接线，8 颗灯效灯倒序输出
+    // 第 1 颗为模式指示灯，不经过任何处理直接输出；后面 8 颗灯效灯倒序输出
     // 时间平滑：每帧向目标色靠拢 1/4，柔化逐帧跳变；跳色类灯效旁路，保留台阶感
     memcpy(pwm_temp, mode_led_rgb, 3);
 

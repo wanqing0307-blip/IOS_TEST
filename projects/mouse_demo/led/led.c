@@ -117,6 +117,16 @@ void led_status_hint(void)
 {
     uint8_t i=0;
     uint8_t r=0, g=0, b=0;
+    uint8_t conn;
+
+    // 连接状态：USB 视为已连接；2.4G 以 RF 正常模式或同步成功为准；蓝牙以 sync_ok 为准
+    if(iDEVICE_TYPE_USB == device_type)
+        conn = 1;
+    else if(iDEVICE_TYPE_24G == device_type)
+        conn = (iRF_MODE_NORMAL == rf_mode_type)
+            || (0 != (ble_24g_ctrl&bom6239_sync_ok));
+    else
+        conn = (0 != (ble_24g_ctrl&bom6239_sync_ok));
 
     // 第 1 颗 ARGB 模式指示灯：与 NUM/CAPS 状态灯共用 hint_led_status 的节奏
     if((iLOW_POWER >= bat_value) && (0 == (bat_status&bcharging)))
@@ -126,14 +136,7 @@ void led_status_hint(void)
     }
     else
     {
-        uint8_t connected;
-
-        if(iDEVICE_TYPE_USB == device_type)
-            connected = 1;                                  // 有线：直接亮
-        else if(iDEVICE_TYPE_24G == device_type)
-            connected = (iRF_MODE_NORMAL == rf_mode_type);  // 2.4G 连上
-        else
-            connected = (0 != (ble_24g_ctrl&bom6239_sync_ok));  // 蓝牙连上
+        uint8_t connected = conn;
 
         // 上电无线状态的配对/回连提示：与 mLED_NUM_LOW 同一闪烁相位；连上后常亮
         if(0 != (hint_led_status&bled_hint_mode))
@@ -172,21 +175,30 @@ void led_status_hint(void)
     mode_led_rgb[iG_INDEX] = g;
     mode_led_rgb[iB_INDEX] = b;
 
-	if(kb_led_status&bnum_lock)
+    // NUM/CAPS 锁定灯：连接成功后才按锁定状态点亮，未连接时熄灭
+    if(0 != conn)
     {
-        mLED_NUM_HIGH
+        if(kb_led_status&bnum_lock)
+        {
+            mLED_NUM_HIGH
+        }
+        else
+        {
+            mLED_NUM_LOW;
+        }
+
+        if(kb_led_status&bcaps_lock)
+        {
+            mLED_CAPS_HIGH;
+        }
+        else
+        {
+            mLED_CAPS_LOW;
+        }
     }
     else
     {
         mLED_NUM_LOW;
-    }
-
-    if(kb_led_status&bcaps_lock)
-    {
-        mLED_CAPS_HIGH;
-    }
-    else
-    {
         mLED_CAPS_LOW;
     }
 }
@@ -227,6 +239,7 @@ void device_led_off(void)
 
 void logo_off(void)
 {
+    drv_ledc_blank();       // 清空发送缓冲，重新上电不会闪出旧画面
     bargb_valid = false;
 
     DRV_RCC_CLOCK_ENABLE(RCC_CLK_LEDC, 0U);
@@ -325,10 +338,12 @@ void device_led_process(void)
             {
                 if(ble_24g_ctrl&bom6239_conn_ok)
                 {
-                    device_conn_index++;
-                    led_delay_count = rtc_cur_value;
-                    device_hint_count = 0;
-                    bdevice_led_status = false;     // 从灭开始计数，保证连接成功只闪3下
+                    // 配对成功不提示：直接转常亮
+                    hint_led_status &= ~bled_hint_mode;
+                    device_conn_index = 0;
+                    ble_24g_ctrl |= bom6239_sync_ok;    // 立即按已连接颜色输出
+                    ble_24g_ctrl &= ~bom6239_conning;
+                    ble_24g_ctrl &= ~bom6239_sync_ing;
                 }
 
                 key_into_fcc_test();
@@ -345,36 +360,6 @@ void device_led_process(void)
                 {
                     device_led_on();
                     if(mMS_TO_TICK(250) < (rtc_cur_value - led_delay_count))
-                    {
-                        bdevice_led_status = false;
-                        led_delay_count = rtc_cur_value;
-                    }
-                }
-            }
-            else if(2 == device_conn_index)
-            {
-                if(false == bdevice_led_status)
-                {
-                    device_led_off();
-                    if(mMS_TO_TICK(125) < (rtc_cur_value - led_delay_count))
-                    {
-                        bdevice_led_status = true;
-                        led_delay_count = rtc_cur_value;
-
-                        device_hint_count++;
-                        if(3<device_hint_count)
-                        {
-                            hint_led_status &= ~bled_hint_mode;
-                            device_conn_index = 0;
-                            ble_24g_ctrl &= ~bom6239_conning;
-                            ble_24g_ctrl &= ~bom6239_sync_ing;  // 同一次连接不再触发回连闪灯
-                        }
-                    }
-                }
-                else
-                {
-                    device_led_on();
-                    if(mMS_TO_TICK(125) < (rtc_cur_value - led_delay_count))
                     {
                         bdevice_led_status = false;
                         led_delay_count = rtc_cur_value;
@@ -398,10 +383,11 @@ void device_led_process(void)
             {
                 if(ble_24g_ctrl&bom6239_sync_ok)
                 {
+                    // 回连成功：快闪 3 下后转常亮（蓝牙与 2.4G 共用）
                     device_conn_index++;
                     led_delay_count = rtc_cur_value;
                     device_hint_count = 0;
-                    bdevice_led_status = false;     // 从灭开始计数，保证连接成功只闪3下
+                    bdevice_led_status = false;     // 从灭开始计数
                 }
 
                 if(false == bdevice_led_status)
@@ -516,6 +502,33 @@ void logo_process(void)
             clr_rgb();                              // 灯效全灭，保留LEDC输出第1颗模式指示灯（配对/回连提示）
             return;
         }
+
+        // 2.4G 仅 RF 正常模式渲染灯效；配对/连接/同步/无接收器阶段一律熄灭，
+        // 避免配对成功切到同步的瞬间闪出一帧灯效画面
+        if((iDEVICE_TYPE_24G == device_type) && (iRF_MODE_NORMAL != rf_mode_type))
+        {
+            if(false == bargb_valid)
+            {
+                OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+                OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+                ledc_init();
+            }
+            clr_rgb();
+            return;
+        }
+    }
+
+    // 连接提示（配对/回连/成功快闪）期间不渲染灯效，避免提示阶段叠出一帧灯效画面
+    if(0 != (hint_led_status&bled_hint_mode))
+    {
+        if(false == bargb_valid)
+        {
+            OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+            OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+            ledc_init();
+        }
+        clr_rgb();
+        return;
     }
 
     if(false == bled_bright_en)

@@ -2548,13 +2548,14 @@ typedef struct {
 extern om_error_t drv_ledc_init(OM_LEDC_Type *om_ledc, ledc_config_t *config);
 # 106 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write();
-# 119 "../../../hal/driver/include/../om6239/drv_ledc.h"
+extern void drv_ledc_blank(void);
+# 120 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write_int(OM_LEDC_Type *om_ledc, uint8_t *data, uint16_t data_len);
-# 132 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 133 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_register_isr_callback(OM_LEDC_Type *om_ledc, drv_isr_callback_t isr_cb);
-# 146 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 147 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr_callback(OM_LEDC_Type *om_ledc, drv_event_t event);
-# 157 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 158 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr(OM_LEDC_Type *om_ledc);
 # 77 "../../../hal/driver/include/../om6239/driver_om6239.h" 2
 # 1 "../../../hal/driver/include/../om6239/drv_encoder.h" 1
@@ -2834,11 +2835,9 @@ extern unsigned char pwm_value;
 extern enum led_level led_light_lev;
 
 extern uint16_t lfsr_value;
-extern uint8_t start_dec_count;
 extern uint8_t snake_led_index;
 
 extern uint8_t pwm_time_count;
-extern uint16_t delay_time_count;
 extern uint8_t rgb_index;
 extern uint8_t led_process_index;
 extern uint8_t hint_time_count;
@@ -2886,7 +2885,17 @@ extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
 extern void led_mode_sbzl(void);
 
+extern void led_mode_baoshan_init(void);
 extern void led_mode_baoshan(void);
+extern void led_timer_reset(void);
+extern void led_mode_breath_init(void);
+extern void led_mode_liuguang_init(void);
+extern void led_mode_sbzl_init(void);
+extern void led_mode_star_init(void);
+extern void led_mode_nhjb_init(void);
+extern void led_mode_lhtw_init(void);
+extern void led_mode_tw_init(void);
+extern void led_mode_qcnh_init(void);
 extern void led_mode_qcnh(void);
 extern void led_mode_lhtw(void);
 extern void led_mode_dxtw(void);
@@ -3106,7 +3115,7 @@ extern int main_24g(void);
 
 extern _Bool bperiph_int;
 extern _Bool bdevice_led_status;
-# 31 "../../../mode_24g/sleep.c"
+# 32 "../../../mode_24g/sleep.c"
 void sleep_process(void)
 {
     uint8_t i;
@@ -3179,13 +3188,18 @@ void sleep_process(void)
                     rf_ctrl_reg &= ~((1<<5)|(1<<4));
 
                     mouse_periph_wakeup_enable(0x00);
-                    logo_off();
+                    clr_rgb();
                     key_tx_count = 0;
                     mmk_tx_count = 0;
                     rtc_value = drv_rtc_read(((OM_RTC_Type *) 0x40000200));
                     do
                     {
-                        rf_normal_mode_sleep();
+
+
+                        if(10 > no_dongle_time_count)
+                            delayus(500);
+                        else
+                            rf_normal_mode_sleep();
                         drv_wdt_keep_alive(((OM_WDT_Type *) 0x40000700));
 
                         i++;
@@ -3204,12 +3218,16 @@ void sleep_process(void)
 
                         if(10 > no_dongle_time_count)
                         {
-                            hint_led_status |= (1<<7);
-                            if(1 == bdevice_led_status)
-                                device_led_on();
-                            else
-                                device_led_off();
+                            device_led_process();
+
+                            if(0 == bargb_valid)
+                            {
+                                ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+1));
+                                ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
+                                ledc_init();
+                            }
                             led_status_hint();
+                            drv_ledc_write();
                             if(((850)<<5) < (drv_rtc_read(((OM_RTC_Type *) 0x40000200))-rtc_value))
                                 break;
                         }
@@ -3225,8 +3243,6 @@ void sleep_process(void)
                         }
                     }
                     while(1);
-                    hint_led_status &= 0xF8;
-                    bdevice_led_status = !bdevice_led_status;
 
                     if((0!=key_tx_count)||(0!=mmk_tx_count))
                     {
@@ -3243,6 +3259,7 @@ void sleep_process(void)
 
                     mouse_24g_init();
                     sys_ctrl |= (1<<2);
+
                 }
             }
             break;

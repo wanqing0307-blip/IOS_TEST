@@ -2346,13 +2346,14 @@ typedef struct {
 extern om_error_t drv_ledc_init(OM_LEDC_Type *om_ledc, ledc_config_t *config);
 # 106 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write();
-# 119 "../../../hal/driver/include/../om6239/drv_ledc.h"
+extern void drv_ledc_blank(void);
+# 120 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write_int(OM_LEDC_Type *om_ledc, uint8_t *data, uint16_t data_len);
-# 132 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 133 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_register_isr_callback(OM_LEDC_Type *om_ledc, drv_isr_callback_t isr_cb);
-# 146 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 147 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr_callback(OM_LEDC_Type *om_ledc, drv_event_t event);
-# 157 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 158 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr(OM_LEDC_Type *om_ledc);
 # 77 "../../../hal/driver/include/../om6239/driver_om6239.h" 2
 # 1 "../../../hal/driver/include/../om6239/drv_encoder.h" 1
@@ -2957,11 +2958,9 @@ extern unsigned char pwm_value;
 extern enum led_level led_light_lev;
 
 extern uint16_t lfsr_value;
-extern uint8_t start_dec_count;
 extern uint8_t snake_led_index;
 
 extern uint8_t pwm_time_count;
-extern uint16_t delay_time_count;
 extern uint8_t rgb_index;
 extern uint8_t led_process_index;
 extern uint8_t hint_time_count;
@@ -3009,7 +3008,17 @@ extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
 extern void led_mode_sbzl(void);
 
+extern void led_mode_baoshan_init(void);
 extern void led_mode_baoshan(void);
+extern void led_timer_reset(void);
+extern void led_mode_breath_init(void);
+extern void led_mode_liuguang_init(void);
+extern void led_mode_sbzl_init(void);
+extern void led_mode_star_init(void);
+extern void led_mode_nhjb_init(void);
+extern void led_mode_lhtw_init(void);
+extern void led_mode_tw_init(void);
+extern void led_mode_qcnh_init(void);
 extern void led_mode_qcnh(void);
 extern void led_mode_lhtw(void);
 extern void led_mode_dxtw(void);
@@ -3280,7 +3289,6 @@ unsigned char pwm_value;
 enum led_level led_light_lev;
 
 uint8_t pwm_time_count;
-uint16_t delay_time_count;
 uint8_t rgb_index;
 uint8_t led_process_index;
 uint8_t hint_time_count;
@@ -3296,7 +3304,7 @@ uint8_t pwm_duty_array_2[0x20];
 uint8_t pwm_duty_array_3[0x20];
 
 extern _Bool b24g_nromal;
-# 99 "../led/led.c"
+# 98 "../led/led.c"
 void ledc_init(void)
 {
     ledc_config_t config = {
@@ -3307,11 +3315,21 @@ void ledc_init(void)
     drv_ledc_init(((OM_LEDC_Type *) 0x40000A00), &config);
     bargb_valid = 1;
 }
-# 117 "../led/led.c"
+# 116 "../led/led.c"
 void led_status_hint(void)
 {
     uint8_t i=0;
     uint8_t r=0, g=0, b=0;
+    uint8_t conn;
+
+
+    if(iDEVICE_TYPE_USB == device_type)
+        conn = 1;
+    else if(iDEVICE_TYPE_24G == device_type)
+        conn = (0x03 == dat_24g_0[26])
+            || (0 != (ble_24g_ctrl&(1<<3)));
+    else
+        conn = (0 != (ble_24g_ctrl&(1<<3)));
 
 
     if((10 >= bat_value) && (0 == (bat_status&(1<<6))))
@@ -3321,14 +3339,7 @@ void led_status_hint(void)
     }
     else
     {
-        uint8_t connected;
-
-        if(iDEVICE_TYPE_USB == device_type)
-            connected = 1;
-        else if(iDEVICE_TYPE_24G == device_type)
-            connected = (0x03 == dat_24g_0[26]);
-        else
-            connected = (0 != (ble_24g_ctrl&(1<<3)));
+        uint8_t connected = conn;
 
 
         if(0 != (hint_led_status&(1<<7)))
@@ -3367,25 +3378,34 @@ void led_status_hint(void)
     mode_led_rgb[0x00] = g;
     mode_led_rgb[0x02] = b;
 
- if(kb_led_status&(1<<0))
+
+    if(0 != conn)
     {
-        {((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1u<<(2*8+2));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(2*8+2));}
+        if(kb_led_status&(1<<0))
+        {
+            {((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1u<<(2*8+2));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(2*8+2));}
+        }
+        else
+        {
+            {((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1u<<(2*8+2));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(2*8+2));};
+        }
+
+        if(kb_led_status&(1<<1))
+        {
+            {((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1u<<(3*8+4));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(3*8+4));};
+        }
+        else
+        {
+            {((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1u<<(3*8+4));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(3*8+4));};
+        }
     }
     else
     {
         {((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1u<<(2*8+2));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(2*8+2));};
-    }
-
-    if(kb_led_status&(1<<1))
-    {
-        {((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1u<<(3*8+4));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(3*8+4));};
-    }
-    else
-    {
         {((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1u<<(3*8+4));((OM_GPIO_Type *) 0x43000000)->OUTENSET = (1u<<(3*8+4));};
     }
 }
-# 202 "../led/led.c"
+# 213 "../led/led.c"
 void device_led_on(void)
 {
     bdevice_led_status = 1;
@@ -3398,7 +3418,7 @@ void device_led_on(void)
     else if(iDEVICE_TYPE_24G == device_type)
         hint_led_status |= ((1<<2)|(1<<7));
 }
-# 222 "../led/led.c"
+# 233 "../led/led.c"
 void device_led_off(void)
 {
     bdevice_led_status = 0;
@@ -3408,6 +3428,7 @@ void device_led_off(void)
 
 void logo_off(void)
 {
+    drv_ledc_blank();
     bargb_valid = 0;
 
     do { (0U) ? (((OM_RCC_Type *) 0x40000600)->CLKGATE |= (RCC_CLK_LEDC)) : (((OM_RCC_Type *) 0x40000600)->CLKGATE &= ~(RCC_CLK_LEDC)); } while(0);
@@ -3455,7 +3476,7 @@ __attribute((used, section("RAM_CODE"), noinline)) void rgb_w_max(void)
 }
 
 extern void key_into_fcc_test(void);
-# 286 "../led/led.c"
+# 298 "../led/led.c"
 void device_led_process(void)
 {
 
@@ -3499,10 +3520,12 @@ void device_led_process(void)
             {
                 if(ble_24g_ctrl&(1<<1))
                 {
-                    device_conn_index++;
-                    led_delay_count = rtc_cur_value;
-                    device_hint_count = 0;
-                    bdevice_led_status = 0;
+
+                    hint_led_status &= ~(1<<7);
+                    device_conn_index = 0;
+                    ble_24g_ctrl |= (1<<3);
+                    ble_24g_ctrl &= ~(1<<0);
+                    ble_24g_ctrl &= ~(1<<2);
                 }
 
                 key_into_fcc_test();
@@ -3519,36 +3542,6 @@ void device_led_process(void)
                 {
                     device_led_on();
                     if(((250)<<5) < (rtc_cur_value - led_delay_count))
-                    {
-                        bdevice_led_status = 0;
-                        led_delay_count = rtc_cur_value;
-                    }
-                }
-            }
-            else if(2 == device_conn_index)
-            {
-                if(0 == bdevice_led_status)
-                {
-                    device_led_off();
-                    if(((125)<<5) < (rtc_cur_value - led_delay_count))
-                    {
-                        bdevice_led_status = 1;
-                        led_delay_count = rtc_cur_value;
-
-                        device_hint_count++;
-                        if(3<device_hint_count)
-                        {
-                            hint_led_status &= ~(1<<7);
-                            device_conn_index = 0;
-                            ble_24g_ctrl &= ~(1<<0);
-                            ble_24g_ctrl &= ~(1<<2);
-                        }
-                    }
-                }
-                else
-                {
-                    device_led_on();
-                    if(((125)<<5) < (rtc_cur_value - led_delay_count))
                     {
                         bdevice_led_status = 0;
                         led_delay_count = rtc_cur_value;
@@ -3572,6 +3565,7 @@ void device_led_process(void)
             {
                 if(ble_24g_ctrl&(1<<3))
                 {
+
                     device_conn_index++;
                     led_delay_count = rtc_cur_value;
                     device_hint_count = 0;
@@ -3637,7 +3631,7 @@ void device_led_process(void)
             return;
     }
 }
-# 475 "../led/led.c"
+# 460 "../led/led.c"
 void logo_process(void)
 {
     uint8_t i;
@@ -3652,9 +3646,13 @@ void logo_process(void)
         bsave_cfg_dpi = 0;
         flash_save_cfg_dpi();
     }
-    if(iDEVICE_TYPE_24G == device_type)
+
+
+
+    if(1==bflash_ctrl)
     {
-        if(1==bflash_ctrl)
+        bflash_ctrl = 0;
+        if(iDEVICE_TYPE_24G == device_type)
             return;
     }
 
@@ -3679,6 +3677,33 @@ void logo_process(void)
             clr_rgb();
             return;
         }
+
+
+
+        if((iDEVICE_TYPE_24G == device_type) && (0x03 != dat_24g_0[26]))
+        {
+            if(0 == bargb_valid)
+            {
+                ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+1));
+                ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
+                ledc_init();
+            }
+            clr_rgb();
+            return;
+        }
+    }
+
+
+    if(0 != (hint_led_status&(1<<7)))
+    {
+        if(0 == bargb_valid)
+        {
+            ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+1));
+            ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
+            ledc_init();
+        }
+        clr_rgb();
+        return;
     }
 
     if(0 == bled_bright_en)
@@ -3713,6 +3738,8 @@ void logo_process(void)
         {
             led_fade = 64;
             led_fade_dir = 1;
+            if(iMODE_LED_BS == led_cur_mode)
+                led_fade = 4;
         }
     }
 
@@ -3730,6 +3757,7 @@ void logo_process(void)
 
         led_process_index = 0;
         rgb_index = 0;
+        led_timer_reset();
 
         clr_rgb();
         memset(pwm_duty_array_0, 0x00, 16);
@@ -3746,63 +3774,37 @@ void logo_process(void)
 
                 break;
             case iMODE_LED_BREATH:
-                pwm_time_count = 0;
-                delay_time_count = 0xFF;
-                rgb_enable = rgb_en_tbl[led_rgb_index&0x0F];
+                led_mode_breath_init();
 
                 break;
             case iMODE_LED_NHJB:
-                delay_time_count = 0;
-                pwm_duty_array_0[0] = 64;
-                pwm_duty_array_0[1] = 0x00;
-                pwm_duty_array_0[2] = 0x00;
-
+                led_mode_nhjb_init();
                 break;
             case iMODE_LED_LG_L_R:
-                delay_time_count = 0;
-                led_status_reg = 0xCCCC;
-
-                for(i=0; i<(8); i++)
-                {
-                    pwm_duty_array_0[i] = led_liuguang_l_r_tbl[i];
-                    pwm_duty_array_1[i] = led_liuguang_rgb_tbl[i];
-                }
-
+                led_mode_liuguang_init();
                 break;
             case iMODE_LED_STAR:
-                delay_time_count = 0;
-                snake_led_index = 0xFF;
-                lfsr_value = 0x55AA;
+                led_mode_star_init();
                 break;
             case iMODE_LED_SBZL:
-                for(i=0; i<(8); i++)
-                {
-                    pwm_duty_array_0[i] = sbzl_r_tbl[(8)-1-i];
-                    pwm_duty_array_1[i] = sbzl_g_tbl[(8)-1-i];
-                    pwm_duty_array_2[i] = sbzl_b_tbl[(8)-1-i];
-                    pwm_duty_array_3[i] = sbzl_ctrl_tbl[(8)-1-i];
-                }
+                led_mode_sbzl_init();
                 break;
             case iMODE_LED_BS:
-                delay_time_count = 0xFF;
+                led_mode_baoshan_init();
+                led_fade = 64;
+                led_fade_dir = 0;
                 break;
             case iMODE_LED_QCNH:
+                led_mode_qcnh_init();
                 break;
             case iMODE_LED_LHTW:
+                led_mode_lhtw_init();
                 break;
             case iMODE_LED_DXTW:
-                snake_led_index = 3;
-                pwm_duty_array_0[snake_led_index] = 64;
-                break;
             case iMODE_LED_SXTW:
-                snake_led_index = 3;
-                pwm_duty_array_0[snake_led_index] = 64;
-                bback_led_status = 0;
-                break;
             case iMODE_LED_TXTW:
             case iMODE_LED_FXTW:
-                snake_led_index = 3;
-                pwm_duty_array_0[snake_led_index] = 64;
+                led_mode_tw_init();
                 break;
         }
     }

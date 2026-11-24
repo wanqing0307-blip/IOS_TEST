@@ -2541,13 +2541,14 @@ typedef struct {
 extern om_error_t drv_ledc_init(OM_LEDC_Type *om_ledc, ledc_config_t *config);
 # 106 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write();
-# 119 "../../../hal/driver/include/../om6239/drv_ledc.h"
+extern void drv_ledc_blank(void);
+# 120 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write_int(OM_LEDC_Type *om_ledc, uint8_t *data, uint16_t data_len);
-# 132 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 133 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_register_isr_callback(OM_LEDC_Type *om_ledc, drv_isr_callback_t isr_cb);
-# 146 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 147 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr_callback(OM_LEDC_Type *om_ledc, drv_event_t event);
-# 157 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 158 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr(OM_LEDC_Type *om_ledc);
 # 77 "../../../hal/driver/include/../om6239/driver_om6239.h" 2
 # 1 "../../../hal/driver/include/../om6239/drv_encoder.h" 1
@@ -2827,11 +2828,9 @@ extern unsigned char pwm_value;
 extern enum led_level led_light_lev;
 
 extern uint16_t lfsr_value;
-extern uint8_t start_dec_count;
 extern uint8_t snake_led_index;
 
 extern uint8_t pwm_time_count;
-extern uint16_t delay_time_count;
 extern uint8_t rgb_index;
 extern uint8_t led_process_index;
 extern uint8_t hint_time_count;
@@ -2879,7 +2878,17 @@ extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
 extern void led_mode_sbzl(void);
 
+extern void led_mode_baoshan_init(void);
 extern void led_mode_baoshan(void);
+extern void led_timer_reset(void);
+extern void led_mode_breath_init(void);
+extern void led_mode_liuguang_init(void);
+extern void led_mode_sbzl_init(void);
+extern void led_mode_star_init(void);
+extern void led_mode_nhjb_init(void);
+extern void led_mode_lhtw_init(void);
+extern void led_mode_tw_init(void);
+extern void led_mode_qcnh_init(void);
 extern void led_mode_qcnh(void);
 extern void led_mode_lhtw(void);
 extern void led_mode_dxtw(void);
@@ -3117,7 +3126,18 @@ void mouse_24g_init(void)
 {
     mouse_periph_wakeup_enable(0x00);
 
+
+
+    if(0 == bargb_valid)
+    {
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTCLR = (1<<(0*8+1));
+        ((OM_GPIO_Type *) 0x43000000)->DATAOUTSET = (1<<(0*8+0));
+        ledc_init();
+    }
+
     drv_rf24g_init();
+    ble_24g_ctrl &= ~(1<<3);
+    ble_24g_ctrl |= (1<<2);
     rf_mode_convert(0x02);
     rtc_init();
 
@@ -3126,6 +3146,7 @@ void mouse_24g_init(void)
     drv_rtc_set_alarm0(rtc_reload_value);
 
     __enable_irq();
+
 }
 
 
@@ -3156,6 +3177,8 @@ int main_24g(void)
                     device_led_process();
                 led_hint_process();
                 logo_process();
+                drv_ledc_write();
+
                 sleep_process();
             }
         }
@@ -3187,7 +3210,7 @@ int main_24g(void)
 
     return 1;
 }
-# 117 "../../../mode_24g/main_24g.c"
+# 131 "../../../mode_24g/main_24g.c"
 __attribute((used, section("RAM_CODE"), noinline)) void RTC_IRQHandler_24G(void)
 {
     switch(dat_24g_0[27]&0x03)

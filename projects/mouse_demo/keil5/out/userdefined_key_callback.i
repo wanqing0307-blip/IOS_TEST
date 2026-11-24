@@ -2341,13 +2341,14 @@ typedef struct {
 extern om_error_t drv_ledc_init(OM_LEDC_Type *om_ledc, ledc_config_t *config);
 # 106 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write();
-# 119 "../../../hal/driver/include/../om6239/drv_ledc.h"
+extern void drv_ledc_blank(void);
+# 120 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write_int(OM_LEDC_Type *om_ledc, uint8_t *data, uint16_t data_len);
-# 132 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 133 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_register_isr_callback(OM_LEDC_Type *om_ledc, drv_isr_callback_t isr_cb);
-# 146 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 147 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr_callback(OM_LEDC_Type *om_ledc, drv_event_t event);
-# 157 "../../../hal/driver/include/../om6239/drv_ledc.h"
+# 158 "../../../hal/driver/include/../om6239/drv_ledc.h"
 extern void drv_ledc_isr(OM_LEDC_Type *om_ledc);
 # 77 "../../../hal/driver/include/../om6239/driver_om6239.h" 2
 # 1 "../../../hal/driver/include/../om6239/drv_encoder.h" 1
@@ -2952,11 +2953,9 @@ extern unsigned char pwm_value;
 extern enum led_level led_light_lev;
 
 extern uint16_t lfsr_value;
-extern uint8_t start_dec_count;
 extern uint8_t snake_led_index;
 
 extern uint8_t pwm_time_count;
-extern uint16_t delay_time_count;
 extern uint8_t rgb_index;
 extern uint8_t led_process_index;
 extern uint8_t hint_time_count;
@@ -3004,7 +3003,17 @@ extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
 extern void led_mode_sbzl(void);
 
+extern void led_mode_baoshan_init(void);
 extern void led_mode_baoshan(void);
+extern void led_timer_reset(void);
+extern void led_mode_breath_init(void);
+extern void led_mode_liuguang_init(void);
+extern void led_mode_sbzl_init(void);
+extern void led_mode_star_init(void);
+extern void led_mode_nhjb_init(void);
+extern void led_mode_lhtw_init(void);
+extern void led_mode_tw_init(void);
+extern void led_mode_qcnh_init(void);
 extern void led_mode_qcnh(void);
 extern void led_mode_lhtw(void);
 extern void led_mode_dxtw(void);
@@ -3472,41 +3481,10 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             special_key |= (1<<4);
 
             break;
-        case 0x31&0x0F:
-            device_key |= (1<<1);
-            if(0==(device_key_bak&(1<<1)))
-            {
-                device_key_bak |= (1<<1);
-                press_bt1_time_count = conn_rtc_value;
-            }
-            else
-            {
-                if(((1000)<<5) < (conn_rtc_value-press_bt1_time_count))
-                {
-                    if(iDEVICE_TYPE_24G == device_type)
-                    {
-                        if(2 == dat_24g_0[27])
-                        {
-                            if(0x01 != dat_24g_0[26])
-                            {
-                                {dat_24g_0[27] = 0;};
-                                rf_mode_convert(0x01);
-                            }
-                        }
-                    }
-                    else if(iDEVICE_TYPE_BT2 >= device_type)
-                    {
-                        if(0 == (ble_24g_ctrl&(1<<0)))
-                        {
-                            ((OM_PMU_Type *) 0x40000000)->SW_RSVD1 |= (1<<3);
-                            __NVIC_SystemReset();
-                        }
-                    }
-                }
-            }
-            break;
         case 0x32&0x0F:
             device_key |= (1<<0);
+            if(iDEVICE_TYPE_BT2 < device_type)
+                break;
             if(0==(device_key_bak&(1<<0)))
             {
                 device_key_bak |= (1<<0);
@@ -3526,7 +3504,7 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             }
             else
             {
-                if(((1000)<<5) < (conn_rtc_value-press_bt0_time_count))
+                if(((3000)<<5) < (conn_rtc_value-press_bt0_time_count))
                 {
                     if(0 == (ble_24g_ctrl&(1<<0)))
                     {
@@ -3539,6 +3517,8 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             break;
         case 0x33&0x0F:
             device_key |= (1<<1);
+            if(iDEVICE_TYPE_BT2 < device_type)
+                break;
             if(0==(device_key_bak&(1<<1)))
             {
                 device_key_bak |= (1<<1);
@@ -3571,6 +3551,8 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             break;
         case 0x34&0x0F:
             device_key |= (1<<2);
+            if(iDEVICE_TYPE_BT2 < device_type)
+                break;
             if(0==(device_key_bak&(1<<2)))
             {
                 device_key_bak |= (1<<2);
@@ -3608,20 +3590,14 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
                 device_key_bak |= (1<<3);
                 press_24g_time_count = conn_rtc_value;
 
-                if(iDEVICE_TYPE_24G != device_type)
-                {
-                    device_type = iDEVICE_TYPE_24G;
-                    bt_index = iDEVICE_TYPE_24G;
-                    flash_save_status();
-                    delayus(10000);
-                    __NVIC_SystemReset();
-                }
+
             }
             else
             {
                 if(((3000)<<5) < (conn_rtc_value-press_24g_time_count))
                 {
-                    if(2 == dat_24g_0[27])
+                    if((iDEVICE_TYPE_24G == device_type)
+                        && (2 == dat_24g_0[27]))
                     {
                         if(0x01 != dat_24g_0[26])
                         {
@@ -3699,7 +3675,7 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             break;
     }
 }
-# 555 "../periph/userdefined_key_callback.c"
+# 522 "../periph/userdefined_key_callback.c"
 void __attribute__((noinline)) key_decode_cmd_0x40(void)
 {
     uint32_t conn_rtc_value = drv_rtc_read(((OM_RTC_Type *) 0x40000200));

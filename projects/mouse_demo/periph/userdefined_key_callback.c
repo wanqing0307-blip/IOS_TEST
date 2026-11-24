@@ -317,39 +317,6 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             special_key |= bfn_press;
 
             break;
-        case iMODE_KEY_CONN&0x0F:
-            device_key |= bkey_bt1_press;
-            if(0==(device_key_bak&bkey_bt1_press_bak))
-            {
-                device_key_bak |= bkey_bt1_press_bak;
-                press_bt1_time_count = conn_rtc_value;
-            }
-            else
-            {
-                if(mMS_TO_TICK(1000) < (conn_rtc_value-press_bt1_time_count))
-                {
-                    if(iDEVICE_TYPE_24G == device_type)
-                    {
-                        if(iMCU_MODE_NO_DONGLE == work_mode)
-                        {
-                            if(iRF_MODE_CONNECT != rf_mode_type)
-                            {
-                                mMCU_MODE_NORMAL;
-                                rf_mode_convert(iRF_MODE_CONNECT);
-                            }
-                        }
-                    }
-                    else if(iDEVICE_TYPE_BT2 >= device_type)
-                    {
-                        if(0 == (ble_24g_ctrl&bom6239_conning))
-                        {
-                            OM_PMU->SW_RSVD1 |= RSVD1_RF_CONN_EN;
-                            NVIC_SystemReset();
-                        }
-                    }
-                }
-            }
-            break;
         case iMODE_KEY_BT0&0x0F:
             device_key |= bkey_bt0_press;
             if(iDEVICE_TYPE_BT2 < device_type)
@@ -373,7 +340,7 @@ void __attribute__((noinline)) key_decode_cmd_0x30(void)
             }
             else
             {
-                if(mMS_TO_TICK(1000) < (conn_rtc_value-press_bt0_time_count))
+                if(mMS_TO_TICK(3000) < (conn_rtc_value-press_bt0_time_count))
                 {
                     if(0 == (ble_24g_ctrl&bom6239_conning))
                     {

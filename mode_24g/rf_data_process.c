@@ -150,8 +150,9 @@ void rf_sync_ok_callback(void)
         report_24g = ((report_dpi[key_mode]>>4)&0x03);
     m_tx_count = 0;
 
-    if(true == b24g_nromal)
-        ble_24g_ctrl &= ~bom6239_sync_ing;
+    ble_24g_ctrl |= bom6239_sync_ok;        // 同步成功：指示灯快闪3下后转常亮，由状态机清除 sync_ing
+
+    rtc_init_value = drv_rtc_read(OM_RTC);  // 连接成功即重置空闲计时，避免刚连上就被判超时进入休眠/重新同步
 
     hid_ctrl_reg |= bdevice_status_change;
 }
@@ -346,7 +347,8 @@ __RAM_CODE void rf_normal_mode_sleep(void)
 void rf_tx1_idle_callback(void)
 {
     lvd_scan_count++;
-    if(4==(lvd_scan_count&0x07))
+    // 提示灯统一由一个地方驱动：正常连接态由 RF 回调驱动，no-dongle/同步阶段由主循环驱动
+    if((4==(lvd_scan_count&0x07)) && (iMCU_MODE_NORMAL == work_mode))
         device_led_process();                     // 16ms
     if(0==(lvd_scan_count&0x01))
         logo_process();
@@ -355,7 +357,7 @@ void rf_tx1_idle_callback(void)
 void rf_tx1_irq_callback(void)
 {
     lvd_scan_count++;
-    if(4==(lvd_scan_count&0x07))
+    if((4==(lvd_scan_count&0x07)) && (iMCU_MODE_NORMAL == work_mode))
         device_led_process();
     if(0==(lvd_scan_count&0x01))
         logo_process();

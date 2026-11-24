@@ -2377,13 +2377,14 @@ typedef struct {
 extern om_error_t drv_ledc_init(OM_LEDC_Type *om_ledc, ledc_config_t *config);
 # 106 "../../../hal/driver/om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write();
-# 119 "../../../hal/driver/om6239/drv_ledc.h"
+extern void drv_ledc_blank(void);
+# 120 "../../../hal/driver/om6239/drv_ledc.h"
 extern om_error_t drv_ledc_write_int(OM_LEDC_Type *om_ledc, uint8_t *data, uint16_t data_len);
-# 132 "../../../hal/driver/om6239/drv_ledc.h"
+# 133 "../../../hal/driver/om6239/drv_ledc.h"
 extern void drv_ledc_register_isr_callback(OM_LEDC_Type *om_ledc, drv_isr_callback_t isr_cb);
-# 146 "../../../hal/driver/om6239/drv_ledc.h"
+# 147 "../../../hal/driver/om6239/drv_ledc.h"
 extern void drv_ledc_isr_callback(OM_LEDC_Type *om_ledc, drv_event_t event);
-# 157 "../../../hal/driver/om6239/drv_ledc.h"
+# 158 "../../../hal/driver/om6239/drv_ledc.h"
 extern void drv_ledc_isr(OM_LEDC_Type *om_ledc);
 # 50 "../../../hal/driver/om6239/drv_ledc.c" 2
 # 1 "../led\\led.h" 1
@@ -2460,11 +2461,9 @@ extern unsigned char pwm_value;
 extern enum led_level led_light_lev;
 
 extern uint16_t lfsr_value;
-extern uint8_t start_dec_count;
 extern uint8_t snake_led_index;
 
 extern uint8_t pwm_time_count;
-extern uint16_t delay_time_count;
 extern uint8_t rgb_index;
 extern uint8_t led_process_index;
 extern uint8_t hint_time_count;
@@ -2512,7 +2511,17 @@ extern void led_mode_liuguang(void);
 extern void led_mode_star(void);
 extern void led_mode_sbzl(void);
 
+extern void led_mode_baoshan_init(void);
 extern void led_mode_baoshan(void);
+extern void led_timer_reset(void);
+extern void led_mode_breath_init(void);
+extern void led_mode_liuguang_init(void);
+extern void led_mode_sbzl_init(void);
+extern void led_mode_star_init(void);
+extern void led_mode_nhjb_init(void);
+extern void led_mode_lhtw_init(void);
+extern void led_mode_tw_init(void);
+extern void led_mode_qcnh_init(void);
 extern void led_mode_qcnh(void);
 extern void led_mode_lhtw(void);
 extern void led_mode_dxtw(void);
@@ -2663,10 +2672,18 @@ om_error_t drv_ledc_init(OM_LEDC_Type *om_ledc, ledc_config_t *config)
 extern void uart_tx(unsigned char data);
 extern _Bool bargb_valid;
 
+__attribute__((aligned(4))) static uint8_t pwm_temp[(9)*3];
+static uint8_t pwm_disp[(8)][3];
+
+
+void drv_ledc_blank(void)
+{
+    memset(pwm_temp, 0, sizeof(pwm_temp));
+    memset(pwm_disp, 0, sizeof(pwm_disp));
+}
+
 __attribute((used, section("RAM_CODE"), noinline)) om_error_t drv_ledc_write()
 {
-    __attribute__((aligned(4))) static uint8_t pwm_temp[(9)*3];
-    static uint8_t pwm_disp[(8)][3];
 
     if(0 == bargb_valid)
         return OM_ERROR_OK;

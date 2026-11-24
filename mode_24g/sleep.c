@@ -28,6 +28,7 @@ extern bool                 bdevice_led_status;
 * 输出参数:
 * 说    明: 无
 ******************************************************************************/
+
 void sleep_process(void)
 {
     uint8_t i;
@@ -100,13 +101,18 @@ void sleep_process(void)
                     rf_ctrl_reg &= ~(brf_sync_time|brf_sync_status);
 
                     mouse_periph_wakeup_enable(WAKEUP_ALL_DISABLE);
-                    logo_off();
+                    clr_rgb();              // 只清灯效；保留 LEDC 输出第 1 颗指示灯，避免重试时整条灯瞬间熄灭
                     key_tx_count = 0;
                     mmk_tx_count = 0;
                     rtc_value = drv_rtc_read(OM_RTC);
                     do
                     {
-                        rf_normal_mode_sleep();
+                        // 提示灯闪烁期间不进 STOP1：STOP1 会暂停系统时钟，打断 LEDC 正在发送的帧，
+                        // 表现为闪灯时短暂发暗；提示结束后 ARGB 已关闭，再恢复 STOP1 省电
+                        if(iDEFAULT_NO_DONGLE_MODE_TIME > no_dongle_time_count)
+                            delayus(500);
+                        else
+                            rf_normal_mode_sleep();
                         drv_wdt_keep_alive(OM_WDT);
 
                         i++;
@@ -125,12 +131,16 @@ void sleep_process(void)
 
                         if(iDEFAULT_NO_DONGLE_MODE_TIME > no_dongle_time_count)
                         {
-                            hint_led_status |= bled_hint_mode;
-                            if(true == bdevice_led_status)
-                                device_led_on();
-                            else
-                                device_led_off();
+                            device_led_process();           // no-dongle 阶段由主循环统一驱动提示灯
+
+                            if(false == bargb_valid)        // 进入 no-dongle 前 logo_off() 已关闭 ARGB
+                            {
+                                OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+                                OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+                                ledc_init();
+                            }
                             led_status_hint();
+                            drv_ledc_write();               // 无 RF 数据发送，这里主动刷新第 1 颗指示灯
                             if(mMS_TO_TICK(850) < (drv_rtc_read(OM_RTC)-rtc_value))
                                 break;
                         }
@@ -146,8 +156,6 @@ void sleep_process(void)
                         }
                     }
                     while(1);
-                    hint_led_status &= 0xF8;
-                    bdevice_led_status = !bdevice_led_status;
 
                     if((0!=key_tx_count)||(0!=mmk_tx_count))
                     {
@@ -164,6 +172,7 @@ void sleep_process(void)
 
                     mouse_24g_init();
                     sys_ctrl |= bscan_flag;
+
                 }
             }
             break;

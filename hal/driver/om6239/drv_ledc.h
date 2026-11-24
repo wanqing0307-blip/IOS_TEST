@@ -104,6 +104,7 @@ extern om_error_t drv_ledc_init(OM_LEDC_Type *om_ledc, ledc_config_t *config);
  *******************************************************************************
  */
 extern om_error_t drv_ledc_write();
+extern void drv_ledc_blank(void);
 
 /**
  *******************************************************************************

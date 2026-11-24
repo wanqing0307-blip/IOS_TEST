@@ -26,9 +26,9 @@ unsigned char           const   matrixkey_mac_fn_tbl[] =
     iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iLEFT_CTRL,     // C4 R0
     iSTD_K,                iKEY_TYPE_STD|iKEY_PRESS,                // C4 R1
     iSTD_P,                iKEY_TYPE_STD|iKEY_PRESS,                // C4 R2
-    iMODE_KEY_BT1,         iKEY_TYPE_SPECIAL,                       // C4 R3
-    iMODE_KEY_BT0,         iKEY_TYPE_SPECIAL,                       // C4 R4
-    iLED_MODE_CYC_ADD,     iKEY_TYPE_SPECIAL,                       // C4 R5
+    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C4 R3
+    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C4 R4
+    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C4 R5
     iKEY_DEFAULT,          iKEY_TYPE_SPECIAL,                       // C4 R6
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C4 R7
 // C5
@@ -44,13 +44,13 @@ unsigned char           const   matrixkey_mac_fn_tbl[] =
     iKEY_WIN,              iKEY_TYPE_SPECIAL,                       // C6 R0
     iSTD_F4,               iKEY_TYPE_STD|iKEY_PRESS,                // C6 R1
     iSTD_O,                iKEY_TYPE_STD|iKEY_PRESS,                // C6 R2
-    iMMK_CALCULATOR_L,     iKEY_TYPE_MMK | iMMK_CALCULATOR_H,       // C6 R3
+    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C6 R3
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C6 R4
     iSTD_M,                iKEY_TYPE_STD|iKEY_PRESS,                // C6 R5
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C6 R6
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C6 R7
 // C7
-    iMODE_KEY_CONN,        iKEY_TYPE_SPECIAL,                       // C7 R0
+    iSTD_TAB,              iKEY_TYPE_STD|iKEY_PRESS,                // C7 R0
     iSTD_WAVE,             iKEY_TYPE_STD|iKEY_PRESS,                // C7 R1
     iSTD_F7,               iKEY_TYPE_STD|iKEY_PRESS,                // C7 R2
     iSTD_Y,                iKEY_TYPE_STD|iKEY_PRESS,                // C7 R3
@@ -91,7 +91,7 @@ unsigned char           const   matrixkey_mac_fn_tbl[] =
     iSTD_F12,              iKEY_TYPE_STD|iKEY_PRESS,                // C11 R2
     iLED_OFF,              iKEY_TYPE_SPECIAL,                       // C11 R3
     iSTD_PAUSE,            iKEY_TYPE_STD|iKEY_PRESS,                // C11 R4
-    iLED_BRIGHT_ADD,       iKEY_TYPE_SPECIAL,                       // C11 R5
+    iSTD_PAGEUP,           iKEY_TYPE_STD|iKEY_PRESS,                // C11 R5
     iSTD_EUROPE1,          iKEY_TYPE_STD|iKEY_PRESS,                // C11 R6
     iSTD_SLASH,            iKEY_TYPE_STD|iKEY_PRESS,                // C11 R7
 // C12
@@ -101,7 +101,7 @@ unsigned char           const   matrixkey_mac_fn_tbl[] =
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C12 R3
     iSTD_BACKSLASH,        iKEY_TYPE_STD|iKEY_PRESS,                // C12 R4
     iSTD_0,                iKEY_TYPE_STD|iKEY_PRESS,                // C12 R5
-    iLED_BRIGHT_SUB,       iKEY_TYPE_SPECIAL,                       // C12 R6
+    iSTD_PAGEDOWN,         iKEY_TYPE_STD|iKEY_PRESS,                // C12 R6
     iSTD_COMMA,            iKEY_TYPE_STD|iKEY_PRESS,                // C12 R7
 // C13
     iMODE_KEY_BT2,         iKEY_TYPE_SPECIAL,                       // C13 R0
@@ -114,7 +114,7 @@ unsigned char           const   matrixkey_mac_fn_tbl[] =
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C13 R7
 // C14
     iSTD_V,                iKEY_TYPE_STD|iKEY_PRESS,                // C14 R0
-    iLED_MODE_4,           iKEY_TYPE_SPECIAL,                       // C14 R1
+    iSTD_5,                iKEY_TYPE_STD|iKEY_PRESS,                // C14 R1
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C14 R2
     iSTD_NUMPAD_DIVIDE,    iKEY_TYPE_STD|iKEY_PRESS,                // C14 R3
     iSTD_NUMPAD8,          iKEY_TYPE_STD|iKEY_PRESS,                // C14 R4
@@ -146,7 +146,7 @@ unsigned char           const   matrixkey_mac_fn_tbl[] =
     iSTD_F1,               iKEY_TYPE_STD|iKEY_PRESS,                // C17 R3
     iSTD_F5,               iKEY_TYPE_STD|iKEY_PRESS,                // C17 R4
     iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iRIGHT_SHIFT,   // C17 R5
-    iMMK_MUTE_L,           iKEY_TYPE_MMK | iMMK_MUTE_H,             // C17 R6
+    iSTD_NULL,             iKEY_TYPE_INVALID,                       // C17 R6
     iMODE_KEY_BT1,         iKEY_TYPE_SPECIAL,                       // C17 R7
 // C18
     iSTD_APP,              iKEY_TYPE_STD|iKEY_PRESS,                // C18 R0

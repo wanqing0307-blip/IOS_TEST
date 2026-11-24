@@ -35,7 +35,7 @@
 #define iKEY_MODE2_BANK         8
 #define iKEY_MODE3_BANK         12
 //
-#define iKEY_TBL_VERSION        0x04    // 键表布局版本，版本变化时强制重新装载
+#define iKEY_TBL_VERSION        0x07    // 键表布局版本，版本变化时强制重新装载
 //
 //----------------------------------------------
 // LED相关配置数据区域
