@@ -105,7 +105,7 @@ static uint8_t hid_consumer_control_report_value[2];
 
 #if (PROFILE_HID_SYSTEM_CONTROL)
 ///system control usage (Generic Desktop page)
-static uint8_t hid_system_control_report_value[1];
+static uint8_t hid_system_control_report_value[2];
 #endif
 
 #if (PROFILE_HID_KEYBOARD)
@@ -175,12 +175,12 @@ static const uint8_t _hid_report_map_value[] = {
     0x09, 0x80,                       /* Usage (System Control) */
     0xA1, 0x01,                       /* Collection (Application) */
     0x85, HID_REPORT_ID_SYSTEM_CONTROL_INPUT, /* Report ID (5) */
-    0x19, 0x00,                       /*     Usage Minimum (0) */
+    0x19, 0x01,                       /*     Usage Minimum (1) */
     0x29, 0xB7,                       /*     Usage Maximum (0xB7) */
-    0x15, 0x00,                       /*     Logical Minimum (0) */
+    0x15, 0x01,                       /*     Logical Minimum (1) */
     0x26, 0xB7, 0x00,                 /*     Logical Maximum (0xB7) */
-    0x75, 0x08,                       /*     Report Size (8) */
     0x95, 0x01,                       /*     Report Count (1) */
+    0x75, 0x10,                       /*     Report Size (16)  与 QMK 一致 */
     0x81, 0x00,                       /*     Input (Data,Array,Abs) 0x9B = Do Not Disturb */
     0xC0,                             /* End Collection */
 #endif
@@ -290,7 +290,7 @@ bool ex2_hid_tx_notification_system_control(uint8_t *buf)
 {
 #if (PROFILE_HID_SYSTEM_CONTROL)
     if(ex2_stk_get_txq_num() <= MOUSE_DATA_IN_TXQ_MAX_NUM)
-        return ex2_att_tx_notification(ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_CV, buf, 1);
+        return ex2_att_tx_notification(ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_CV, buf, 2);
     else
         return false;
 #else

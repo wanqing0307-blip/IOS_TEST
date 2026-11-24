@@ -160,7 +160,8 @@ __disable_irq();
 
             fifo_epn = (volatile uint8_t *)&OM_USB->EPnFIFO[3];
             *fifo_epn = iREPORT_ID_SYS_KEY;
-            *fifo_epn = sys_data;
+            *fifo_epn = sys_data;               // 16 位用法值，低字节
+            *fifo_epn = 0;                      // 高字节
 
             OM_USB->TXCSR1 |= USB_TXCSR_P_TXPKTRDY;
             g_USB_Ep_Status[3] = EP_TX;
