@@ -106,6 +106,7 @@
         #define iKEY_DESK_MAC     0x45
         #define iKEY_MAC_SEARCH_SIRI 0x46   // MAC：短按搜索，长按 Siri
         #define iKEY_MAC_SHOT     0x47      // MAC：截屏 Cmd+Shift+3
+        #define iKEY_MAC_DND      0x48      // MAC：勿扰模式（System Control 报告，Generic Desktop 0x9B）
       //}
     //}
 //}
@@ -140,6 +141,11 @@
 #define iSYS_POWER                      0x01
 #define iSYS_SLEEP                      0x02
 #define iSYS_WAKEUP                     0x04
+
+//-----------------------------------------------------------------------------;
+// 系统控制键用法（Generic Desktop 页，经 System Control 报告发送）
+//
+#define iSYS_GD_DO_NOT_DISTURB          0x9B    // System Do Not Disturb：MAC F6 勿扰模式
 
 //-----------------------------------------------------------------------------;
 // 标准键键值
@@ -334,6 +340,9 @@
 //
 #define iMMK_IOS_SIRI_H         0x00
 #define iMMK_IOS_SIRI_L         0xCF
+
+#define iMMK_MAC_DICTATION_H    0x00    // MAC 听写：Consumer Voice Command 0x00CF
+#define iMMK_MAC_DICTATION_L    0xCF    // （macOS Sonoma 起识别为听写，与苹果键盘 F5 一致）
 
 #define iMMK_MAC_CTRL_H         0x02    // MAC电脑控制台
 #define iMMK_MAC_CTRL_L         0xA0

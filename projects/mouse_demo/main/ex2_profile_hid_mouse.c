@@ -78,6 +78,7 @@ typedef enum {
     HID_REPORT_ID_CONSUMER_CONTROL_INPUT  = 2,   /* Consumer Control input report ID */
     HID_REPORT_ID_KEYBOARD_INPUT          = 3,   /* Keyboard input report ID */
     HID_REPORT_ID_BITMAP_KB_INPUT         = 4,   /* BITMAP Keyboard input report ID */
+    HID_REPORT_ID_SYSTEM_CONTROL_INPUT    = 5,   /* System Control input report ID (MAC 勿扰) */
 } hid_report_id_t;
 
 // Protocol Mode values
@@ -100,6 +101,11 @@ static uint8_t hid_mouse_report_value[6];
 #if (PROFILE_HID_CONSUMER_CONTROL)
 ///consumer control bitmap value
 static uint8_t hid_consumer_control_report_value[2];
+#endif
+
+#if (PROFILE_HID_SYSTEM_CONTROL)
+///system control usage (Generic Desktop page)
+static uint8_t hid_system_control_report_value[1];
 #endif
 
 #if (PROFILE_HID_KEYBOARD)
@@ -162,6 +168,21 @@ static const uint8_t _hid_report_map_value[] = {
     0x95 , 0x01,                      /*    REPORT_COUNT (1)*/
     0x81 , 0x00,                      /*    INPUT (Data,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)*/
     0xC0 ,                            /* END_COLLECTION*/
+#endif
+
+#if (PROFILE_HID_SYSTEM_CONTROL)
+    0x05, 0x01,                       /* Usage Page (Generic Desktop) */
+    0x09, 0x80,                       /* Usage (System Control) */
+    0xA1, 0x01,                       /* Collection (Application) */
+    0x85, HID_REPORT_ID_SYSTEM_CONTROL_INPUT, /* Report ID (5) */
+    0x19, 0x00,                       /*     Usage Minimum (0) */
+    0x29, 0xB7,                       /*     Usage Maximum (0xB7) */
+    0x15, 0x00,                       /*     Logical Minimum (0) */
+    0x26, 0xB7, 0x00,                 /*     Logical Maximum (0xB7) */
+    0x75, 0x08,                       /*     Report Size (8) */
+    0x95, 0x01,                       /*     Report Count (1) */
+    0x81, 0x00,                       /*     Input (Data,Array,Abs) 0x9B = Do Not Disturb */
+    0xC0,                             /* End Collection */
 #endif
 
 #if (PROFILE_HID_BITMAP_KEYBOARD)
@@ -265,6 +286,19 @@ bool ex2_hid_tx_notification_consumer_control(uint8_t *buf)
         return false;
 }
 
+bool ex2_hid_tx_notification_system_control(uint8_t *buf)
+{
+#if (PROFILE_HID_SYSTEM_CONTROL)
+    if(ex2_stk_get_txq_num() <= MOUSE_DATA_IN_TXQ_MAX_NUM)
+        return ex2_att_tx_notification(ATT_HANDLE_HID_SYSTEM_CONTROL_REPORT_CV, buf, 1);
+    else
+        return false;
+#else
+    (void)buf;
+    return true;                                    /* 未启用时直接丢弃 */
+#endif
+}
+
 void hid_notification_enable(uint16_t hid_cccd)
 {
     _hid_cccd_value = hid_cccd;
@@ -361,6 +395,14 @@ const exe_att_ent_t ex2_tbl_gatt_database[] = {
     EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_REPORT_CHAR,                   EX2_ATT_VALUE_TYPE_PTR,  sizeof(hid_consumer_control_report_value),  &hid_consumer_control_report_value[0],                                               EX2_ATT_PER_READ),
     EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_DESCRIPTOR_CLIENT_CHAR_CONFIG, EX2_ATT_VALUE_TYPE_PTR,  2,                                          &_hid_cccd_value,                                                                    EX2_ATT_PER_READ | EX2_ATT_PER_WRITE | EX2_ATT_PER_ENCRYPT),
     EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_REPORT_REF_DESCR,              EX2_ATT_VALUE_TYPE_DATA, sizeof(ble_hid_report_ref_t),               BLE_HID_REPORT_REF(HID_REPORT_ID_CONSUMER_CONTROL_INPUT, BLE_HID_REPORT_TYPE_INPUT), EX2_ATT_PER_READ),
+    #endif
+
+    #if (PROFILE_HID_SYSTEM_CONTROL)
+    /* System Control's CD,CV,CCCD,RRD (MAC 勿扰) */
+    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_CHARACTERISTIC,                EX2_ATT_VALUE_TYPE_DATA, 1,                                         BLE_CHAR_PROP_READ | BLE_CHAR_PROP_NOTIFY,                                          EX2_ATT_PER_READ),
+    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_REPORT_CHAR,                   EX2_ATT_VALUE_TYPE_PTR,  sizeof(hid_system_control_report_value),   &hid_system_control_report_value[0],                                                EX2_ATT_PER_READ),
+    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_DESCRIPTOR_CLIENT_CHAR_CONFIG, EX2_ATT_VALUE_TYPE_PTR,  2,                                         &_hid_cccd_value,                                                                   EX2_ATT_PER_READ | EX2_ATT_PER_WRITE | EX2_ATT_PER_ENCRYPT),
+    EX2_ATT_DEFINE(EX2_UUID_LEN_2B, BLE_UUID_REPORT_REF_DESCR,              EX2_ATT_VALUE_TYPE_DATA, sizeof(ble_hid_report_ref_t),              BLE_HID_REPORT_REF(HID_REPORT_ID_SYSTEM_CONTROL_INPUT, BLE_HID_REPORT_TYPE_INPUT),  EX2_ATT_PER_READ),
     #endif
 
     #if (PROFILE_HID_KEYBOARD)

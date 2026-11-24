@@ -92,6 +92,7 @@ uint8_t                     mouse_data_z;
 uint8_t                     std_key[22];
 uint8_t                     mmk_data_l;
 uint8_t                     mmk_data_h;
+uint8_t                     sys_data;
 
 uint8_t                     wheel_data;
 //

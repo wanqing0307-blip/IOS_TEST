@@ -50,6 +50,7 @@ uint8_t                         std_key_value;
 uint8_t                         com_ctrl_index;
 
 uint8_t                         desk_mac_index;
+uint8_t                         sys_data_tmp;           // 系统控制键（Generic Desktop）本次扫描值
 
 //******************************************************************************
 // 查表获取 数值中1的个数
@@ -112,6 +113,7 @@ void __attribute__((noinline)) key_process(void)
     {
         multi_data_tmp_l = 0;
         multi_data_tmp_l = 0;
+        sys_data_tmp = 0;
         memset(key_data_tmp, 0x00, 22);
         key_ctrl_ex &= ~bcom_ctrl_en;
     }
@@ -228,6 +230,17 @@ void __attribute__((noinline)) key_process(void)
             mmk_tx_count = 8;
         }
     }
+
+    // 系统控制键（MAC F6 勿扰）：仅 USB / 蓝牙发送；
+    // 2.4G 接收器固件没有 System Control 报告，这里不发，避免被接收器误解析
+    if((sys_data_tmp != sys_data) && (iDEVICE_TYPE_24G != device_type))
+    {
+        if(0==(m_data_flag & bsys_data_send))
+        {
+            sys_data = sys_data_tmp;
+            m_data_flag |= bsys_data_send;
+        }
+    }
 }
 
 /******************************************************************************
@@ -243,6 +256,8 @@ void mode_swtich_init(void)
 
     mmk_data_l = 0;
     mmk_data_h = 0;
+    sys_data = 0;
+    m_data_flag &= ~bsys_data_send;
 
     m_data_flag |= (bmouse_data_send|bstd_kb_data_send|bmmk_data_send);
 }
@@ -263,6 +278,7 @@ __RAM_CODE void matrixkey_value(void)
     modifier_key_tmp = 0;
     multi_data_tmp_l = 0;
     multi_data_tmp_h = 0;
+    sys_data_tmp = 0;
 
     key_ctrl &= ~bkey_press_status;
 
@@ -476,6 +492,7 @@ __RAM_CODE void matrixkey_scan(void)
     modifier_key_tmp = 0;
     multi_data_tmp_l = 0;
     multi_data_tmp_h = 0;
+    sys_data_tmp = 0;
 
     scan_key();
     if(iDEVICE_TYPE_24G == device_type)
