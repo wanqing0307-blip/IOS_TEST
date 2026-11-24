@@ -141,6 +141,9 @@ def commit_to_branch(src, branch, head, ver, trailer=""):
             shutil.copytree(p, wt / p.name) if p.is_dir() else shutil.copy2(p, wt / p.name)
         gitw(wt, "add", "-A")
         gitw(wt, "add", "-f", OBJ)              # 防止 .o 被 .gitignore 忽略
+        if not gitw(wt, "status", "--porcelain").strip():
+            print("分支 %s 上的对外版已经是这个内容，不需要提交" % branch)
+            return
         msg = "对外版：来源提交 %s，mac_fkey V%s" % (head, ver)
         if trailer:
             msg += "\n\n" + trailer
