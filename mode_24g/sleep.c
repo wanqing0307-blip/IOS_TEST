@@ -104,6 +104,7 @@ void sleep_process(void)
                     clr_rgb();              // 只清灯效；保留 LEDC 输出第 1 颗指示灯，避免重试时整条灯瞬间熄灭
                     key_tx_count = 0;
                     mmk_tx_count = 0;
+                    sys_tx_count = 0;
                     rtc_value = drv_rtc_read(OM_RTC);
                     do
                     {
@@ -146,7 +147,7 @@ void sleep_process(void)
                         }
                         else
                         {
-                            if((0!=key_tx_count)||(0!=mmk_tx_count))
+                            if((0!=key_tx_count)||(0!=mmk_tx_count)||(0!=sys_tx_count))
                                 break;
 
                             hint_led_status &= ~bled_hint_mode;
@@ -157,7 +158,7 @@ void sleep_process(void)
                     }
                     while(1);
 
-                    if((0!=key_tx_count)||(0!=mmk_tx_count))
+                    if((0!=key_tx_count)||(0!=mmk_tx_count)||(0!=sys_tx_count))
                     {
                         no_dongle_time_count=0;
                         rf_ctrl_reg |= (brf_sync_time|brf_sync_status);

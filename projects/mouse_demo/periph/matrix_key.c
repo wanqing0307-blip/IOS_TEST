@@ -98,11 +98,6 @@ uint8_t const mac_shot[] = {
 };
 uint8_t mac_shot_index;
 
-// 2.4G 下 MAC F6 勿扰改发的标准键占用的按键位：库函数按 1→5 的顺序找空位，
-// 只有同时按住 4 个以上普通键才会用到第 5 位（再多的键走全无冲位图）
-#define iMAC_DND_24G_SLOT   5
-static uint8_t mac_dnd_24g_on;                  // 上一次扫描是否放了该键，用于松开时清除
-
 /******************************************************************************
 * 函数名称: void key_process(void)
 * 功能描述:
@@ -204,29 +199,6 @@ void __attribute__((noinline)) key_process(void)
             key_ctrl_ex &= ~bshot_mac;
     }
 
-    // 2.4G 下 MAC F6 勿扰：接收器固件没有 System Control 报告，发不出 0x9B，
-    // 按住 F6 期间改为发标准键 iSTD_MAC_DND_24G（PrintScreen，macOS 识别为 F13）。
-    // tmp_std_key 的按键位由库函数按按下/松开事件维护、不会每次扫描清零，
-    // 所以这里只占固定的一位，按住时保持，松开时只清掉自己放进去的键
-    if(iDEVICE_TYPE_24G == device_type)
-    {
-        if(iSYS_GD_DO_NOT_DISTURB == sys_data_tmp)
-        {
-            if((iSTD_NULL == tmp_std_key[iMAC_DND_24G_SLOT])
-               || (iSTD_MAC_DND_24G == tmp_std_key[iMAC_DND_24G_SLOT]))
-            {                                   // 该位被其他按键占用时不覆盖
-                tmp_std_key[iMAC_DND_24G_SLOT] = iSTD_MAC_DND_24G;
-                mac_dnd_24g_on = 1;
-            }
-        }
-        else if(mac_dnd_24g_on)
-        {
-            mac_dnd_24g_on = 0;
-            if(iSTD_MAC_DND_24G == tmp_std_key[iMAC_DND_24G_SLOT])
-                tmp_std_key[iMAC_DND_24G_SLOT] = iSTD_NULL;
-        }
-    }
-
     for(i=0; i<6; i++)
     {
         if(key_data_tmp[i] != std_key[i])
@@ -261,14 +233,29 @@ void __attribute__((noinline)) key_process(void)
         }
     }
 
-    // 系统控制键（MAC F6 勿扰）：仅 USB / 蓝牙发送；
-    // 2.4G 接收器固件没有 System Control 报告，这里不发，避免被接收器误解析
+    // 系统控制键（MAC F6 勿扰）：USB / 蓝牙直接发 System Control 报告（Generic Desktop 0x9B）
     if((sys_data_tmp != sys_data) && (iDEVICE_TYPE_24G != device_type))
     {
         if(0==(m_data_flag & bsys_data_send))
         {
             sys_data = sys_data_tmp;
             m_data_flag |= bsys_data_send;
+        }
+    }
+
+    // 2.4G 下 MAC F6 勿扰：发 2.4G 系统键包 [iRF_K_TYPE_KB, iRF_K_OTHER_SYS, 位图]，
+    // 勿扰用位图第 3 位 iSYS_DO_NOT_DISTURB，由接收器转成 Generic Desktop 0x9B 报告；
+    // 状态变化时连发 8 包（同多媒体键），发送见 rf_data_process.c
+    if(iDEVICE_TYPE_24G == device_type)
+    {
+        uint8_t sys_bits = 0;
+
+        if(iSYS_GD_DO_NOT_DISTURB == sys_data_tmp)
+            sys_bits = iSYS_DO_NOT_DISTURB;
+        if(sys_bits != sys_rf_data)
+        {
+            sys_rf_data = sys_bits;
+            sys_tx_count = 8;
         }
     }
 }
