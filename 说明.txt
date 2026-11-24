@@ -1,0 +1,28 @@
+﻿R12 三模键盘固件
+================================
+版本：ce80148（2026-11-24 10:04）
+生成时间：2026-11-24 10:04
+F5 / F6 模块：mac_fkey V1.00
+mac_fkey.o 编译器：Component: ARM Compiler 6.16 Tool: armclang [5dfeb700]
+mac_fkey.o SHA-256：72f30358f7c142bf5a23416f5dd4ff239c14d4ebe421d62824cf5b503a677287
+
+F5 / F6 功能键模块
+------------------
+Mac 布局 F5（听写）、F6（勿扰模式）功能键模块以预编译目标文件提供：
+     projects/mouse_demo/periph/mac_fkey.h   接口声明
+     projects/mouse_demo/periph/mac_fkey.o   预编译目标文件
+Keil 工程已按目标文件链接 mac_fkey.o，用法和 userdefined_key.o 相同。
+
+编译
+----
+用 Keil MDK（ARM Compiler 6.16）打开 projects/mouse_demo/keil5/SE73K.uvprojx，直接编译。
+
+注意：以下内容改动后，mac_fkey.o 需要由固件提供方重新生成，否则 F5 / F6 会失效
+------------------------------------------------------------------------------
+- mac_fkey.o 直接使用这些全局变量，不能改名或改类型：
+    device_type、m_data_flag、multi_data_tmp_l、multi_data_tmp_h
+- 这些定义的取值已经编进 mac_fkey.o，不能改：
+    bsys_data_send（m_data_flag 第 5 位）、iDEVICE_TYPE_24G、
+    iKEY_MAC_F5、iKEY_MAC_F6、iRF_K_TYPE_KB、iRF_K_OTHER_SYS、iRF_K_LENGTH_OTHER
+- 编译设置保持 Cortex-M0、Short enums/wchar。
+- mac_fkey.h 里的函数和各处调用不要删改。

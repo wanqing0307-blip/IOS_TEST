@@ -1,0 +1,689 @@
+/*******************************************************************************
+* Copyright (c) 2013, SHENZHEN Co.,LTD.
+* All rights reserved.
+*
+* 文件名称: led.c
+*
+* 功能说明:
+* 修改说明:
+*******************************************************************************/
+#include <string.h>
+#include "om_driver.h"
+
+#include "main.h"
+#include "main_24g.h"
+#include "lvd.h"
+#include "led.h"
+
+#include "flash.h"
+#include "flash_process.h"
+#include "usb_cfg_info.h"
+#include "matrix_key.h"
+
+//-----------------------------------------------------------------------------;
+// 常量定义区
+//
+
+
+//-----------------------------------------------------------------------------;
+// 变量定义区
+//
+bool                            bdevice_led_status;
+bool                            bled_bright_en;
+bool                            bback_led_status;
+bool                            bargb_valid;
+
+uint8_t                         gtemp_i;
+uint8_t                         gtemp_j;
+uint8_t                         gtemp_x;
+
+uint8_t                         device_conn_index=0;
+uint8_t                         device_hint_count;
+
+uint8_t                         led_hint_mode;
+uint8_t                         led_mode_bak;
+
+uint8_t                         logo_hint_time_count;
+uint8_t                         rgb_enable;
+
+uint8_t                         pwm_value;
+uint8_t                         pwm_count;
+
+uint8_t                         nhjb_led_index;
+
+uint16_t                        flash_on_time;
+uint16_t                        flash_off_time;
+uint32_t                        led_delay_count;
+
+
+uint16_t                        led_ctrl_reg;
+uint16_t                        led_status_reg;
+uint8_t                         led_use_flag;
+
+uint8_t                         led_cur_mode;
+uint8_t                         led_pre_mode;
+enum speed_level                led_speed_lev;
+unsigned char                   led_rgb_index;
+unsigned char                   pwm_value;
+enum led_level                  led_light_lev;
+
+uint8_t                         pwm_time_count;
+uint8_t                         rgb_index;
+uint8_t                         led_process_index;
+uint8_t                         hint_time_count;
+uint8_t                         led_fade = iPWM_MAX;
+uint8_t                         led_fade_dir;
+
+__ALIGNED(4) uint8_t            pwm_rgb_tbl[iLED_MAX][3];
+uint8_t                         mode_led_rgb[3];
+
+uint8_t                         pwm_duty_array_0[0x20];
+uint8_t                         pwm_duty_array_1[0x20];
+uint8_t                         pwm_duty_array_2[0x20];
+uint8_t                         pwm_duty_array_3[0x20];
+
+extern bool                     b24g_nromal;
+
+//=============================================================================;
+// 代码区                                                                       ;
+//=============================================================================;
+
+/*******************************************************************************
+* 函数名称: ledc_init()
+* 功能描述:
+* 输入参数： 无
+* 输出参数： 无
+* 说    明:
+*******************************************************************************/
+void ledc_init(void)
+{
+    ledc_config_t config = {
+        .reset_cycles         = 100,
+        .long_pulse_cycles    = 28,
+        .short_pulse_cycles   = 14,
+    };
+    drv_ledc_init(OM_LEDC, &config);
+    bargb_valid = true;
+}
+
+/******************************************************************************
+* 函数名称: led_status_hint
+* 功能描述:
+* 输入参数:
+* 输出参数:
+* 说    明:
+******************************************************************************/
+void led_status_hint(void)
+{
+    uint8_t i=0;
+    uint8_t r=0, g=0, b=0;
+    uint8_t conn;
+
+    // 连接状态：USB 视为已连接；2.4G 以 RF 正常模式或同步成功为准；蓝牙以 sync_ok 为准
+    if(iDEVICE_TYPE_USB == device_type)
+        conn = 1;
+    else if(iDEVICE_TYPE_24G == device_type)
+        conn = (iRF_MODE_NORMAL == rf_mode_type)
+            || (0 != (ble_24g_ctrl&bom6239_sync_ok));
+    else
+        conn = (0 != (ble_24g_ctrl&bom6239_sync_ok));
+
+    // 第 1 颗 ARGB 模式指示灯：与 NUM/CAPS 状态灯共用 hint_led_status 的节奏
+    if((iLOW_POWER >= bat_value) && (0 == (bat_status&bcharging)))
+    {
+        if(0 != (hint_led_status&bled_low))
+            r = iPWM_MAX;                       // 低电：红色闪（优先）
+    }
+    else
+    {
+        uint8_t connected = conn;
+
+        // 上电无线状态的配对/回连提示：与 mLED_NUM_LOW 同一闪烁相位；连上后常亮
+        if(0 != (hint_led_status&bled_hint_mode))
+            connected = (false != bdevice_led_status);
+
+        if(0 != connected)
+        {
+            if(iDEVICE_TYPE_BT0 == device_type)
+            {
+                b = iPWM_MAX;                   // 蓝牙1：蓝
+            }
+            else if(iDEVICE_TYPE_BT1 == device_type)
+            {
+                r = iPWM_MAX>>1;
+                b = iPWM_MAX;                   // 蓝牙2：紫
+            }
+            else if(iDEVICE_TYPE_BT2 == device_type)
+            {
+                g = iPWM_MAX;
+                b = iPWM_MAX;                   // 蓝牙3：青
+            }
+            else if(iDEVICE_TYPE_24G == device_type)
+            {
+                g = iPWM_MAX;                   // 2.4G：绿
+            }
+            else if(iDEVICE_TYPE_USB == device_type)
+            {
+                r = iPWM_MAX;
+                g = iPWM_MAX>>2;
+                b = iPWM_MAX>>1;                // 有线：粉红
+            }
+        }
+    }
+
+    mode_led_rgb[iR_INDEX] = r;
+    mode_led_rgb[iG_INDEX] = g;
+    mode_led_rgb[iB_INDEX] = b;
+
+    // NUM/CAPS 锁定灯：连接成功后才按锁定状态点亮，未连接时熄灭
+    if(0 != conn)
+    {
+        if(kb_led_status&bnum_lock)
+        {
+            mLED_NUM_HIGH
+        }
+        else
+        {
+            mLED_NUM_LOW;
+        }
+
+        if(kb_led_status&bcaps_lock)
+        {
+            mLED_CAPS_HIGH;
+        }
+        else
+        {
+            mLED_CAPS_LOW;
+        }
+    }
+    else
+    {
+        mLED_NUM_LOW;
+        mLED_CAPS_LOW;
+    }
+}
+
+/*******************************************************************************
+* 函数名称: device_led_on()
+* 功能描述:
+* 输入参数： 无
+* 输出参数： 无
+* 说    明:
+*******************************************************************************/
+void device_led_on(void)
+{
+    bdevice_led_status = true;
+
+    hint_led_status &= 0xF8;
+    if(iDEVICE_TYPE_BT0 == device_type)
+        hint_led_status |= (bled_bt0|bled_hint_mode);
+    else if(iDEVICE_TYPE_BT1 == device_type)
+        hint_led_status |= (bled_bt1|bled_hint_mode);
+    else if(iDEVICE_TYPE_24G == device_type)
+        hint_led_status |= (bled_24g|bled_hint_mode);
+}
+
+/*******************************************************************************
+* 函数名称: device_led_off()
+* 功能描述:
+* 输入参数： 无
+* 输出参数： 无
+* 说    明:
+*******************************************************************************/
+void device_led_off(void)
+{
+    bdevice_led_status = false;
+
+    hint_led_status &= 0xF8;
+}
+
+void logo_off(void)
+{
+    drv_ledc_blank();       // 清空发送缓冲，重新上电不会闪出旧画面
+    bargb_valid = false;
+
+    DRV_RCC_CLOCK_ENABLE(RCC_CLK_LEDC, 0U);
+    OM_GPIO0->DATAOUTSET = (1<<ARGB_OUT_PIN);
+    OM_GPIO0->DATAOUTCLR = (1<<ARGB_OFF_PIN);
+}
+
+void clr_rgb(void)
+{
+    memset(pwm_rgb_tbl, 0x00, iLED_MAX*3);
+}
+
+void rgb_pwm0_w(void)
+{
+    gtemp_j &= 0x0F;
+    if(rgb_enable&iPWM_R)
+         pwm_rgb_tbl[gtemp_j][iR_INDEX] = pwm_duty_array_0[gtemp_x];
+     else
+         pwm_rgb_tbl[gtemp_j][iR_INDEX] = 0;
+    if(rgb_enable&iPWM_G)
+         pwm_rgb_tbl[gtemp_j][iG_INDEX] = pwm_duty_array_0[gtemp_x];
+     else
+         pwm_rgb_tbl[gtemp_j][iG_INDEX] = 0;
+    if(rgb_enable&iPWM_B)
+         pwm_rgb_tbl[gtemp_j][iB_INDEX] = pwm_duty_array_0[gtemp_x];
+     else
+         pwm_rgb_tbl[gtemp_j][iB_INDEX] = 0;
+}
+
+__RAM_CODE void rgb_w_max(void)
+{
+    gtemp_j &= 0x0F;
+    if(rgb_enable&iPWM_R)
+        pwm_rgb_tbl[gtemp_j][iR_INDEX] = iPWM_MAX;
+    else
+        pwm_rgb_tbl[gtemp_j][iR_INDEX] = 0;
+    if(rgb_enable&iPWM_G)
+        pwm_rgb_tbl[gtemp_j][iG_INDEX] = iPWM_MAX;
+    else
+        pwm_rgb_tbl[gtemp_j][iG_INDEX] = 0;
+    if(rgb_enable&iPWM_B)
+        pwm_rgb_tbl[gtemp_j][iB_INDEX] = iPWM_MAX;
+    else
+        pwm_rgb_tbl[gtemp_j][iB_INDEX] = 0;
+}
+
+extern void key_into_fcc_test(void);
+
+/******************************************************************************
+* 函数名称: logo_process
+* 功能描述:
+* 输入参数:
+* 输出参数:
+* 说    明:
+******************************************************************************/
+void device_led_process(void)
+{
+//-----------------------------------------------------------------------------
+// 模式提示
+//
+    if(0 != hint_time_count)
+    {
+        hint_led_status |= bled_hint_mode;
+        if(0 != (hint_time_count&0x08))
+        {
+            bdevice_led_status = true;
+            hint_led_status |= (bled_hint_mode|bled_24g|bled_bt1|bled_bt0);
+        }
+        else
+        {
+            device_led_off();
+        }
+
+        hint_time_count--;
+        if(2>hint_time_count)
+        {
+            hint_time_count = 0;
+            hint_led_status = 0x00;
+        }
+
+        return;
+    }
+
+    rtc_cur_value = drv_rtc_read(OM_RTC);
+    if(iDEVICE_TYPE_USB != device_type)
+    {
+        if(ble_24g_ctrl & bom6239_conning)
+        {
+            hint_led_status |= bled_hint_mode;
+            if(0 == device_conn_index)
+            {
+                device_conn_index++;
+                led_delay_count = rtc_cur_value;
+            }
+            else if(1 == device_conn_index)
+            {
+                if(ble_24g_ctrl&bom6239_conn_ok)
+                {
+                    // 配对成功不提示：直接转常亮
+                    hint_led_status &= ~bled_hint_mode;
+                    device_conn_index = 0;
+                    ble_24g_ctrl |= bom6239_sync_ok;    // 立即按已连接颜色输出
+                    ble_24g_ctrl &= ~bom6239_conning;
+                    ble_24g_ctrl &= ~bom6239_sync_ing;
+                }
+
+                key_into_fcc_test();
+                if(false == bdevice_led_status)
+                {
+                    device_led_off();
+                    if(mMS_TO_TICK(250) < (rtc_cur_value - led_delay_count))
+                    {
+                        bdevice_led_status = true;
+                        led_delay_count = rtc_cur_value;
+                    }
+                }
+                else
+                {
+                    device_led_on();
+                    if(mMS_TO_TICK(250) < (rtc_cur_value - led_delay_count))
+                    {
+                        bdevice_led_status = false;
+                        led_delay_count = rtc_cur_value;
+                    }
+                }
+            }
+            return;
+        }
+        else if(ble_24g_ctrl&bom6239_sync_ing)
+        {
+            if(true == b24g_nromal)
+                return;
+
+            hint_led_status |= bled_hint_mode;
+            if(0 == device_conn_index)
+            {
+                device_conn_index++;
+                led_delay_count = rtc_cur_value;
+            }
+            else if(1 == device_conn_index)
+            {
+                if(ble_24g_ctrl&bom6239_sync_ok)
+                {
+                    // 回连成功：快闪 3 下后转常亮（蓝牙与 2.4G 共用）
+                    device_conn_index++;
+                    led_delay_count = rtc_cur_value;
+                    device_hint_count = 0;
+                    bdevice_led_status = false;     // 从灭开始计数
+                }
+
+                if(false == bdevice_led_status)
+                {
+                    device_led_off();
+                    if(mMS_TO_TICK(1000) < (rtc_cur_value - led_delay_count))
+                    {
+                        bdevice_led_status = true;
+                        led_delay_count = rtc_cur_value;
+                    }
+                }
+                else
+                {
+                    device_led_on();
+                    if(mMS_TO_TICK(1000) < (rtc_cur_value - led_delay_count))
+                    {
+                        bdevice_led_status = false;
+                        led_delay_count = rtc_cur_value;
+                    }
+                }
+            }
+            else if(2 == device_conn_index)
+            {
+                if(false == bdevice_led_status)
+                {
+                    device_led_off();
+                    if(mMS_TO_TICK(125) < (rtc_cur_value - led_delay_count))
+                    {
+                        bdevice_led_status = true;
+                        led_delay_count = rtc_cur_value;
+
+                        device_hint_count++;
+                        if(3<device_hint_count)
+                        {
+                            device_conn_index = 0;
+                            ble_24g_ctrl &= ~bom6239_sync_ing;
+                        }
+                    }
+                }
+                else
+                {
+                    device_led_on();
+                    if(mMS_TO_TICK(125) < (rtc_cur_value - led_delay_count))
+                    {
+                        bdevice_led_status = false;
+                        led_delay_count = rtc_cur_value;
+                    }
+                }
+            }
+            return;
+        }
+        hint_led_status &= ~bled_hint_mode;
+        device_conn_index = 0;
+    }
+    else
+    {
+        hint_led_status &= ~bled_hint_mode;
+        if(0 != (usb_ctrl_flag&busb_suspend_resume))
+            return;
+    }
+}
+
+/******************************************************************************
+* 函数名称: logo_process
+* 功能描述:
+* 输入参数:
+* 输出参数:
+* 说    明:
+******************************************************************************/
+void logo_process(void)
+{
+    uint8_t i;
+
+    if(true==bsave_status)
+    {
+        bsave_status = false;
+        flash_save_status();
+    }
+    if(true==bsave_cfg_dpi)
+    {
+        bsave_cfg_dpi = false;
+        flash_save_cfg_dpi();
+    }
+    // 刚写过 flash：2.4G 下 logo_process 在 RF 回调里执行，本次跳过灯效让出时间给 RF。
+    // 只跳过这一次，必须清标志；原来从不清零，2.4G 下改过灯效/速度/颜色后灯效会一直定格到复位。
+    // 灯效按 RTC 时间推进，跳过一次不影响速度。
+    if(true==bflash_ctrl)
+    {
+        bflash_ctrl = false;
+        if(iDEVICE_TYPE_24G == device_type)
+            return;
+    }
+
+    if(iDEVICE_TYPE_USB == device_type)
+    {
+        if(0 != (usb_ctrl_flag&busb_suspend_resume))
+        {
+            logo_off();
+            return;
+        }
+    }
+    else
+    {
+        if(ble_24g_ctrl&bom6239_sync_ing)
+        {
+            if(false == bargb_valid)
+            {
+                OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+                OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+                ledc_init();
+            }
+            clr_rgb();                              // 灯效全灭，保留LEDC输出第1颗模式指示灯（配对/回连提示）
+            return;
+        }
+
+        // 2.4G 仅 RF 正常模式渲染灯效；配对/连接/同步/无接收器阶段一律熄灭，
+        // 避免配对成功切到同步的瞬间闪出一帧灯效画面
+        if((iDEVICE_TYPE_24G == device_type) && (iRF_MODE_NORMAL != rf_mode_type))
+        {
+            if(false == bargb_valid)
+            {
+                OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+                OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+                ledc_init();
+            }
+            clr_rgb();
+            return;
+        }
+    }
+
+    // 连接提示（配对/回连/成功快闪）期间不渲染灯效，避免提示阶段叠出一帧灯效画面
+    if(0 != (hint_led_status&bled_hint_mode))
+    {
+        if(false == bargb_valid)
+        {
+            OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+            OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+            ledc_init();
+        }
+        clr_rgb();
+        return;
+    }
+
+    if(false == bled_bright_en)
+    {
+        if(false == bargb_valid)
+        {
+            OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+            OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+            ledc_init();
+        }
+        clr_rgb();                              // 灯效熄灭，保留第1颗模式指示灯
+        return;
+    }
+
+    if(false==bargb_valid)
+    {
+        OM_GPIO0->DATAOUTCLR = (1<<ARGB_OUT_PIN);
+        OM_GPIO0->DATAOUTSET = (1<<ARGB_OFF_PIN);
+        ledc_init();
+    }
+
+    if(iLOW_POWER>=bat_value)
+    {
+        clr_rgb();                              // 低电：灯效全灭，只保留第1颗模式指示灯红色闪
+        return;
+    }
+
+    // 灯效切换过渡：淡出 -> 切换初始化 -> 淡入
+    if(0 == led_fade_dir)
+    {
+        if(led_pre_mode != led_cur_mode)
+        {
+            led_fade = iPWM_MAX;
+            led_fade_dir = 1;
+            if(iMODE_LED_BS == led_cur_mode)
+                led_fade = iLED_FADE_STEP;          // 进入爆闪不淡出，立即切换
+        }
+    }
+
+    if(1 == led_fade_dir)
+    {
+        if(led_fade > iLED_FADE_STEP)
+        {
+            led_fade -= iLED_FADE_STEP;
+            return;                                 // 淡出中冻结当前画面
+        }
+
+        led_fade = 0;
+        led_fade_dir = 2;
+        led_pre_mode = led_cur_mode;
+
+        led_process_index = 0;
+        rgb_index = 0;
+        led_timer_reset();                          // 灯效按 RTC 时间推进，进入即走第一步
+
+        clr_rgb();
+        memset(pwm_duty_array_0, 0x00, 16);
+        memset(pwm_duty_array_1, 0x00, 16);
+        memset(pwm_duty_array_2, 0x00, 16);
+        memset(pwm_duty_array_3, 0x00, 16);
+
+        switch(led_cur_mode)
+        {
+            case iMODE_LED_OFF:
+
+                break;
+            case iMODE_LED_ON:
+
+                break;
+            case iMODE_LED_BREATH:
+                led_mode_breath_init();
+
+                break;
+            case iMODE_LED_NHJB:
+                led_mode_nhjb_init();
+                break;
+            case iMODE_LED_LG_L_R:
+                led_mode_liuguang_init();
+                break;
+            case iMODE_LED_STAR:
+                led_mode_star_init();
+                break;
+            case iMODE_LED_SBZL:
+                led_mode_sbzl_init();
+                break;
+            case iMODE_LED_BS:
+                led_mode_baoshan_init();
+                led_fade = iPWM_MAX;                // 进入爆闪不淡入，首帧即全亮
+                led_fade_dir = 0;
+                break;
+            case iMODE_LED_QCNH:
+                led_mode_qcnh_init();
+                break;
+            case iMODE_LED_LHTW:
+                led_mode_lhtw_init();
+                break;
+            case iMODE_LED_DXTW:
+            case iMODE_LED_SXTW:
+            case iMODE_LED_TXTW:
+            case iMODE_LED_FXTW:
+                led_mode_tw_init();
+                break;
+        }
+    }
+    else if(2 == led_fade_dir)
+    {
+        led_fade += iLED_FADE_STEP;
+        if(iPWM_MAX <= led_fade)
+        {
+            led_fade = iPWM_MAX;
+            led_fade_dir = 0;
+        }
+    }
+
+        //bled_hint_ing = 1;
+        switch(led_cur_mode)
+        {
+            case iMODE_LED_OFF:
+                break;
+            case iMODE_LED_ON:
+                led_mode_on();
+                break;
+            case iMODE_LED_BREATH:
+                led_mode_breath();
+                break;
+            case iMODE_LED_NHJB:
+                led_mode_nhjb();
+                break;
+            case iMODE_LED_LG_L_R:
+                led_mode_liuguang();
+                break;
+            case iMODE_LED_STAR:
+                led_mode_star();
+                break;
+            case iMODE_LED_SBZL:
+                led_mode_sbzl();
+                break;
+            case iMODE_LED_BS:
+                led_mode_baoshan();
+                break;
+            case iMODE_LED_QCNH:
+                led_mode_qcnh();
+                break;
+            case iMODE_LED_LHTW:
+                led_mode_lhtw();
+                break;
+            case iMODE_LED_DXTW:
+                led_mode_dxtw();
+                break;
+            case iMODE_LED_SXTW:
+                led_mode_sxtw();
+                break;
+            case iMODE_LED_TXTW:
+            case iMODE_LED_FXTW:
+                led_mode_txtw();
+                break;
+        }
+}
