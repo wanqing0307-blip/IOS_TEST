@@ -21,7 +21,7 @@ unsigned char           const   matrixkey_mac_fn_tbl[] =
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C3 R4
     iSTD_RETURN,           iKEY_TYPE_STD|iKEY_PRESS,                // C3 R5
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C3 R6
-    iSTD_KEYBOARD_LANG1,   iKEY_TYPE_STD|iKEY_PRESS,                // C3 R7
+    iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iRIGHT_ALT,     // C3 R7
 // C4
     iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iLEFT_CTRL,     // C4 R0
     iSTD_K,                iKEY_TYPE_STD|iKEY_PRESS,                // C4 R1
@@ -38,7 +38,7 @@ unsigned char           const   matrixkey_mac_fn_tbl[] =
     iKEY_WIN_LOCK,         iKEY_TYPE_SPECIAL,                       // C5 R3
     iSTD_C,                iKEY_TYPE_STD|iKEY_PRESS,                // C5 R4
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C5 R5
-    iSTD_KEYBOARD_LANG2,   iKEY_TYPE_STD|iKEY_PRESS,                // C5 R6
+    iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iRIGHT_CTRL,    // C5 R6
     iSTD_Z,                iKEY_TYPE_STD|iKEY_PRESS,                // C5 R7
 // C6
     iKEY_WIN,              iKEY_TYPE_SPECIAL,                       // C6 R0
