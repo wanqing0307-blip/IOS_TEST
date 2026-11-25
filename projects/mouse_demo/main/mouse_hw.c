@@ -185,6 +185,83 @@ void ex2_ll_hci_connect_param_update_complete(uint8_t *buf)
 }
 
 /*********************************************************************
+ * 诊断（调试用）：浅休眠时协议栈的状态，按 FN+P 以文字输出
+ * 连接上下文在协议栈库内部不可访问，这里只用库公开的接口：
+ *   比较“连接事件计数器的增量”和“应用实际被唤醒的次数”，
+ *   两者接近 = 每个连接事件都醒（latency 没生效）；事件数远大于唤醒数 = latency 在跳。
+ */
+extern bool stk_is_wait_sending(void);
+extern uint32_t ex2_ll_get_conn_super_timeout(void);
+
+static uint32_t dbg_l1_rtc0, dbg_l1_rtc;
+static uint16_t dbg_l1_evt0, dbg_l1_evt;
+static uint16_t dbg_l1_wakes, dbg_l1_enter, dbg_bounce, dbg_l1_waitcnt;
+static uint8_t  dbg_bounce_flag;
+
+static void dbg_snapshot(uint8_t entry)         // entry = 1：刚进入浅休眠，记起点
+{
+    uint32_t now = drv_rtc_read(OM_RTC);
+    uint16_t evt = ex2_ll_get_conn_event_counter();
+    if(entry)
+    {
+        dbg_l1_rtc0 = now;
+        dbg_l1_evt0 = evt;
+        dbg_l1_wakes = 0;
+        dbg_l1_waitcnt = 0;
+    }
+    else
+        dbg_l1_wakes++;
+    dbg_l1_rtc = now;
+    dbg_l1_evt = evt;
+    if(stk_is_wait_sending())
+        dbg_l1_waitcnt++;
+}
+
+static void dbg_put_char(char ch)
+{
+    uint8_t c = 0;
+    if((ch >= 'A') && (ch <= 'Z'))       c = 0x04 + (ch - 'A');
+    else if(ch == '0')                   c = 0x27;
+    else if((ch >= '1') && (ch <= '9'))  c = 0x1E + (ch - '1');
+    else if(ch == ' ')                   c = 0x2C;
+    else if(ch == '\n')                  c = 0x28;
+    if(c && (dbg_seq_len < DBG_SEQ_MAX))
+        dbg_seq[dbg_seq_len++] = c;
+}
+
+static void dbg_item(char tag, uint32_t v)
+{
+    char b[10];
+    uint8_t n = 0;
+    dbg_put_char(tag);
+    do { b[n++] = (char)('0' + (v % 10)); v /= 10; } while(v && (n < 10));
+    while(n) dbg_put_char(b[--n]);
+    dbg_put_char(' ');
+}
+
+/* 生成一行诊断文字（本次浅休眠以来）：
+ * I 连接间隔(tick, 32768/s)  T 超时(tick)  C 连接事件数  N 应用唤醒次数  P 平均唤醒周期(tick)
+ * W 唤醒时还有数据待发的次数  E 进入浅休眠次数  B 被拉回 LEVEL0 次数  X 拉回时的数据标志
+ * U 参数更新次数  V 更新后的延迟 */
+void dbg_info_build(void)
+{
+    uint32_t dt = dbg_l1_rtc - dbg_l1_rtc0;
+    dbg_seq_len = 0;
+    dbg_item('I', ex2_ll_get_conn_interval_tick());
+    dbg_item('T', ex2_ll_get_conn_super_timeout());
+    dbg_item('C', (uint16_t)(dbg_l1_evt - dbg_l1_evt0));
+    dbg_item('N', dbg_l1_wakes);
+    dbg_item('P', dbg_l1_wakes ? (dt / dbg_l1_wakes) : 0);
+    dbg_item('W', dbg_l1_waitcnt);
+    dbg_item('E', dbg_l1_enter);
+    dbg_item('B', dbg_bounce);
+    dbg_item('X', dbg_bounce_flag);
+    dbg_item('U', dbg_conn_update_cnt);
+    dbg_item('V', dbg_conn_latency);
+    dbg_put_char('\n');
+}
+
+/*********************************************************************
  * LOCAL FUNCTIONS
  */
 __RAM_CODE uint8_t ex2_app_mouse_scan(void)
@@ -439,6 +516,8 @@ __RAM_CODE void drv_rtc_isr_callback(void)
                     mouse_periph_wakeup_enable(WAKEUP_SLEEP_LEVEL1);
 
                     logo_off();
+                    dbg_l1_enter++;
+                    dbg_snapshot(1);
                     ex2_gap_enable_latency();   // 主机的 ATT 读写会让协议栈暂停 latency 约 2s，浅休眠时恢复
                     ex2_ll_set_next_polling_time(1);
                 }
@@ -449,6 +528,7 @@ __RAM_CODE void drv_rtc_isr_callback(void)
                 if((ble_sleep_2_time_tbl[(sleep_time_ble>>4)&0x07] > (rtc_count-rtc_init_value))
                     ||((0 != (bat_status&bcharging))&&(0==(bat_status&bcharge_ok))))
                 {
+                    dbg_snapshot(0);
                     ex2_gap_enable_latency();   // 同上：主机每次 ATT 读写后都重新允许 latency，否则每个连接事件都要醒
                     ex2_ll_set_next_polling_time(1);
                 }
@@ -470,6 +550,8 @@ __RAM_CODE void drv_rtc_isr_callback(void)
     {
         if(MS_SLEEP_LEVEL0 != ms_sleep_level)
         {
+            dbg_bounce++;                       // 诊断：浅休眠里有数据要发，被拉回 LEVEL0
+            dbg_bounce_flag = m_data_flag | (bbat_update ? 0x80 : 0);
             ms_sleep_level = MS_SLEEP_LEVEL0;
             mouse_periph_wakeup_enable(WAKEUP_SLEEP_LEVEL0);
         }
