@@ -1,23 +1,38 @@
 ﻿R12 三模键盘固件
 ================================
 版本：8222c3b（2026-11-25 09:19）
-生成时间：2026-11-25 01:20
+生成时间：2026-11-25 01:21
 F5 / F6 模块：mac_fkey V1.00
 mac_fkey.o 编译器：Component: ARM Compiler 6.16 Tool: armclang [5dfeb700]
 mac_fkey.o SHA-256：72f30358f7c142bf5a23416f5dd4ff239c14d4ebe421d62824cf5b503a677287
 
-F5 / F6 功能键模块
-------------------
-Mac 布局 F5（听写）、F6（勿扰模式）功能键模块以预编译目标文件提供：
+一、编译和烧录
+--------------
+1. 用 Keil MDK（ARM Compiler 6.16）打开 projects/mouse_demo/keil5/SE73K.uvprojx。
+2. Project → Rebuild all target files。编译完成后自动生成：
+     projects/mouse_demo/keil5/SE73K.bin       烧录用固件
+     projects/mouse_demo/keil5/out/SE73K.axf   带符号的镜像，调试用
+3. 用平时的烧录工具烧录 SE73K.bin。
+
+二、Mac 布局 F5 / F6
+--------------------
+只在 Mac 布局下生效；Win 布局和 FN+F5 / FN+F6（标准 F5 / F6）不变，不需要在 Mac 上做任何设置。
+
+  按键   功能       USB    蓝牙                          2.4G
+  F5     听写       可用   可用                          可用
+  F6     勿扰模式   可用   可用（升级后需重新配对一次）  需要接收器支持
+
+- 蓝牙：报告描述符有变化，升级固件后在 Mac 的“系统设置 → 蓝牙”里移除这把键盘，
+  再重新配对一次，F6 才会生效。
+- 2.4G：F6 需要接收器支持系统控制报告。接收器不支持时按 F6 没有反应，也不会有其他影响。
+
+三、F5 / F6 模块文件
+--------------------
      projects/mouse_demo/periph/mac_fkey.h   接口声明
      projects/mouse_demo/periph/mac_fkey.o   预编译目标文件
 Keil 工程已按目标文件链接 mac_fkey.o，用法和 userdefined_key.o 相同。
 
-编译
-----
-用 Keil MDK（ARM Compiler 6.16）打开 projects/mouse_demo/keil5/SE73K.uvprojx，直接编译。
-
-注意：以下内容改动后，mac_fkey.o 需要由固件提供方重新生成，否则 F5 / F6 会失效
+四、注意：以下内容改动后，mac_fkey.o 需要由固件提供方重新生成，否则 F5 / F6 会失效
 ------------------------------------------------------------------------------
 - mac_fkey.o 直接使用这些全局变量，不能改名或改类型：
     device_type、m_data_flag、multi_data_tmp_l、multi_data_tmp_h
