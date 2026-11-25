@@ -154,6 +154,37 @@ extern bool profile_bas_tx_notification(uint8_t level);
 extern  uint8_t hid_keyboard_out_report_value;
 
 /*********************************************************************
+ * 诊断：主机最近一次更新后的连接参数，用 J-Link 在 Keil Watch 窗口查看
+ * dbg_conn_interval_tick：连接间隔，RTC tick（约 32 tick = 1ms，15ms ≈ 490）
+ * dbg_conn_latency：从机延迟；dbg_conn_update_cnt：连上后参数更新的次数（0 = 主机没有更新过参数）
+ */
+volatile uint32_t                   dbg_conn_interval_tick;
+volatile uint32_t                   dbg_conn_timeout_tick;
+volatile uint16_t                   dbg_conn_latency;
+volatile uint16_t                   dbg_conn_update_cnt;
+
+typedef struct {                                 // 与协议栈 ll_conn_param_t 相同（见 ex2_api.h）
+    uint32_t tick_winsize;
+    uint32_t tick_winoff;
+    uint32_t tick_interval;
+    uint32_t tick_timeout;
+    uint16_t latency;
+    uint16_t instance;
+    uint8_t  chn_map[5];
+} dbg_ll_conn_param_t;
+
+/* 覆盖协议栈的弱函数：主机更新连接参数时调用 */
+void ex2_ll_hci_connect_param_update_complete(uint8_t *buf)
+{
+    dbg_ll_conn_param_t param;
+    memcpy(&param, buf, sizeof(param));        // Cortex-M0 不支持非对齐访问，先拷出来
+    dbg_conn_interval_tick = param.tick_interval;
+    dbg_conn_timeout_tick  = param.tick_timeout;
+    dbg_conn_latency       = param.latency;
+    dbg_conn_update_cnt++;
+}
+
+/*********************************************************************
  * LOCAL FUNCTIONS
  */
 __RAM_CODE uint8_t ex2_app_mouse_scan(void)
@@ -408,6 +439,7 @@ __RAM_CODE void drv_rtc_isr_callback(void)
                     mouse_periph_wakeup_enable(WAKEUP_SLEEP_LEVEL1);
 
                     logo_off();
+                    ex2_gap_enable_latency();   // 主机的 ATT 读写会让协议栈暂停 latency 约 2s，浅休眠时恢复
                     ex2_ll_set_next_polling_time(1);
                 }
                 sys_tick_count += 8;
@@ -417,6 +449,7 @@ __RAM_CODE void drv_rtc_isr_callback(void)
                 if((ble_sleep_2_time_tbl[(sleep_time_ble>>4)&0x07] > (rtc_count-rtc_init_value))
                     ||((0 != (bat_status&bcharging))&&(0==(bat_status&bcharge_ok))))
                 {
+                    ex2_gap_enable_latency();   // 同上：主机每次 ATT 读写后都重新允许 latency，否则每个连接事件都要醒
                     ex2_ll_set_next_polling_time(1);
                 }
                 else
