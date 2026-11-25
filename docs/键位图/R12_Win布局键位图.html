@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>R12 Win 布局键位图</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* 布局：标题 + 图例，下面一整块按真实键帽比例绘制的键盘（窄屏横向滚动），最后是 FN 组合键说明表 */
+:root{
+  --bg:#eef0f2; --surface:#ffffff; --fg:#1b1f24; --muted:#5d6570; --line:#d3d8de;
+  --plate:#2a2f36; --cap:#f7f8f9; --cap-edge:#c9ced5; --cap-fg:#1b1f24; --fncap:#3b434d; --fncap-fg:#f2f4f6;
+  --c-media:#b4471f; --c-link:#1f6fb4; --c-sys:#7a3fb0; --c-led:#1d8a5c; --c-other:#6b7280;
+  --font-body:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14171b; --surface:#1c2026; --fg:#e6e9ed; --muted:#9aa3ae; --line:#2e343c;
+  --plate:#0b0d10; --cap:#2a3038; --cap-edge:#191d22; --cap-fg:#eef1f4; --fncap:#4a5563; --fncap-fg:#f2f4f6;
+  --c-media:#f08a5d; --c-link:#6cb2f0; --c-sys:#c49af0; --c-led:#5fd4a0; --c-other:#a3abb6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14171b; --surface:#1c2026; --fg:#e6e9ed; --muted:#9aa3ae; --line:#2e343c;
+  --plate:#0b0d10; --cap:#2a3038; --cap-edge:#191d22; --cap-fg:#eef1f4; --fncap:#4a5563; --fncap-fg:#f2f4f6;
+  --c-media:#f08a5d; --c-link:#6cb2f0; --c-sys:#c49af0; --c-led:#5fd4a0; --c-other:#a3abb6; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{font-size:clamp(1.5rem,3vw,2rem);margin:0;line-height:1.25;text-wrap:balance}
+h2{font-size:1.15rem;margin:0 0 10px}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono{font-family:var(--font-mono);font-size:.88em}
+header{display:flex;flex-direction:column;gap:8px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.9rem}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+.d-media{background:var(--c-media)} .d-link{background:var(--c-link)} .d-sys{background:var(--c-sys)} .d-led{background:var(--c-led)} .d-other{background:var(--c-other)}
+
+/* 键盘：22.5u × 6.5u，按百分比定位；字号随键盘宽度缩放 */
+.scroll{overflow-x:auto;border-radius:12px}
+.plate{background:var(--plate);border-radius:12px;padding:14px;min-width:980px}
+.board{position:relative;width:100%;aspect-ratio:22.5/6.5;container-type:inline-size}
+.key{position:absolute;padding:.22cqw;}
+.key::before{content:"";position:absolute;inset:.22cqw;background:var(--cap);border:1px solid var(--cap-edge);border-radius:.45cqw;
+  box-shadow:inset 0 -.28cqw 0 rgba(0,0,0,.12)}
+.key .kl,.key .fl{position:relative;display:block;padding:.35cqw .55cqw 0;line-height:1.15}
+.key .kl{font-size:.95cqw;font-weight:600;color:var(--cap-fg);white-space:nowrap}
+.key .fl{position:absolute;left:.22cqw;right:.22cqw;bottom:.55cqw;padding:0 .55cqw;font-size:.7cqw;font-weight:500;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat-media .fl{color:var(--c-media)} .cat-link .fl{color:var(--c-link)} .cat-sys .fl{color:var(--c-sys)}
+.cat-led .fl{color:var(--c-led)} .cat-other .fl{color:var(--c-other)}
+.has-fn::before{border-bottom-width:.25cqw}
+.cat-media::before{border-bottom-color:var(--c-media)} .cat-link::before{border-bottom-color:var(--c-link)}
+.cat-sys::before{border-bottom-color:var(--c-sys)} .cat-led::before{border-bottom-color:var(--c-led)} .cat-other::before{border-bottom-color:var(--c-other)}
+.fnkey::before{background:var(--fncap);border-color:var(--fncap)}
+.fnkey .kl{color:var(--fncap-fg)}
+.hint{font-size:.85rem}
+
+/* FN 组合键说明 */
+.groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.group{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.group h3{margin:0 0 8px;font-size:1rem;display:flex;align-items:center;gap:8px}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+td{padding:5px 0;border-top:1px solid var(--line);vertical-align:top}
+tr:first-child td{border-top:0}
+td:first-child{width:7.2em;white-space:nowrap;font-family:var(--font-mono);font-size:.85rem;padding-right:10px;padding-top:7px}
+td small{display:block;color:var(--muted);font-size:.82rem}
+.notes{display:flex;flex-direction:column;gap:6px;font-size:.9rem;color:var(--muted);max-width:80ch}
+.notes li{margin:0}
+ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>R12 Win 布局键位图</h1>
+  <div class="legend">
+    <span><i class="dot d-media"></i>多媒体</span><span><i class="dot d-link"></i>连接</span>
+    <span><i class="dot d-sys"></i>布局与锁定</span><span><i class="dot d-led"></i>灯效</span>
+  </div>
+</header>
+
+<section>
+  <div class="scroll"><div class="plate"><div class="board">
+<div class="key has-fn cat-sys" style="left:0.0000%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C4 R6"><span class="kl">Esc</span><span class="fl">恢复出厂</span></div>
+<div class="key has-fn cat-media" style="left:8.8889%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C17 R3"><span class="kl">F1</span><span class="fl">播放器</span></div>
+<div class="key has-fn cat-media" style="left:13.3333%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C3 R3"><span class="kl">F2</span><span class="fl">音量 −</span></div>
+<div class="key has-fn cat-media" style="left:17.7778%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C16 R1"><span class="kl">F3</span><span class="fl">音量 +</span></div>
+<div class="key has-fn cat-media" style="left:22.2222%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C6 R1"><span class="kl">F4</span><span class="fl">静音</span></div>
+<div class="key has-fn cat-media" style="left:28.8889%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C17 R4"><span class="kl">F5</span><span class="fl">上一曲</span></div>
+<div class="key has-fn cat-media" style="left:33.3333%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C3 R2"><span class="kl">F6</span><span class="fl">播放暂停</span></div>
+<div class="key has-fn cat-media" style="left:37.7778%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C7 R2"><span class="kl">F7</span><span class="fl">下一曲</span></div>
+<div class="key has-fn cat-media" style="left:42.2222%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C8 R2"><span class="kl">F8</span><span class="fl">停止</span></div>
+<div class="key has-fn cat-media" style="left:48.8889%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C9 R2"><span class="kl">F9</span><span class="fl">邮件</span></div>
+<div class="key has-fn cat-media" style="left:53.3333%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C12 R2"><span class="kl">F10</span><span class="fl">我的电脑</span></div>
+<div class="key has-fn cat-sys" style="left:57.7778%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C10 R2"><span class="kl">F11</span><span class="fl">全键锁定</span></div>
+<div class="key has-fn cat-media" style="left:62.2222%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C11 R2"><span class="kl">F12</span><span class="fl">计算器</span></div>
+<div class="key" style="left:67.7778%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C10 R3"><span class="kl">PrtSc</span></div>
+<div class="key has-fn cat-led" style="left:72.2222%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C11 R3"><span class="kl">ScrLk</span><span class="fl">灯开关</span></div>
+<div class="key" style="left:76.6667%;top:0.0000%;width:4.4444%;height:15.3846%" title="矩阵 C11 R4"><span class="kl">Pause</span></div>
+<div class="key" style="left:0.0000%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C7 R1"><span class="kl">` ~</span></div>
+<div class="key has-fn cat-link" style="left:4.4444%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C18 R5"><span class="kl">1</span><span class="fl">蓝牙 1</span></div>
+<div class="key has-fn cat-link" style="left:8.8889%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C17 R7"><span class="kl">2</span><span class="fl">蓝牙 2</span></div>
+<div class="key has-fn cat-link" style="left:13.3333%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C13 R0"><span class="kl">3</span><span class="fl">蓝牙 3</span></div>
+<div class="key has-fn cat-link" style="left:17.7778%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C18 R1"><span class="kl">4</span><span class="fl">2.4G</span></div>
+<div class="key" style="left:22.2222%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C14 R1"><span class="kl">5</span></div>
+<div class="key" style="left:26.6667%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C15 R1"><span class="kl">6</span></div>
+<div class="key" style="left:31.1111%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C7 R5"><span class="kl">7</span></div>
+<div class="key" style="left:35.5556%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C8 R5"><span class="kl">8</span></div>
+<div class="key" style="left:40.0000%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C9 R5"><span class="kl">9</span></div>
+<div class="key" style="left:44.4444%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C12 R5"><span class="kl">0</span></div>
+<div class="key" style="left:48.8889%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C8 R1"><span class="kl">- _</span></div>
+<div class="key" style="left:53.3333%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C9 R1"><span class="kl">= +</span></div>
+<div class="key" style="left:57.7778%;top:23.0769%;width:8.8889%;height:15.3846%" title="矩阵 C10 R1"><span class="kl">Backspace</span></div>
+<div class="key has-fn cat-led" style="left:67.7778%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C8 R6"><span class="kl">Ins</span><span class="fl">切换灯效</span></div>
+<div class="key" style="left:72.2222%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C10 R4"><span class="kl">Home</span></div>
+<div class="key" style="left:76.6667%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C11 R5"><span class="kl">PgUp</span></div>
+<div class="key" style="left:82.2222%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C13 R3"><span class="kl">Num</span></div>
+<div class="key" style="left:86.6667%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C14 R3"><span class="kl">/</span></div>
+<div class="key" style="left:91.1111%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C15 R3"><span class="kl">*</span></div>
+<div class="key" style="left:95.5556%;top:23.0769%;width:4.4444%;height:15.3846%" title="矩阵 C16 R3"><span class="kl">-</span></div>
+<div class="key" style="left:0.0000%;top:38.4615%;width:6.6667%;height:15.3846%" title="矩阵 C7 R0"><span class="kl">Tab</span></div>
+<div class="key" style="left:6.6667%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C12 R0"><span class="kl">Q</span></div>
+<div class="key has-fn cat-sys" style="left:11.1111%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C10 R0"><span class="kl">W</span><span class="fl">WASD⇄</span></div>
+<div class="key" style="left:15.5556%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C11 R0"><span class="kl">E</span></div>
+<div class="key" style="left:20.0000%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C15 R0"><span class="kl">R</span></div>
+<div class="key" style="left:24.4444%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C16 R0"><span class="kl">T</span></div>
+<div class="key" style="left:28.8889%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C7 R3"><span class="kl">Y</span></div>
+<div class="key" style="left:33.3333%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C3 R1"><span class="kl">U</span></div>
+<div class="key" style="left:37.7778%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C5 R1"><span class="kl">I</span></div>
+<div class="key" style="left:42.2222%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C6 R2"><span class="kl">O</span></div>
+<div class="key" style="left:46.6667%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C4 R2"><span class="kl">P</span></div>
+<div class="key" style="left:51.1111%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C8 R4"><span class="kl">[ {</span></div>
+<div class="key" style="left:55.5556%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C9 R4"><span class="kl">] }</span></div>
+<div class="key" style="left:60.0000%;top:38.4615%;width:6.6667%;height:15.3846%" title="矩阵 C12 R4"><span class="kl">\ |</span></div>
+<div class="key" style="left:67.7778%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C10 R5"><span class="kl">Del</span></div>
+<div class="key" style="left:72.2222%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C7 R4"><span class="kl">End</span></div>
+<div class="key" style="left:76.6667%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C12 R6"><span class="kl">PgDn</span></div>
+<div class="key" style="left:82.2222%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C13 R4"><span class="kl">7</span></div>
+<div class="key" style="left:86.6667%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C14 R4"><span class="kl">8</span></div>
+<div class="key" style="left:91.1111%;top:38.4615%;width:4.4444%;height:15.3846%" title="矩阵 C15 R4"><span class="kl">9</span></div>
+<div class="key" style="left:95.5556%;top:38.4615%;width:4.4444%;height:30.7692%" title="矩阵 C16 R4"><span class="kl">+</span></div>
+<div class="key" style="left:0.0000%;top:53.8462%;width:7.7778%;height:15.3846%" title="矩阵 C17 R1"><span class="kl">Caps Lock</span></div>
+<div class="key has-fn cat-sys" style="left:7.7778%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C6 R0"><span class="kl">A</span><span class="fl">Win</span></div>
+<div class="key has-fn cat-sys" style="left:12.2222%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C8 R0"><span class="kl">S</span><span class="fl">Mac</span></div>
+<div class="key" style="left:16.6667%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C9 R0"><span class="kl">D</span></div>
+<div class="key" style="left:21.1111%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C17 R2"><span class="kl">F</span></div>
+<div class="key" style="left:25.5556%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C8 R3"><span class="kl">G</span></div>
+<div class="key" style="left:30.0000%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C10 R6"><span class="kl">H</span></div>
+<div class="key" style="left:34.4444%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C12 R1"><span class="kl">J</span></div>
+<div class="key" style="left:38.8889%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C4 R1"><span class="kl">K</span></div>
+<div class="key" style="left:43.3333%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C11 R1"><span class="kl">L</span></div>
+<div class="key" style="left:47.7778%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C7 R6"><span class="kl">; :</span></div>
+<div class="key" style="left:52.2222%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C9 R6"><span class="kl">&#x27; &quot;</span></div>
+<div class="key" style="left:56.6667%;top:53.8462%;width:10.0000%;height:15.3846%" title="矩阵 C3 R5"><span class="kl">Enter</span></div>
+<div class="key" style="left:82.2222%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C13 R5"><span class="kl">4</span></div>
+<div class="key" style="left:86.6667%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C14 R5"><span class="kl">5</span></div>
+<div class="key" style="left:91.1111%;top:53.8462%;width:4.4444%;height:15.3846%" title="矩阵 C15 R5"><span class="kl">6</span></div>
+<div class="key" style="left:0.0000%;top:69.2308%;width:10.0000%;height:15.3846%" title="矩阵 C4 R7"><span class="kl">Shift</span></div>
+<div class="key" style="left:10.0000%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C5 R7"><span class="kl">Z</span></div>
+<div class="key" style="left:14.4444%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C17 R0"><span class="kl">X</span></div>
+<div class="key" style="left:18.8889%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C5 R4"><span class="kl">C</span></div>
+<div class="key" style="left:23.3333%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C14 R0"><span class="kl">V</span></div>
+<div class="key" style="left:27.7778%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C13 R1"><span class="kl">B</span></div>
+<div class="key" style="left:32.2222%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C8 R7"><span class="kl">N</span></div>
+<div class="key" style="left:36.6667%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C6 R5"><span class="kl">M</span></div>
+<div class="key" style="left:41.1111%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C12 R7"><span class="kl">, &lt;</span></div>
+<div class="key" style="left:45.5556%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C10 R7"><span class="kl">. &gt;</span></div>
+<div class="key" style="left:50.0000%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C11 R7"><span class="kl">/ ?</span></div>
+<div class="key" style="left:54.4444%;top:69.2308%;width:12.2222%;height:15.3846%" title="矩阵 C17 R5"><span class="kl">Shift</span></div>
+<div class="key has-fn cat-led" style="left:72.2222%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C18 R2"><span class="kl">↑</span><span class="fl">亮度 +</span></div>
+<div class="key" style="left:82.2222%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C13 R6"><span class="kl">1</span></div>
+<div class="key" style="left:86.6667%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C14 R6"><span class="kl">2</span></div>
+<div class="key" style="left:91.1111%;top:69.2308%;width:4.4444%;height:15.3846%" title="矩阵 C15 R6"><span class="kl">3</span></div>
+<div class="key" style="left:95.5556%;top:69.2308%;width:4.4444%;height:30.7692%" title="矩阵 C16 R6"><span class="kl">Enter</span></div>
+<div class="key" style="left:0.0000%;top:84.6154%;width:5.5556%;height:15.3846%" title="矩阵 C4 R0"><span class="kl">Ctrl</span></div>
+<div class="key has-fn cat-sys" style="left:5.5556%;top:84.6154%;width:5.5556%;height:15.3846%" title="矩阵 C5 R3"><span class="kl">Win</span><span class="fl">锁 Win 键</span></div>
+<div class="key" style="left:11.1111%;top:84.6154%;width:5.5556%;height:15.3846%" title="矩阵 C18 R6"><span class="kl">Alt</span></div>
+<div class="key" style="left:16.6667%;top:84.6154%;width:27.7778%;height:15.3846%" title="矩阵 C5 R0"><span class="kl"></span></div>
+<div class="key" style="left:44.4444%;top:84.6154%;width:5.5556%;height:15.3846%" title="矩阵 C3 R7"><span class="kl">Alt</span></div>
+<div class="key fnkey" style="left:50.0000%;top:84.6154%;width:5.5556%;height:15.3846%" title="矩阵 C9 R7"><span class="kl">FN</span></div>
+<div class="key" style="left:55.5556%;top:84.6154%;width:5.5556%;height:15.3846%" title="矩阵 C18 R0"><span class="kl">Menu</span></div>
+<div class="key" style="left:61.1111%;top:84.6154%;width:5.5556%;height:15.3846%" title="矩阵 C5 R6"><span class="kl">Ctrl</span></div>
+<div class="key has-fn cat-led" style="left:67.7778%;top:84.6154%;width:4.4444%;height:15.3846%" title="矩阵 C18 R3"><span class="kl">←</span><span class="fl">速度 −</span></div>
+<div class="key has-fn cat-led" style="left:72.2222%;top:84.6154%;width:4.4444%;height:15.3846%" title="矩阵 C18 R4"><span class="kl">↓</span><span class="fl">亮度 −</span></div>
+<div class="key has-fn cat-led" style="left:76.6667%;top:84.6154%;width:4.4444%;height:15.3846%" title="矩阵 C18 R7"><span class="kl">→</span><span class="fl">速度 +</span></div>
+<div class="key" style="left:82.2222%;top:84.6154%;width:8.8889%;height:15.3846%" title="矩阵 C14 R7"><span class="kl">0</span></div>
+<div class="key" style="left:91.1111%;top:84.6154%;width:4.4444%;height:15.3846%" title="矩阵 C15 R7"><span class="kl">.</span></div>
+  </div></div></div>
+</section>
+
+<section>
+  <h2>FN 组合键</h2>
+  <div class="groups">
+    <div class="group"><h3><i class="dot d-link"></i>连接</h3><table>
+      <tr><td>FN+1 / 2 / 3</td><td>蓝牙通道 1 / 2 / 3<small>仅蓝牙档有效；长按约 3 秒重新配对</small></td></tr>
+      <tr><td>FN+4</td><td>2.4G 对码 / 回连<small>长按约 3 秒；仅 2.4G 档有效</small></td></tr>
+    </table></div>
+    <div class="group"><h3><i class="dot d-sys"></i>布局与锁定</h3><table>
+      <tr><td>FN+A</td><td>切换 Windows 布局<small>默认布局；按模式分别保存</small></td></tr>
+      <tr><td>FN+S</td><td>切换 macOS 布局<small>Alt 与 Win 键功能互换；按模式分别保存</small></td></tr>
+      <tr><td>FN+W</td><td>WASD 与方向键互换<small>再次按下恢复，设置掉电保存</small></td></tr>
+      <tr><td>FN+Win</td><td>锁定 / 解锁 Win 键<small>仅 Windows 布局；掉电不保存</small></td></tr>
+      <tr><td>FN+F11</td><td>全键盘锁定 / 解锁<small>仅 Windows 布局；再次按下解锁</small></td></tr>
+      <tr><td>FN+Esc</td><td>恢复出厂设置<small>长按约 2 秒</small></td></tr>
+    </table></div>
+    <div class="group"><h3><i class="dot d-media"></i>多媒体</h3><table>
+      <tr><td>FN+F1</td><td>打开媒体播放器</td></tr>
+      <tr><td>FN+F2 / F3</td><td>音量 − / 音量 +</td></tr>
+      <tr><td>FN+F4</td><td>静音</td></tr>
+      <tr><td>FN+F5 / F7</td><td>上一曲 / 下一曲</td></tr>
+      <tr><td>FN+F6</td><td>播放 / 暂停</td></tr>
+      <tr><td>FN+F8</td><td>停止播放</td></tr>
+      <tr><td>FN+F9</td><td>打开邮件</td></tr>
+      <tr><td>FN+F10</td><td>打开“我的电脑”</td></tr>
+      <tr><td>FN+F12</td><td>打开计算器</td></tr>
+    </table></div>
+    <div class="group"><h3><i class="dot d-led"></i>灯效</h3><table>
+      <tr><td>FN+Ins</td><td>循环切换灯效 1 → 13</td></tr>
+      <tr><td>FN+ScrLk</td><td>灯效开 / 关</td></tr>
+      <tr><td>FN+↑ / ↓</td><td>亮度增加 / 降低</td></tr>
+      <tr><td>FN+← / →</td><td>灯效速度降低 / 提高</td></tr>
+    </table></div>
+  </div>
+</section>
+
+</div>
+
+</body>
+</html>
