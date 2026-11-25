@@ -26,3 +26,7 @@ projects/mouse_demo/keil5/JLinkLog.txt
 #   components/exble2/stack/*.lib
 #   SE73_BootLoader_DLS853_20260330.bin（boot_img.s 用 .incbin 引用）
 # ------------------------------------------------------------
+
+# Python 缓存
+__pycache__/
+*.pyc

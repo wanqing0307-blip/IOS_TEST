@@ -17,6 +17,7 @@
 #include "usb_cfg_info.h"
 #include "flash_process.h"
 #include "key_code_define.h"
+#include "mac_fkey.h"
 
 //----------------------------------------------------------------------------;
 //常量定义
@@ -50,7 +51,6 @@ uint8_t                         std_key_value;
 uint8_t                         com_ctrl_index;
 
 uint8_t                         desk_mac_index;
-uint8_t                         sys_data_tmp;           // 系统控制键（Generic Desktop）本次扫描值
 
 //******************************************************************************
 // 查表获取 数值中1的个数
@@ -92,12 +92,6 @@ uint8_t const desk_mac[] = {
     0x00,                       iSTD_NULL,  iSTD_NULL,  iSTD_NULL,
 };
 
-// MAC 截屏组合键：Cmd+Shift+3，一组保持 4 个扫描周期
-uint8_t const mac_shot[] = {
-    (iLEFT_GUI|iLEFT_SHIFT)&0x0F, iSTD_3,   iSTD_NULL,  iSTD_NULL,
-};
-uint8_t mac_shot_index;
-
 /******************************************************************************
 * 函数名称: void key_process(void)
 * 功能描述:
@@ -115,7 +109,7 @@ void __attribute__((noinline)) key_process(void)
     {
         multi_data_tmp_l = 0;
         multi_data_tmp_l = 0;
-        sys_data_tmp = 0;
+        mac_fkey_scan_clear();
         memset(key_data_tmp, 0x00, 22);
         key_ctrl_ex &= ~bcom_ctrl_en;
     }
@@ -183,22 +177,6 @@ void __attribute__((noinline)) key_process(void)
             key_ctrl_ex &= ~bdesk_mac;
     }
 
-    if(0 != (key_ctrl_ex&bshot_mac))
-    {
-        if(0==(mac_shot_index&0x03))
-        {
-            i = mac_shot_index;
-
-            tmp_std_key[0] = mac_shot[i++];
-            tmp_std_key[1] = mac_shot[i++];
-            tmp_std_key[2] = mac_shot[i++];
-        }
-
-        mac_shot_index++;
-        if(sizeof(mac_shot) <= mac_shot_index)
-            key_ctrl_ex &= ~bshot_mac;
-    }
-
     for(i=0; i<6; i++)
     {
         if(key_data_tmp[i] != std_key[i])
@@ -233,29 +211,8 @@ void __attribute__((noinline)) key_process(void)
         }
     }
 
-    // 系统控制键（MAC F6 勿扰）：USB / 蓝牙直接发 System Control 报告（Generic Desktop 0x9B）
-    if((sys_data_tmp != sys_data) && (iDEVICE_TYPE_24G != device_type))
-    {
-        if(0==(m_data_flag & bsys_data_send))
-        {
-            sys_data = sys_data_tmp;
-            m_data_flag |= bsys_data_send;
-        }
-    }
-
-    // 2.4G 下 MAC F6 勿扰：发 2.4G 系统键包 [iRF_K_TYPE_KB, iRF_K_OTHER_SYS, 用法值]，
-    // 用法值和 USB / 蓝牙的 System Control 报告完全相同（勿扰 0x9B，释放 0x00），
-    // 由接收器原样放进它的 System Control 报告转发给电脑（见 docs/2.4G接收器_勿扰键对接说明.md）。
-    // 现有接收器不转发这个包：实测按 F6 无反应，也不会误触发电源/睡眠。
-    // 状态变化时连发 8 包（同多媒体键），发送见 rf_data_process.c
-    if(iDEVICE_TYPE_24G == device_type)
-    {
-        if(sys_data_tmp != sys_rf_data)
-        {
-            sys_rf_data = sys_data_tmp;
-            sys_tx_count = 8;
-        }
-    }
+    // Mac 布局 F5 / F6 功能键：按当前连接模式安排发送（实现在 mac_fkey 模块）
+    mac_fkey_update();
 }
 
 /******************************************************************************
@@ -271,8 +228,7 @@ void mode_swtich_init(void)
 
     mmk_data_l = 0;
     mmk_data_h = 0;
-    sys_data = 0;
-    m_data_flag &= ~bsys_data_send;
+    mac_fkey_reset();
 
     m_data_flag |= (bmouse_data_send|bstd_kb_data_send|bmmk_data_send);
 }
@@ -293,7 +249,7 @@ __RAM_CODE void matrixkey_value(void)
     modifier_key_tmp = 0;
     multi_data_tmp_l = 0;
     multi_data_tmp_h = 0;
-    sys_data_tmp = 0;
+    mac_fkey_scan_clear();
 
     key_ctrl &= ~bkey_press_status;
 
@@ -507,7 +463,7 @@ __RAM_CODE void matrixkey_scan(void)
     modifier_key_tmp = 0;
     multi_data_tmp_l = 0;
     multi_data_tmp_h = 0;
-    sys_data_tmp = 0;
+    mac_fkey_scan_clear();
 
     scan_key();
     if(iDEVICE_TYPE_24G == device_type)

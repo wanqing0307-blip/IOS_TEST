@@ -21,6 +21,7 @@
 #include "flash_process.h"
 
 #include "matrix_key.h"
+#include "mac_fkey.h"
 
 //-----------------------------------------------------------------------------;
 //常量定义区
@@ -34,10 +35,6 @@ uint32_t                        press_bt1_time_count;
 uint32_t                        press_bt2_time_count;
 uint32_t                        press_24g_time_count;
 uint32_t                        default_time_count;
-
-static uint8_t                  mac_siri_state;     // 0空闲 1按住 2已发Siri
-static uint32_t                 mac_siri_time;
-static uint8_t                  mac_shot_done;
 
 //-----------------------------------------------------------------------------
 //表格定义区
@@ -664,51 +661,9 @@ void __attribute__((noinline)) key_decode_cmd_0x40(void)
             define_key_ctrl |= bdefine_key_send;
 
             break;
-        case iKEY_MAC_SEARCH_SIRI&0x0F:
-            if(define_key_flag & bkey_decode_end)       // 松开
-            {
-                if(1 == mac_siri_state)                 // 短按：搜索
-                {
-                    multi_data_tmp_l = iMMK_WWW_SEARCH_L;
-                    multi_data_tmp_h = iMMK_WWW_SEARCH_H;
-                }
-                mac_siri_state = 0;
-            }
-            else if(0 == mac_siri_state)                // 按下
-            {
-                mac_siri_state = 1;
-                mac_siri_time = conn_rtc_value;
-            }
-            else if(1 == mac_siri_state)                // 按住超过 1 秒：Siri
-            {
-                if(mMS_TO_TICK(1000) < (conn_rtc_value-mac_siri_time))
-                {
-                    mac_siri_state = 2;
-                    multi_data_tmp_l = iMMK_IOS_SIRI_L;
-                    multi_data_tmp_h = iMMK_IOS_SIRI_H;
-                }
-            }
-            break;
-        case iKEY_MAC_SHOT&0x0F:
-            if(define_key_flag & bkey_decode_end)
-            {
-                mac_shot_done = 0;
-                break;
-            }
-            if(0 == mac_shot_done)
-            {
-                mac_shot_done = 1;
-                mac_shot_index = 0;
-                key_ctrl_ex |= bshot_mac;
-            }
-            define_key_ctrl |= bdefine_key_send;
-
-            break;
-        case iKEY_MAC_DND&0x0F:                         // MAC F6：勿扰模式
-            // 库函数 key_decode() 只在按住期间调用本回调（首次扫描之后
-            // bkey_decode_end 就会置位），所以这里每次都置值，按住期间保持 0x9B；
-            // 松开后不再回调，扫描开头清 0，即发送释放
-            sys_data_tmp = iSYS_GD_DO_NOT_DISTURB;
+        case iKEY_MAC_F5&0x0F:                          // Mac 布局 F5 / F6：由 mac_fkey 模块处理
+        case iKEY_MAC_F6&0x0F:                          // （本回调只在按住期间调用，每次扫描一次）
+            mac_fkey_hold(decode_data_l&0x0F);
             break;
     }
 }

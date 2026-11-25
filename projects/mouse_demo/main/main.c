@@ -83,8 +83,6 @@ uint8_t                     key_tx_count;
 uint8_t                     key_ex_tx_count;
 uint8_t                     mmk_tx_count;
 uint8_t                     def_tx_count;
-uint8_t                     sys_tx_count;       // 2.4G 系统键包剩余发送次数
-uint8_t                     sys_rf_data;        // 2.4G 系统键包：Generic Desktop 用法值（同 USB 的 sys_data，0 = 释放）
 
 uint8_t                     mouse_data_key;
 uint16_t                    mouse_x;
@@ -94,7 +92,6 @@ uint8_t                     mouse_data_z;
 uint8_t                     std_key[22];
 uint8_t                     mmk_data_l;
 uint8_t                     mmk_data_h;
-uint8_t                     sys_data;
 
 uint8_t                     wheel_data;
 //
@@ -132,7 +129,7 @@ void mouse_periph_wakeup_enable(uint8_t mask)
         MATRX_ALL_LOW;
         KEY_EX_LOW;
         delayus(2000);
-        OM_PMU->PAD_PU_CTRL_1 = 0x0A000005;
+        OM_PMU->PAD_PU_CTRL_1 = 0x00000002;     // 浅休眠：只保留 P20(CHR_OK) 30K 上拉；列线输出低不带上拉，NUM/CAPS/USB_5V 不带上拉（同深度休眠）
 
         drv_gpio_set_trig(OM_GPIO0, (1<<KEY_R0_PIN)|(1<<KEY_R1_PIN)|(1<<KEY_R2_PIN)|(1<<KEY_R3_PIN)| \
                                     (1<<KEY_R4_PIN)|(1<<KEY_R5_PIN)|(1<<KEY_R6_PIN)|(1<<KEY_R7_PIN), \
@@ -159,7 +156,7 @@ void mouse_periph_wakeup_enable(uint8_t mask)
         drv_pmu_wakeup_pin_set(KEY_R7_PIN, PMU_PIN_WAKEUP_TYPE_DISABLE);
         NVIC_DisableIRQ(WAKEUP_GPIO0_IRQn);
 
-        OM_PMU->PAD_PU_CTRL_1 = 0x0A0AA825;     // P20(MODE_24G) 清掉内部上拉，模式脚只靠外部100K下拉
+        OM_PMU->PAD_PU_CTRL_1 = 0x200AA80A;     // 正常运行：同上电初始化。P20(CHR_OK)/C19/C0~C4/C17 30K 上拉；NUM/CAPS/USB_5V/模式脚不带上拉
         MATRX_ALL_IN;
 
         led_status_hint();

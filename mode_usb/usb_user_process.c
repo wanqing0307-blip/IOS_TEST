@@ -9,6 +9,7 @@
 *******************************************************************************/
 #include "main_usb.h"
 #include "main.h"
+#include "mac_fkey.h"
 
 /*******************************************************************************
  USB数据的报告ID定义
@@ -93,8 +94,7 @@ void usb_data_process(void)
         return;
     }
 
-    // 有任一待发数据才继续（原来写死 0x1F，会漏掉第 5 位 bsys_data_send，
-    // 导致单独按 F6 勿扰时 System Control 报告永远发不出去）
+    // 有任一待发数据才继续（要包含第 5 位系统控制报告 bsys_data_send，不能写死 0x1F）
     if(0==(m_data_flag&(bmouse_data_send|bstd_kb_data_send|bmmk_data_send
                        |bstd_ex_data_send|bhid_data_send|bsys_data_send)))
         return;
@@ -158,12 +158,12 @@ __disable_irq();
             g_USB_Ep_Status[3] = EP_TX;
         }
         else if(m_data_flag & bsys_data_send)
-        {                                       // 系统控制键（MAC 勿扰）
+        {                                       // 系统控制报告
             m_data_flag &= ~bsys_data_send;
 
             fifo_epn = (volatile uint8_t *)&OM_USB->EPnFIFO[3];
             *fifo_epn = iREPORT_ID_SYS_KEY;
-            *fifo_epn = sys_data;               // 16 位用法值，低字节
+            *fifo_epn = mac_fkey_sys_value();   // 16 位用法值，低字节
             *fifo_epn = 0;                      // 高字节
 
             OM_USB->TXCSR1 |= USB_TXCSR_P_TXPKTRDY;

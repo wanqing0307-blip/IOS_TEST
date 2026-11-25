@@ -20,7 +20,7 @@
 //
 #define iREPORT_ID_MOUSE        0x02
 #define iREPORT_ID_MULTIM_KEY   0x01
-#define iREPORT_ID_SYS_KEY      0x03            // System Control（MAC 勿扰）
+#define iREPORT_ID_SYS_KEY      0x03            // 系统控制报告
 #define iREPORT_ID_KB_KEY       0x05
 #define iREPORT_ID_CUSTOMER_DATA 0x0E
 

@@ -112,7 +112,6 @@ extern uint16_t                 key_ctrl_ex;
 
     #define bkey_all_realse     (1<<7)
     #define bdesk_mac           (1<<4)
-    #define bshot_mac           (1<<3)      // MAC 截屏组合键
 
     #define bcom_ctrl_long      (1<<2)
     #define bcom_ctrl_status    (1<<1)
@@ -199,7 +198,6 @@ extern unsigned char            decode_index;
 
 extern unsigned char            multi_data_tmp_l;
 extern unsigned char            multi_data_tmp_h;
-extern unsigned char            sys_data_tmp;
 extern unsigned char            tmp_std_key[22];
 
 #define key_data_tmp            tmp_std_key
@@ -215,7 +213,6 @@ extern unsigned char            ctrl_key_value;
 extern unsigned char            std_key_value;
 extern unsigned char            com_ctrl_index;
 extern uint8_t                  desk_mac_index;
-extern uint8_t                  mac_shot_index;
 
 extern unsigned char    const   matrixkey_win_tbl[];
 extern unsigned char    const   matrixkey_win_fn_tbl[];

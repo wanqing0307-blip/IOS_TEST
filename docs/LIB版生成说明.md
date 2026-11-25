@@ -1,0 +1,73 @@
+# LIB 版生成说明（只放在源码版里，不随 LIB 版发出）
+
+## 1. 仓库里的两个版本
+
+| | 源码版 | LIB 版 |
+|---|---|---|
+| 分支 | `main` | `lib`（独立分支，不含源码版的任何提交历史） |
+| Mac F5 / F6 实现 | 源码 `projects/mouse_demo/periph/mac_fkey.c` | 预编译 `mac_fkey.o`（机器码，不含调试信息），没有 `.c` |
+| Keil 工程 | 编译 `mac_fkey.c` | 链接 `mac_fkey.o`（和 `userdefined_key.o` 一样按目标文件链接） |
+| 只放在源码版里的文档 | 有 | 没有：`docs/改动对比/`、`docs/2.4G接收器_勿扰键对接说明.md`、本文件、`tools/make_lib.py` |
+| 标识 | 无 | 根目录有 `说明.txt`，写明来源提交、模块版本、`.o` 的编译器和 SHA-256 |
+
+**给别人只给 `lib` 分支的内容**：GitHub 上切到 `lib` 分支 → Code → Download ZIP，下载的压缩包里没有 git 历史。不要给对方整个仓库的访问权限：`main` 和其他分支、历史提交里都有源码。
+
+## 2. F5 / F6 模块
+
+实现全部在 `mac_fkey.c`，接口在 `mac_fkey.h`。其他文件只保留调用：
+
+| 文件 | 调用 |
+|---|---|
+| `periph/matrix_key_tbl_mac.h` | Mac 表 C17 R4 = `iKEY_MAC_F5`，C3 R2 = `iKEY_MAC_F6`（特殊键） |
+| `periph/userdefined_key_callback.c` | `key_decode_cmd_0x40()`：两个键都转给 `mac_fkey_hold()` |
+| `periph/matrix_key.c` | 扫描开头、全键盘锁定时 `mac_fkey_scan_clear()`；`key_process()` 末尾 `mac_fkey_update()`；`mode_swtich_init()` 里 `mac_fkey_reset()` |
+| `mode_usb/usb_user_process.c` | 系统控制报告的用法值取 `mac_fkey_sys_value()` |
+| `main/mouse_hw.c` | 蓝牙系统控制通知的用法值取 `mac_fkey_sys_value()` |
+| `mode_24g/rf_data_process.c` | `mac_fkey_rf_pending()` / `mac_fkey_rf_fill()` 取包发送，`mac_fkey_rf_keepalive()` 保活 |
+| `mode_24g/sleep.c` | 未连接接收器时 `mac_fkey_rf_cancel()`、`mac_fkey_rf_pending()` |
+
+USB 报告描述、蓝牙报告描述里的系统控制报告留在源码里：这部分电脑连上就能读到，只说明“有系统控制报告”，看不出 F5 / F6 怎么实现。
+
+## 3. 生成LIB 版
+
+源码版改动并测试通过、提交之后，在仓库根目录、源码版分支（`main`）上运行：
+
+```bat
+python tools\make_lib.py --armclang "D:\Keil_v5\ARM\ARMCompiler6.16\Bin\armclang.exe" --branch lib
+git push origin lib
+```
+
+脚本会导出最近一次提交，用 Keil 的 armclang 编出 `mac_fkey.o`，去掉源码和只放在源码版里的文档，把 Keil 工程改为链接 `.o`，写入 `说明.txt`，检查后提交到 `lib` 分支（自动接在 GitHub 上已有的 `lib` 后面）。生成的工程同时放在仓库旁边的 `R12_LIB_<日期>_<提交号>` 文件夹里，加 `--zip` 还会打成压缩包。
+
+**单独调用 armclang 报许可证错误时**，改用 Keil 编出来的 `.o`：
+
+1. Keil 里右键 `mac_fkey.c` → Options for File 'mac_fkey.c' → C/C++ (AC6) 页，Misc Controls 填 `-fno-lto -g0`，点 OK（只需设一次，这个设置会存进工程文件，记得提交）。
+2. Rebuild，得到 `projects\mouse_demo\keil5\out\mac_fkey.o`。
+3. 运行：
+
+```bat
+python tools\make_lib.py --obj projects\mouse_demo\keil5\out\mac_fkey.o --branch lib
+git push origin lib
+```
+
+脚本会检查这个 `.o` 里没有 LLVM 中间代码和调试信息，并且是用最近一次提交的 `mac_fkey.c` 编出来的。
+
+**为什么要用脚本单独编译**：工程开了链接时优化（LTO），Keil 编出来的 `.o` 里是 LLVM 中间代码（ELF 外壳里的 `.llvmbc` 节），用 LLVM 工具就能还原出逻辑，原厂提供的 `userdefined_key.o` 就是这种格式。脚本编译时加 `-fno-lto -g0`，`.o` 里只有机器码，也没有调试信息。
+
+## 4. LIB 版能改什么、不能改什么
+
+`说明.txt` 里写给了对方，要点：
+
+- `mac_fkey.o` 直接用到 `device_type`、`m_data_flag`、`multi_data_tmp_l`、`multi_data_tmp_h`，不能改名或改类型。
+- `bsys_data_send`、`iDEVICE_TYPE_24G`、`iKEY_MAC_F5`、`iKEY_MAC_F6`、`iRF_K_TYPE_KB`、`iRF_K_OTHER_SYS`、`iRF_K_LENGTH_OTHER` 的取值已经编进 `.o`。
+- 这些改了，或者 `mac_fkey.c` 改了，都要重新生成LIB 版。
+
+## 5. 源码保护的范围
+
+- `.o` 保护的是源码：对方看不到实现和注释，也改不了 F5 / F6 的行为。
+- `.o` 是机器码，仍然可以反汇编；F5 / F6 发出的 HID 数据用 USB 抓包工具也能看到。所以它防的是直接拿到源码，不能防专门的逆向分析。
+
+## 6. 验证
+
+1. 源码版：Keil 打开 `main` 分支的工程编译，烧录后在 USB、蓝牙、2.4G 下各测一次 F5、F6。
+2. LIB 版：Keil 打开 `lib` 分支（或生成的文件夹）的工程编译，同样测一遍。

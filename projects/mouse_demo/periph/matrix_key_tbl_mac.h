@@ -7,8 +7,7 @@
 * 功能说明: MAC 正常矩阵表
 * 修改说明: 由 WIN 表生成；MAC 下 F1~F12 与多媒体对调，按新款苹果键盘排布：
 *           F3 = 调度中心（Consumer 0x029F），F4 = 聚焦搜索（Consumer 0x0221）
-*           F5 = 听写（Consumer 0x00CF），F6 = 勿扰模式（Generic Desktop 0x9B；
-*           2.4G 下用系统键包 iRF_K_OTHER_SYS 发同样的 0x9B，需接收器转发）
+*           F5 = 听写，F6 = 勿扰模式（这两个键由 mac_fkey 模块处理）
 *******************************************************************************/
 #ifndef _MATRIX_KEY_MAC_TBL_
 #define _MATRIX_KEY_MAC_TBL_
@@ -19,7 +18,7 @@ unsigned char           const   matrixkey_mac_tbl[] =
 // C3
     iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iLEFT_SHIFT,    // C3 R0
     iSTD_U,                iKEY_TYPE_STD|iKEY_PRESS,                // C3 R1
-    iKEY_MAC_DND,          iKEY_TYPE_SPECIAL,                       // C3 R2  F6 勿扰模式
+    iKEY_MAC_F6,           iKEY_TYPE_SPECIAL,                       // C3 R2  F6 勿扰模式
     iMMK_BRIGHT_ADD_L,     iKEY_TYPE_MMK | iMMK_BRIGHT_ADD_H,       // C3 R3
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C3 R4
     iSTD_RETURN,           iKEY_TYPE_STD|iKEY_PRESS,                // C3 R5
@@ -147,7 +146,7 @@ unsigned char           const   matrixkey_mac_tbl[] =
     iSTD_CAPITAL,          iKEY_TYPE_STD|iKEY_PRESS,                // C17 R1
     iSTD_F,                iKEY_TYPE_STD|iKEY_PRESS,                // C17 R2
     iMMK_BRIGHT_SUM_L,     iKEY_TYPE_MMK | iMMK_BRIGHT_SUM_H,       // C17 R3
-    iMMK_MAC_DICTATION_L,  iKEY_TYPE_MMK | iMMK_MAC_DICTATION_H,    // C17 R4 F5 听写
+    iKEY_MAC_F5,           iKEY_TYPE_SPECIAL,                       // C17 R4 F5 听写
     iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iRIGHT_SHIFT,   // C17 R5
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C17 R6
     iSTD_2,                iKEY_TYPE_STD|iKEY_PRESS,                // C17 R7
