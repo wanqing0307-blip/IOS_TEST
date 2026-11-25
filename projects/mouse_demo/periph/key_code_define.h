@@ -106,7 +106,6 @@
         #define iKEY_DESK_MAC     0x45
         #define iKEY_MAC_F5       0x46      // MAC 布局 F5（听写），由 mac_fkey 模块处理
         #define iKEY_MAC_F6       0x47      // MAC 布局 F6（勿扰模式），由 mac_fkey 模块处理
-        #define iKEY_DBG_INFO     0x48      // FN+P：打字输出蓝牙休眠诊断信息（调试用，量产前去掉）
       //}
     //}
 //}

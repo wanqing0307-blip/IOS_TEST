@@ -51,9 +51,6 @@ uint8_t                         std_key_value;
 uint8_t                         com_ctrl_index;
 
 uint8_t                         desk_mac_index;
-uint8_t                         dbg_seq[DBG_SEQ_MAX];   // 诊断信息：要“打字”输出的 HID 键码（调试用）
-uint8_t                         dbg_seq_len;
-uint16_t                        dbg_seq_index;
 
 //******************************************************************************
 // 查表获取 数值中1的个数
@@ -178,19 +175,6 @@ void __attribute__((noinline)) key_process(void)
         desk_mac_index++;
         if(sizeof(desk_mac) <= desk_mac_index)
             key_ctrl_ex &= ~bdesk_mac;
-    }
-
-    if(0 != (key_ctrl_ex&bdbg_type))
-    {                                           // 诊断（调试用）：逐个字符输出，按下 4 个扫描周期、松开 4 个扫描周期
-        i = dbg_seq_index >> 3;
-        if(i < dbg_seq_len)
-        {
-            tmp_std_key[0] = 0;
-            tmp_std_key[1] = (0 == (dbg_seq_index & 0x04)) ? dbg_seq[i] : iSTD_NULL;
-            dbg_seq_index++;
-        }
-        else
-            key_ctrl_ex &= ~bdbg_type;
     }
 
     for(i=0; i<6; i++)

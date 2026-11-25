@@ -661,14 +661,6 @@ void __attribute__((noinline)) key_decode_cmd_0x40(void)
             define_key_ctrl |= bdefine_key_send;
 
             break;
-        case iKEY_DBG_INFO&0x0F:                        // FN+P：打字输出蓝牙休眠诊断信息（调试用）
-            if((0 == (define_key_flag & bkey_decode_end)) && (0 == (key_ctrl_ex & bdbg_type)))
-            {
-                dbg_info_build();
-                dbg_seq_index = 0;
-                key_ctrl_ex |= bdbg_type;
-            }
-            break;
         case iKEY_MAC_F5&0x0F:                          // Mac 布局 F5 / F6：由 mac_fkey 模块处理
         case iKEY_MAC_F6&0x0F:                          // （本回调只在按住期间调用，每次扫描一次）
             mac_fkey_hold(decode_data_l&0x0F);

@@ -28,7 +28,7 @@ unsigned char           const   matrixkey_win_fn_tbl[] =
 // C4
     iSTD_NULL,             iKEY_TYPE_STD|iKEY_PRESS|iLEFT_CTRL,     // C4 R0
     iSTD_K,                iKEY_TYPE_STD|iKEY_PRESS,                // C4 R1
-    iKEY_DBG_INFO,         iKEY_TYPE_SPECIAL,                       // C4 R2  FN+P 诊断（调试用）
+    iSTD_P,                iKEY_TYPE_STD|iKEY_PRESS,                // C4 R2
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C4 R3
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C4 R4
     iSTD_NULL,             iKEY_TYPE_INVALID,                       // C4 R5

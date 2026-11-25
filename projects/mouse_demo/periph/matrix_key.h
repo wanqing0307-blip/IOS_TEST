@@ -112,7 +112,6 @@ extern uint16_t                 key_ctrl_ex;
 
     #define bkey_all_realse     (1<<7)
     #define bdesk_mac           (1<<4)
-    #define bdbg_type           (1<<3)      // 正在打字输出诊断信息（调试用）
 
     #define bcom_ctrl_long      (1<<2)
     #define bcom_ctrl_status    (1<<1)
@@ -214,12 +213,6 @@ extern unsigned char            ctrl_key_value;
 extern unsigned char            std_key_value;
 extern unsigned char            com_ctrl_index;
 extern uint8_t                  desk_mac_index;
-
-#define DBG_SEQ_MAX             96              // 诊断信息最多字符数（调试用）
-extern uint8_t                  dbg_seq[DBG_SEQ_MAX];
-extern uint8_t                  dbg_seq_len;
-extern uint16_t                 dbg_seq_index;
-extern void                     dbg_info_build(void);
 
 extern unsigned char    const   matrixkey_win_tbl[];
 extern unsigned char    const   matrixkey_win_fn_tbl[];

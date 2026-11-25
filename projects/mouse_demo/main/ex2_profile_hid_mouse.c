@@ -24,13 +24,10 @@ extern uint8_t  kb_led_status;
 /* GAP ---------------------------------------------------------------------- */
 /* Peripheral Preferred Connection Parameters @ref ex2_gap_ppcp_t */
 ex2_gap_ppcp_t ex2_gap_ppcp_value = {
-    .interval_min = 9,    /* IntervalMin=9*1.25=11.25ms */
-    .interval_max = 24,   /* IntervalMax=24*1.25=30ms：给主机留选择范围，Windows 一般选 15ms */
-    .latency = 30,        /* Latency=30：空闲时最多跳过 30 个连接事件 */
-    .timeout = 400,       /* Timeout=400*10ms=4s */
-    /* 满足苹果配件设计规范：Min>=11.25ms(HID)、Min+15ms<=Max、Latency<=30、
-       Max*(Latency+1)<=2s、Max*(Latency+1)*3<Timeout、Timeout 在 2~6s。
-       原来的 7.5ms/7.5ms/44 在 Windows 上实测未被采用，浅休眠时每 15ms 都要醒。 */
+    .interval_min = 6,    /* IntervalMin=6*1.25=7.5ms */
+    .interval_max = 6,    /* IntervalMax=9*1.25=11.25ms */
+    .latency = 44,        /* Latency=44 */
+    .timeout = 216,       /* Timeout=216*10ms=2s */
 };
 
 /* GATT --------------------------------------------------------------------- */
