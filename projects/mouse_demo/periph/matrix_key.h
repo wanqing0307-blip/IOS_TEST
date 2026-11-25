@@ -218,7 +218,7 @@ extern uint8_t                  desk_mac_index;
 #define DBG_SEQ_MAX             96              // 诊断信息最多字符数（调试用）
 extern uint8_t                  dbg_seq[DBG_SEQ_MAX];
 extern uint8_t                  dbg_seq_len;
-extern uint8_t                  dbg_seq_index;
+extern uint16_t                 dbg_seq_index;
 extern void                     dbg_info_build(void);
 
 extern unsigned char    const   matrixkey_win_tbl[];

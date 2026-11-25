@@ -53,7 +53,7 @@ uint8_t                         com_ctrl_index;
 uint8_t                         desk_mac_index;
 uint8_t                         dbg_seq[DBG_SEQ_MAX];   // 诊断信息：要“打字”输出的 HID 键码（调试用）
 uint8_t                         dbg_seq_len;
-uint8_t                         dbg_seq_index;
+uint16_t                        dbg_seq_index;
 
 //******************************************************************************
 // 查表获取 数值中1的个数
