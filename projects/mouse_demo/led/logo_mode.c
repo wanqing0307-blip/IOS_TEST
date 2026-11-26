@@ -1195,3 +1195,155 @@ void led_mode_lhtw(void)
         tw_put(i, (i * (iHUE_NUM/iLED_MAX)) % iHUE_NUM, (uint16_t)((x * x) >> 4));   // ≈γ2
     }
 }
+
+//-----------------------------------------------------------------------------;
+// 双色流转（SSLZ）
+//
+// 深紫与深红轮流“滑”过灯带：新颜色带着一条柔和的分界从一端推向另一端，
+// 推满后停一下，另一种颜色再从同一端推进来，循环。
+// 颜色按参考视频加深；视频太短（0.9s、只有一轮），滑动方式按要求改为看得见的分界推进：
+// 分界宽约 2.5 颗灯，推过整条灯带约 0.4s；推满后整条灯带停留 0.15s 再开始下一次，
+// 保证每次都完整推完（输出端平滑约需 0.07s 到位，原来只停 0.05s，最后一颗还没变完就开始下一次）
+//
+// ---- 可调参数 ----
+#define iSSLZ_DIR           0                               // 流向：0 = 低序号 -> 高序号，1 = 高序号 -> 低序号（上板确认）
+#define iSSLZ_EDGE          640                             // 分界宽度（1/256 灯）：640 = 2.5 颗灯，越小越“硬”
+#define iSSLZ_SLIDE         53                              // 一次推进的时间（基准节拍 7.5ms 数）：约 0.40s
+#define iSSLZ_HOLD_RED      20                              // 推满深红后停留：0.15s
+#define iSSLZ_HOLD_VIOLET   20                              // 推满深紫后停留：0.15s
+// 一轮 = 推红 + 停 + 推紫 + 停 = 146 节拍（约 1.1s）；速度档 1、2 分别是 2 倍、3 倍时间
+#define iSSLZ_CYCLE         (2 * iSSLZ_SLIDE + iSSLZ_HOLD_RED + iSSLZ_HOLD_VIOLET)
+// 分界中心从第 0 颗灯外侧（-半个分界）走到第 7 颗灯外侧（+半个分界）的距离
+#define iSSLZ_RUN           ((iLED_MAX - 1) * 256 + iSSLZ_EDGE)
+
+// 渐变曲线（33 点，0~4096）：(1-cos)/2，起止平缓、中段快
+static const unsigned short sslz_ramp_tbl[33] = {
+       0,   10,   39,   88,  156,  242,  345,  465,  600,  749,  910,
+    1083, 1264, 1453, 1648, 1847, 2048, 2249, 2448, 2643, 2832, 3013,
+    3186, 3347, 3496, 3631, 3751, 3854, 3940, 4008, 4057, 4086, 4096,
+};
+
+// 深紫 -> 深红的混色（33 点，红色占比 0~1；单位 1/64 PWM，0~4096 对应 0~iPWM_MAX）
+// 两端：深紫 (22, 0, 64)、深红 (64, 0, 3)（0~64），不含绿色，颜色更饱和、更深；
+// 按感知（伽马 2.2）空间插值，中间为玫红 (40, 0, 23)，过渡处不发暗
+// （原为视频取色的浅紫 #AC82E9、珊瑚红 #DC5057，含绿色分量，灯珠上偏白、偏粉）
+static const unsigned short sslz_mix_tbl[33][3] = {
+    {1408,    0, 4096}, {1469,    0, 3887}, {1532,    0, 3685}, {1596,    0, 3488}, {1661,    0, 3297}, {1728,    0, 3112},
+    {1797,    0, 2933}, {1866,    0, 2760}, {1938,    0, 2592}, {2010,    0, 2430}, {2085,    0, 2274}, {2160,    0, 2123},
+    {2237,    0, 1978}, {2316,    0, 1839}, {2396,    0, 1705}, {2478,    0, 1576}, {2561,    0, 1453}, {2645,    0, 1336},
+    {2731,    0, 1224}, {2819,    0, 1117}, {2908,    0, 1016}, {2998,    0,  919}, {3091,    0,  828}, {3184,    0,  742},
+    {3279,    0,  662}, {3376,    0,  586}, {3474,    0,  515}, {3574,    0,  449}, {3675,    0,  388}, {3778,    0,  332},
+    {3883,    0,  281}, {3988,    0,  234}, {4096,    0,  192},
+};
+
+// 混色表按 R,G,B 排列，pwm_rgb_tbl 的通道顺序是 G,R,B，按这张表对应
+static const uint8_t            sslz_ch_tbl[3] = { iR_INDEX, iG_INDEX, iB_INDEX };
+
+static uint16_t                 sslz_phase;                 // 周期内相位（基准节拍数）
+
+/******************************************************************************
+* 函数名称: led_mode_sslz_init
+* 功能描述: 双色流转进入初始化（切换灯效时调用），从全深紫开始，深红随即推入
+******************************************************************************/
+void led_mode_sslz_init(void)
+{
+    sslz_phase = 0;
+}
+
+// x: 0~1024 -> 0~4096（查表 + 线性插值）
+static uint16_t sslz_ramp(uint16_t x)
+{
+    uint8_t  idx  = x >> 5;
+    uint8_t  frac = x & 0x1F;
+    uint16_t a;
+
+    if(32 <= idx)
+        return sslz_ramp_tbl[32];
+    a = sslz_ramp_tbl[idx];
+    return a + (((sslz_ramp_tbl[idx+1] - a) * frac) >> 5);
+}
+
+// 分界中心 c（1/256 灯）经过第 k 颗灯后，该灯新颜色的占比 0~4096
+static uint16_t sslz_share(int32_t c, uint8_t k)
+{
+    int32_t x = c - (int32_t)k * 256;               // 分界中心越过这颗灯的距离
+
+    if(x <= -(iSSLZ_EDGE / 2))
+        return 0;
+    if(x >= (iSSLZ_EDGE / 2))
+        return 4096;
+    return sslz_ramp((uint16_t)(((x + iSSLZ_EDGE / 2) * 1024) / iSSLZ_EDGE));
+}
+
+/******************************************************************************
+* 函数名称: led_mode_sslz
+* 功能描述: 双色流转：深紫 / 深红轮流带柔和分界滑过灯带
+* 说    明: 按 RTC 时间推进相位；颜色固定为深紫、深红，不随颜色切换键变化
+******************************************************************************/
+void led_mode_sslz(void)
+{
+    uint8_t  i, k, n, m, idx, ch, to_red, full;
+    uint16_t cycle, slide, hold_r, ph, red, frac;
+    int32_t  c, a, v;
+
+    n = led_timer_take(&led_timer_main, iLED_BASE_TICK, iLED_CATCHUP_MAX);
+    if(0 == n)
+        return;
+
+    m      = led_speed_index() + 1;                 // 速度档 0/1/2 -> 1/2/3 倍时间
+    cycle  = iSSLZ_CYCLE * m;
+    slide  = iSSLZ_SLIDE * m;
+    hold_r = iSSLZ_HOLD_RED * m;
+
+    sslz_phase += n;
+    while(cycle <= sslz_phase)
+        sslz_phase -= cycle;                        // 也兼容运行中切换到更短周期
+    ph = sslz_phase;
+
+    // 当前阶段：推红 / 红停 / 推紫 / 紫停
+    full = 0;
+    c    = 0;
+    if(ph < slide)
+    {
+        to_red = 1;
+    }
+    else if(ph < slide + hold_r)
+    {
+        to_red = 1;  full = 1;
+    }
+    else if(ph < 2 * slide + hold_r)
+    {
+        to_red = 0;
+        ph    -= slide + hold_r;
+    }
+    else
+    {
+        to_red = 0;  full = 1;
+    }
+    if(0 == full)
+        c = -(iSSLZ_EDGE / 2) + ((int32_t)ph * iSSLZ_RUN) / slide;
+
+    for(i=0; i<iLED_MAX; i++)
+    {
+#if (1 == iSSLZ_DIR)
+        k = iLED_MAX - 1 - i;
+#else
+        k = i;
+#endif
+        red = full ? 4096 : sslz_share(c, k);       // 新颜色占比
+        if(0 == to_red)
+            red = 4096 - red;                       // 推紫：新颜色是深紫
+
+        idx  = red >> 7;                            // 0~32
+        frac = red & 0x7F;
+        for(ch=0; ch<3; ch++)
+        {
+            a = sslz_mix_tbl[idx][ch];
+            if(idx < 32)
+                v = a + (((int32_t)sslz_mix_tbl[idx+1][ch] - a) * frac) / 128;
+            else
+                v = a;
+            pwm_rgb_tbl[i][sslz_ch_tbl[ch]] = (uint8_t)((v + 32) >> 6); // 1/64 PWM -> 0~64，四舍五入
+        }
+    }
+}

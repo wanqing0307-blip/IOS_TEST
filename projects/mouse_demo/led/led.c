@@ -631,6 +631,9 @@ void logo_process(void)
             case iMODE_LED_FXTW:
                 led_mode_tw_init();
                 break;
+            case iMODE_LED_SSLZ:
+                led_mode_sslz_init();
+                break;
         }
     }
     else if(2 == led_fade_dir)
@@ -684,6 +687,9 @@ void logo_process(void)
             case iMODE_LED_TXTW:
             case iMODE_LED_FXTW:
                 led_mode_txtw();
+                break;
+            case iMODE_LED_SSLZ:
+                led_mode_sslz();
                 break;
         }
 }
