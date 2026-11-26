@@ -89,9 +89,10 @@ typedef enum {
     iMODE_LED_SXTW      =11,                    // 双向拖尾
     iMODE_LED_TXTW      =12,                    // 对向拖尾
     iMODE_LED_FXTW      =13,                    // 反向拖尾
+    iMODE_LED_SSLZ      =14,                    // 双色流转（浅紫 / 珊瑚红交替扫过）
 
-    iMODE_LED_MAX       =13,
-    iMODE_LED_INVALID   =14,
+    iMODE_LED_MAX       =14,
+    iMODE_LED_INVALID   =15,
     iLOGO_INVALID   = 0x0F,
 } logo_mode_t;
 
@@ -211,6 +212,8 @@ extern void led_mode_lhtw(void);
 extern void led_mode_dxtw(void);
 extern void led_mode_sxtw(void);
 extern void led_mode_txtw(void);
+extern void led_mode_sslz_init(void);
+extern void led_mode_sslz(void);
 //
 //-----------------------------------------------------------------------------;
 #endif
