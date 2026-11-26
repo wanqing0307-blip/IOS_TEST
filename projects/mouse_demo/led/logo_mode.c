@@ -1199,24 +1199,21 @@ void led_mode_lhtw(void)
 //-----------------------------------------------------------------------------;
 // 双色流转（SSLZ）
 //
-// 浅紫与珊瑚红交替：红色带着一段很宽的柔和渐变从一端扫到另一端，几乎不停留，
-// 再以稍慢的渐变退回浅紫，浅紫停留片刻后进入下一轮。
-// 颜色、节奏按参考视频逐帧取色、拟合（拟合误差约 5%）：
-//   一轮约 0.91s；单颗灯 紫->红 0.30s，红停留约 0.02s，红->紫 0.38s，紫停留 0.21s；
-//   渐变从第 0 颗灯扫到第 7 颗灯约 0.19s
+// 浅紫与珊瑚红轮流“滑”过灯带：新颜色带着一条柔和的分界从一端推向另一端，
+// 推满后停一下，另一种颜色再从同一端推进来，循环。
+// 颜色取自参考视频，一轮时间与视频一致（约 0.91s）；视频太短（0.9s、只有一轮），
+// 滑动方式按要求改为看得见的分界推进：分界宽约 2.5 颗灯，推过整条灯带约 0.4s
 //
 // ---- 可调参数 ----
 #define iSSLZ_DIR           0                               // 流向：0 = 低序号 -> 高序号，1 = 高序号 -> 低序号（上板确认）
-
-// 一轮时间(基准节拍 7.5ms 数)，下标 = 速度档（0 最快）：约 0.91s / 1.82s / 2.72s，0 档与视频一致
-static const unsigned short sslz_cycle_tbl[] = { 121, 242, 363, 484, 605 };
-
-// 一轮按 0~1023 划分（以单颗灯看）
-#define iSSLZ_POS_MAX       1024
-#define iSSLZ_RISE_END      341                             // 0    ~ 340：紫 -> 红渐变（0.30s）
-#define iSSLZ_TOP_END       361                             // 341  ~ 360：红色停留（0.02s）
-#define iSSLZ_FALL_END      785                             // 361  ~ 784：红 -> 紫渐变（0.38s），其余紫色停留
-#define iSSLZ_SWEEP         213                             // 第 0 颗灯到第 7 颗灯的相位差（0.19s）
+#define iSSLZ_EDGE          640                             // 分界宽度（1/256 灯）：640 = 2.5 颗灯，越小越“硬”
+#define iSSLZ_SLIDE         53                              // 一次推进的时间（基准节拍 7.5ms 数）：约 0.40s
+#define iSSLZ_HOLD_RED      7                               // 推满珊瑚红后停留：约 0.05s
+#define iSSLZ_HOLD_VIOLET   8                               // 推满浅紫后停留：约 0.06s
+// 一轮 = 推红 + 停 + 推紫 + 停 = 121 节拍（约 0.91s）；速度档 1、2 分别是 2 倍、3 倍时间
+#define iSSLZ_CYCLE         (2 * iSSLZ_SLIDE + iSSLZ_HOLD_RED + iSSLZ_HOLD_VIOLET)
+// 分界中心从第 0 颗灯外侧（-半个分界）走到第 7 颗灯外侧（+半个分界）的距离
+#define iSSLZ_RUN           ((iLED_MAX - 1) * 256 + iSSLZ_EDGE)
 
 // 渐变曲线（33 点，0~4096）：(1-cos)/2，起止平缓、中段快
 static const unsigned short sslz_ramp_tbl[33] = {
@@ -1244,7 +1241,7 @@ static uint16_t                 sslz_phase;                 // 周期内相位�
 
 /******************************************************************************
 * 函数名称: led_mode_sslz_init
-* 功能描述: 双色流转进入初始化（切换灯效时调用），从全浅紫开始，第一道红色随即扫入
+* 功能描述: 双色流转进入初始化（切换灯效时调用），从全浅紫开始，珊瑚红随即推入
 ******************************************************************************/
 void led_mode_sslz_init(void)
 {
@@ -1264,39 +1261,65 @@ static uint16_t sslz_ramp(uint16_t x)
     return a + (((sslz_ramp_tbl[idx+1] - a) * frac) >> 5);
 }
 
-// u: 单颗灯在一轮中的位置 0~1023 -> 红色占比 0~4096
-static uint16_t sslz_red(uint16_t u)
+// 分界中心 c（1/256 灯）经过第 k 颗灯后，该灯新颜色的占比 0~4096
+static uint16_t sslz_share(int32_t c, uint8_t k)
 {
-    if(u < iSSLZ_RISE_END)
-        return sslz_ramp(((uint32_t)u * 1024) / iSSLZ_RISE_END);
-    if(u < iSSLZ_TOP_END)
+    int32_t x = c - (int32_t)k * 256;               // 分界中心越过这颗灯的距离
+
+    if(x <= -(iSSLZ_EDGE / 2))
+        return 0;
+    if(x >= (iSSLZ_EDGE / 2))
         return 4096;
-    if(u < iSSLZ_FALL_END)
-        return 4096 - sslz_ramp(((uint32_t)(u - iSSLZ_TOP_END) * 1024) / (iSSLZ_FALL_END - iSSLZ_TOP_END));
-    return 0;
+    return sslz_ramp((uint16_t)(((x + iSSLZ_EDGE / 2) * 1024) / iSSLZ_EDGE));
 }
 
 /******************************************************************************
 * 函数名称: led_mode_sslz
-* 功能描述: 双色流转：浅紫 / 珊瑚红交替，带柔和渐变沿灯带扫过
+* 功能描述: 双色流转：浅紫 / 珊瑚红轮流带柔和分界滑过灯带
 * 说    明: 按 RTC 时间推进相位；颜色固定为视频里的两种颜色，不随颜色切换键变化
 ******************************************************************************/
 void led_mode_sslz(void)
 {
-    uint8_t  i, k, n, idx, ch;
-    uint16_t cycle, pos, u, red, frac;
-    int32_t  a, v;
+    uint8_t  i, k, n, m, idx, ch, to_red, full;
+    uint16_t cycle, slide, hold_r, ph, red, frac;
+    int32_t  c, a, v;
 
     n = led_timer_take(&led_timer_main, iLED_BASE_TICK, iLED_CATCHUP_MAX);
     if(0 == n)
         return;
 
-    cycle = sslz_cycle_tbl[led_speed_index()];
+    m      = led_speed_index() + 1;                 // 速度档 0/1/2 -> 1/2/3 倍时间
+    cycle  = iSSLZ_CYCLE * m;
+    slide  = iSSLZ_SLIDE * m;
+    hold_r = iSSLZ_HOLD_RED * m;
+
     sslz_phase += n;
     while(cycle <= sslz_phase)
         sslz_phase -= cycle;                        // 也兼容运行中切换到更短周期
+    ph = sslz_phase;
 
-    pos = ((uint32_t)sslz_phase * iSSLZ_POS_MAX) / cycle;
+    // 当前阶段：推红 / 红停 / 推紫 / 紫停
+    full = 0;
+    c    = 0;
+    if(ph < slide)
+    {
+        to_red = 1;
+    }
+    else if(ph < slide + hold_r)
+    {
+        to_red = 1;  full = 1;
+    }
+    else if(ph < 2 * slide + hold_r)
+    {
+        to_red = 0;
+        ph    -= slide + hold_r;
+    }
+    else
+    {
+        to_red = 0;  full = 1;
+    }
+    if(0 == full)
+        c = -(iSSLZ_EDGE / 2) + ((int32_t)ph * iSSLZ_RUN) / slide;
 
     for(i=0; i<iLED_MAX; i++)
     {
@@ -1305,9 +1328,9 @@ void led_mode_sslz(void)
 #else
         k = i;
 #endif
-        // 第 k 颗灯比第 0 颗灯晚 k/7 个扫过时间 -> 渐变向 k 增大的方向移动
-        u   = (pos + iSSLZ_POS_MAX - ((uint16_t)k * iSSLZ_SWEEP) / (iLED_MAX - 1)) % iSSLZ_POS_MAX;
-        red = sslz_red(u);
+        red = full ? 4096 : sslz_share(c, k);       // 新颜色占比
+        if(0 == to_red)
+            red = 4096 - red;                       // 推紫：新颜色是浅紫
 
         idx  = red >> 7;                            // 0~32
         frac = red & 0x7F;
