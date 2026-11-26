@@ -89,7 +89,7 @@ typedef enum {
     iMODE_LED_SXTW      =11,                    // 双向拖尾
     iMODE_LED_TXTW      =12,                    // 对向拖尾
     iMODE_LED_FXTW      =13,                    // 反向拖尾
-    iMODE_LED_SSLZ      =14,                    // 双色流转（浅紫 / 珊瑚红交替扫过）
+    iMODE_LED_SSLZ      =14,                    // 双色流转（深紫 / 深红轮流滑过）
 
     iMODE_LED_MAX       =14,
     iMODE_LED_INVALID   =15,
